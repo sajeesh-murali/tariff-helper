@@ -1,0 +1,23 @@
+{
+  "employerName": "Bydel Grünerløkka",
+  "jobTitle": "sykepleier",
+  "stillingskode": "58",
+  "lonnstrinn": 26,
+  "positionPercent": 100,
+  "currentAnnualSalary": 576000,
+  "experiences": [
+    {
+      "country": "PH",
+      "kind": "private_service",
+      "workType": "hospital_nurse",
+      "startDate": "2012-06",
+      "endDate": "2019-05"
+    },
+    {
+      "country": "NO",
+      "kind": "public_service",
+      "startDate": "2020-01",
+      "endDate": "2024-12"
+    }
+  ]
+}
