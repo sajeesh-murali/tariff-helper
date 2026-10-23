@@ -1,6 +1,7 @@
 package com.tariffhelper.api;
 
 import com.tariffhelper.api.ApiExceptions.AgreementNotAvailableException;
+import com.tariffhelper.api.ApiExceptions.AgreementNotDeterminedException;
 import com.tariffhelper.api.ApiExceptions.AgreementNotFoundException;
 import com.tariffhelper.api.ApiExceptions.InvalidRequestException;
 import com.tariffhelper.llm.LlmException;
@@ -50,6 +51,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AgreementNotAvailableException.class)
     public ProblemDetail handleAgreementNotAvailable(AgreementNotAvailableException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+    }
+
+    @ExceptionHandler(AgreementNotDeterminedException.class)
+    public ProblemDetail handleAgreementNotDetermined(AgreementNotDeterminedException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+        problem.setProperty("availableAgreements", ex.availableAgreements());
+        return problem;
     }
 
     @ExceptionHandler(InvalidRequestException.class)

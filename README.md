@@ -9,12 +9,46 @@ researched but **not modelled**: they are listed, and an estimate request return
 
 ## How an estimate is produced
 
-1. **The code does the numbers.** It counts seniority month by month using the agreement rules, looks up
-   the minimum pay step, and converts the person's current pay to a full-time figure.
-2. **Claude only explains.** The prompt contains the rules summary and the calculated results. Claude writes
+1. **Which agreement (if the person does not know).** Fixed rules on the employer name decide first
+   (`AgreementMatcher`). Only if they cannot decide, Claude is asked (Call 1) with the employer name and job title
+   only. Its answer must be JSON with an id from the allowlist, or it is treated as `unknown`.
+2. **The code does the numbers.** It counts seniority month by month using the agreement rules, looks up
+   the minimum pay step, converts the person's current pay to a full-time figure, compares with the seniority
+   the payslip shows (if given), and sets the confidence level.
+3. **Claude only explains** (Call 2). The prompt contains the rules summary and the calculated results. Claude writes
    a plain-English explanation. It is told not to change any number.
 
 The result is a range: *what counts* up to *what counts if the employer accepts the uncertain periods*.
+
+### Agreement from the employer name (rules, tried in this order)
+
+| Employer name (lowercase, trimmed) | Agreement | Confidence |
+|---|---|---|
+| contains `oslo kommune`, starts with `bydel `, or contains `sykehjemsetaten` / `velferdsetaten` / `helseetaten` | `oslo-kommune` | high |
+| ends with ` kommune` | `ks-hta` | high |
+| matches `helse … hf`, ends with ` hf`, or contains `sykehus` (incl. `universitetssykehus`) | `spekter` | medium |
+| contains `universitet`, `forsvar`, `kriminalomsorg`, `skatteetaten`, the word `nav`, or `politi…` (not `politisk`) | `staten` | medium |
+| anything else | Claude (Call 1), else none | |
+
+`source` in the answer is `rules`, `ai` or `none`. State and Spekter can be suggested, but an estimate for them still returns `422`.
+
+### Confidence (code only, never from Claude)
+
+- `high`: agreement chosen by the person or matched by rules with high confidence, no uncertain periods, no payslip conflict.
+- `medium`: uncertain periods, a medium match (or any AI match), a job group derived from stillingskode or job title,
+  or payslip seniority that is more than 1 year below, or above, the counted years.
+- `low`: the agreement came from the AI below high confidence, or the lønnstrinn is not on the position's pay ladder.
+
+`reasons` always lists why, in plain English. The level is a label, not a probability.
+
+### Credited seniority from the payslip
+
+- `lonnstrinn` (Oslo only, the ladders have step numbers): credited years = the lowest seniority year with that step.
+  Example: nurse (2601) trinn 26 = 3 years. A trinn not on the ladder gives no comparison and low confidence.
+- `ansiennitetsdato` (any agreement; the only option for KS, which has no step numbers in the YAML yet):
+  whole months from that month to now, divided by 12.
+- The result is `creditedVsCounted`. Claude gets only the conclusion ("the employer currently credits about 3 years;
+  the rules count about 12 years"), never the payslip values.
 
 ## KS rules implemented (HTA § 12.1, pay tables from 1 May 2026)
 
@@ -83,12 +117,26 @@ mvn spring-boot:run   # http://localhost:8080 (override with PORT)
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/agreements` | Agreements, their status (`available` or `placeholder`) and job categories for the form |
+| POST | `/api/agreements/suggest` | Suggest the agreement from the employer name (and job title) |
 | POST | `/api/estimates` | Submit the form, get an estimate |
 | GET | `/actuator/health` | Health check |
 
+### Suggest the agreement
+
+```json
+{ "employerName": "Bydel Grünerløkka", "jobTitle": "sykepleier" }
+```
+
+- `employerName`: required, 2 to 100 characters. `jobTitle`: optional, up to 60. Both allow only letters, digits,
+  spaces and `. , & ( ) / ' -`.
+- Answer: `{"suggestions": [{"agreementId": "oslo-kommune", "confidence": "high", "reason": "...", "jobCategory": "nurse"}], "source": "rules"}`.
+  `jobCategory` is set only when the title matches one of that agreement's categories. `suggestions` is empty
+  (`source: "none"`) when nothing matched.
+
 ### Request
 
-See `requests/sample-estimate.json` (Postman or curl):
+See `requests/sample-estimate.json`, or `requests/sample-estimate-employer.json` for an estimate from the employer
+name and payslip values (Postman or curl):
 
 ```bash
 curl -X POST http://localhost:8080/api/estimates \
@@ -96,7 +144,13 @@ curl -X POST http://localhost:8080/api/estimates \
   -d @requests/sample-estimate.json
 ```
 
-- `jobCategory`: an id from `GET /api/agreements`.
+- `agreementId`: optional. Without it, `employerName` is required and the agreement is suggested from it
+  (`400` if both are missing, `422` with `availableAgreements` if no agreement can be determined).
+- `jobCategory`: optional, an id from `GET /api/agreements`. Without it, it is derived from `stillingskode`
+  (Oslo: 58 nurse, 59/60/61 specialist nurse, 94 clinical nurse) or `jobTitle`; otherwise `400` lists the options.
+- `employerName`, `jobTitle`: same rules as for the suggestion endpoint.
+- Payslip values (all optional): `stillingskode` (up to 6 digits), `lonnstrinn` (1 to 100),
+  `ansiennitetsdato` (`yyyy-MM`, between 1950-01 and the current month).
 - `positionPercent` and `currentAnnualSalary`: the person's **current** job. The salary is what they actually earn per
   year at that percentage; the app converts it to full time.
 - Each entry in `experiences`:
@@ -109,14 +163,19 @@ curl -X POST http://localhost:8080/api/estimates \
 
 All salary figures are annual, full time. Main fields: `countedYears`, `countedYearsIfAllAccepted`,
 `estimatedMinimumSalary` (min/max), `differenceFromCurrent` (negative = already above the minimum),
-`perExperience` (months counted and why), `explanation`, `caveats`, `disclaimer`.
+`perExperience` (months counted and why), `explanation`, `caveats`, `disclaimer`, and:
+
+- `agreementSuggestion` (only when `agreementId` was not given): `agreementId`, `confidence`, `source`, `assumed: true`.
+- `confidence`: `level` (`high`, `medium`, `low`) and `reasons`.
+- `creditedVsCounted` (only when payslip values allow it, otherwise null): `creditedYears`, `countedYears`,
+  `basis` (`lonnstrinn` or `ansiennitetsdato`).
 
 Errors: `400` invalid input, `404` unknown agreement, `422` agreement without rules yet, `429` too many requests, `502` the AI service failed.
 
 ## Postman
 
-Import `postman/tariff-helper.postman_collection.json` (19 requests: KS, Oslo, not-available agreements and error
-cases, each with checks on the expected numbers). The `baseUrl` variable defaults to `http://localhost:8080`.
+Import `postman/tariff-helper.postman_collection.json` (27 requests: KS, Oslo, not-available agreements, error
+cases, agreement suggestion and payslip values, each with checks on the expected numbers). The `baseUrl` variable defaults to `http://localhost:8080`.
 To run the whole collection, start the app with a higher rate limit, otherwise some requests return `429`:
 
 ```powershell
@@ -131,9 +190,9 @@ mvn spring-boot:run
 | `PORT` | 8080 | HTTP port |
 | `LLM_PROVIDER` | stub | `stub` (no external calls, canned explanation) or `claude` |
 | `ANTHROPIC_API_KEY` | none | Required when `LLM_PROVIDER=claude`. The app refuses to start without it. Never commit it. |
-| `CLAUDE_MODEL` | claude-sonnet-5-5 | Claude model for the explanation. A smaller model may be enough; compare on test cases. |
-| `RATE_LIMIT_PER_MINUTE` | 5 | Max estimates per client address per minute (`429` with `Retry-After` above this) |
-| `RATE_LIMIT_PER_DAY` | 500 | Max estimates for the whole service per UTC day. This caps Claude spend. |
+| `CLAUDE_MODEL` | claude-sonnet-5-5 | Claude model for the explanation and the agreement suggestion. A smaller model may be enough; compare on test cases. |
+| `RATE_LIMIT_PER_MINUTE` | 5 | Max requests to `POST /api/estimates` and `POST /api/agreements/suggest` together, per client address per minute (`429` with `Retry-After` above this) |
+| `RATE_LIMIT_PER_DAY` | 500 | Max of those requests for the whole service per UTC day. This caps Claude spend. |
 | `RATE_LIMIT_ENABLED` | true | Turn the limiter off (local testing only) |
 | `FORWARD_HEADERS` | none | Set to `native` only behind a trusted proxy/load balancer, so limits use the real client address |
 | `CORS_ALLOWED_ORIGINS` | empty (closed) | Comma-separated browser origins allowed to call `/api/**`, for example the front end URL |
@@ -160,8 +219,11 @@ The image has no key in it. The limiter is in memory and per instance, so with s
 - Nothing is stored. No database.
 - Request and response bodies, prompts and model answers are never logged (only status codes, timings, token counts).
 - Error responses name the invalid field but never echo submitted values.
-- `workType` and `country` accept only safe characters, because they are placed in the LLM prompt.
-- With `LLM_PROVIDER=claude`, the work history and current pay from the form are sent to Anthropic's API.
+- `workType`, `country`, `employerName` and `jobTitle` accept only safe characters, because they may be placed in an
+  LLM prompt. The employer name is never logged.
+- With `LLM_PROVIDER=claude`, the work history and current pay from the form are sent to Anthropic's API (Call 2).
+  When the rules cannot match the employer, the employer name and job title (and nothing else) are sent in Call 1.
+  Payslip values (stillingskode, lønnstrinn, ansiennitetsdato) are never sent; only the code's conclusion is.
   Check Anthropic's data retention terms for your account and tell users before a real pilot.
 
 ## Layout
@@ -170,10 +232,12 @@ The image has no key in it. The limiter is in memory and per instance, so with s
 com.tariffhelper
 ├── api         controllers, request/response types, exception handler
 ├── domain      Agreement, JobCategory, Rules, SalaryStep, results, enums
-├── service     SeniorityCalculator, SalaryEstimator, EstimateService
-├── llm         LlmClient, StubLlmClient, ClaudeLlmClient, PromptBuilder
+├── service     SeniorityCalculator, SalaryEstimator, EstimateService, AgreementMatcher, JobCategoryResolver,
+│               AgreementSuggestionService, CreditedSeniorityCalculator, ConfidenceAssessor
+├── llm         LlmClient, StubLlmClient, ClaudeLlmClient (Call 2), AgreementSuggester, StubAgreementSuggester,
+│               ClaudeAgreementSuggester (Call 1), ClaudeMessagesApi (shared HTTP call), PromptBuilder
 ├── config      LlmConfig (stub or Claude), WebConfig (rate limiting, CORS)
-├── ratelimit   RateLimiter, RateLimitFilter (429 on POST /api/estimates)
+├── ratelimit   RateLimiter, RateLimitFilter (429 on POST /api/estimates and /api/agreements/suggest)
 └── agreement   loads and validates src/main/resources/agreements/*.yaml
 ```
 

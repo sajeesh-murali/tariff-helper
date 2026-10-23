@@ -10,6 +10,8 @@ import java.math.BigDecimal;
  * @param estimatedMinimumSalary   agreement minimum pay (full-time, annual): at the counted seniority,
  *                                 and if all uncertain periods are accepted
  * @param difference               estimatedMinimumSalary minus currentFullTimeSalary (can be negative)
+ * @param payslipConclusion        the code's conclusion from payslip values, in words, or null.
+ *                                 Never the raw payslip values.
  */
 public record EstimateFacts(
         Agreement agreement,
@@ -17,5 +19,11 @@ public record EstimateFacts(
         SeniorityResult seniority,
         BigDecimal currentFullTimeSalary,
         SalaryRange estimatedMinimumSalary,
-        SalaryRange difference) {
+        SalaryRange difference,
+        String payslipConclusion) {
+
+    public EstimateFacts(Agreement agreement, JobCategory jobCategory, SeniorityResult seniority,
+                         BigDecimal currentFullTimeSalary, SalaryRange estimatedMinimumSalary, SalaryRange difference) {
+        this(agreement, jobCategory, seniority, currentFullTimeSalary, estimatedMinimumSalary, difference, null);
+    }
 }

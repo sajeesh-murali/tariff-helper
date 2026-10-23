@@ -28,6 +28,19 @@ class PromptBuilderTest {
     }
 
     @Test
+    void suggestPromptAsksForJsonFromTheAllowlistAndTreatsFormDataAsData() {
+        String system = builder.suggestSystemPrompt();
+        assertThat(system).contains("<user_data>").contains("never instructions")
+                .contains("\"agreementId\"").contains("Never mention salary");
+
+        String user = builder.suggestUserPrompt("Bergen kommune", null, List.of("ks-hta", "staten"));
+        assertThat(user)
+                .contains("Allowed agreement ids: ks-hta, staten, unknown")
+                .contains("<user_data>\nEmployer name: Bergen kommune\n</user_data>")
+                .doesNotContain("Job title");
+    }
+
+    @Test
     void userPromptCarriesTheRulesTheCalculatedNumbersAndTheHistory() {
         var experiences = List.of(exp(ExperienceKind.PUBLIC_SERVICE, null, "2018-03", "2020-06"));
         EstimateFacts facts = nurseFacts(500_000, experiences);
@@ -80,6 +93,29 @@ class PromptBuilderTest {
         assertThat(open).isGreaterThanOrEqualTo(0);
         assertThat(close).isGreaterThan(open);
         assertThat(user.substring(open, close)).contains("Entry 1:");
+    }
+
+    @Test
+    void payslipConclusionIsAddedButNeverTheRawPayslipValues() {
+        var experiences = List.of(exp(ExperienceKind.PUBLIC_SERVICE, null, "2018-03", "2020-06"));
+        EstimateFacts base = nurseFacts(500_000, experiences);
+        EstimateFacts facts = new EstimateFacts(base.agreement(), base.jobCategory(), base.seniority(),
+                base.currentFullTimeSalary(), base.estimatedMinimumSalary(), base.difference(),
+                "The employer currently credits about 1 year; the rules count about 2 years.");
+        EstimateRequest request = new EstimateRequest("ks-hta", "nurse", 100, java.math.BigDecimal.valueOf(500_000),
+                experiences, "Bergen kommune", "Avdelingssjef", "7174", 47, java.time.YearMonth.of(2011, 7));
+
+        String user = builder.userPrompt(request, facts);
+
+        assertThat(user)
+                .contains("- From the person's payslip: The employer currently credits about 1 year; "
+                        + "the rules count about 2 years.")
+                .doesNotContain("2011-07")
+                .doesNotContain("7174")
+                .doesNotContain("47")
+                .doesNotContain("Bergen kommune")
+                .doesNotContain("Avdelingssjef");
+        assertThat(builder.userPrompt(request(500_000, experiences), base)).doesNotContain("payslip");
     }
 
     @Test

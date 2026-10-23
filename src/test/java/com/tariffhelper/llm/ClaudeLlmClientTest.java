@@ -50,7 +50,7 @@ class ClaudeLlmClientTest {
         server = MockRestServiceServer.bindTo(builder).build();
         ClaudeProperties props = new ClaudeProperties(
                 "test-key", "test-model", "https://api.anthropic.com", 1000, 5);
-        client = new ClaudeLlmClient(builder.build(), props, new PromptBuilder());
+        client = new ClaudeLlmClient(new ClaudeMessagesApi(builder.build(), props), props, new PromptBuilder());
 
         var experiences = List.of(exp(ExperienceKind.PUBLIC_SERVICE, null, "2018-03", "2020-06"));
         request = request(500_000, experiences);

@@ -50,7 +50,7 @@ public class WebConfig implements WebMvcConfigurer {
         RateLimiter limiter = new RateLimiter(Clock.systemUTC(), props.perClientPerMinute(), props.globalPerDay());
         FilterRegistrationBean<RateLimitFilter> registration = new FilterRegistrationBean<>(new RateLimitFilter(limiter));
         registration.setEnabled(props.enabled());
-        registration.addUrlPatterns("/api/estimates");
+        registration.addUrlPatterns(RateLimitFilter.LIMITED_PATHS.toArray(String[]::new));
         return registration;
     }
 }

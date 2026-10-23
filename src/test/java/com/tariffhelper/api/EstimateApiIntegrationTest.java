@@ -184,6 +184,152 @@ class EstimateApiIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    // ---- agreement suggestion, derived job category and payslip values ----
+
+    /** Optional fields first (may be empty), then a 100% job with 12 years of public service (2010-01 to 2021-12). */
+    private static String twelveYears(String fields) {
+        return "{" + fields + (fields.isEmpty() ? "" : ",")
+                + "\"positionPercent\":100,\"currentAnnualSalary\":600000,\"experiences\":["
+                + experience("public_service", null, "2010-01", "2021-12") + "]}";
+    }
+
+    @Test
+    void explicitAgreementHasNoSuggestionAndHighConfidence() throws Exception {
+        postEstimate(twelveYears("\"agreementId\":\"oslo-kommune\",\"jobCategory\":\"nurse\""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.agreementSuggestion").doesNotExist())
+                .andExpect(jsonPath("$.creditedVsCounted").doesNotExist())
+                .andExpect(jsonPath("$.confidence.level").value("high"))
+                .andExpect(jsonPath("$.confidence.reasons", hasItem("You chose the agreement")));
+    }
+
+    @Test
+    void missingAgreementIdIsMatchedFromTheEmployerAndShownAsAssumed() throws Exception {
+        postEstimate(twelveYears("\"employerName\":\"Bydel Frogner\",\"jobCategory\":\"nurse\""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.agreementApplied").value("Oslo kommune (own agreement)"))
+                .andExpect(jsonPath("$.estimatedMinimumSalary.min").value(614_600))
+                .andExpect(jsonPath("$.agreementSuggestion.agreementId").value("oslo-kommune"))
+                .andExpect(jsonPath("$.agreementSuggestion.confidence").value("high"))
+                .andExpect(jsonPath("$.agreementSuggestion.source").value("rules"))
+                .andExpect(jsonPath("$.agreementSuggestion.assumed").value(true))
+                .andExpect(jsonPath("$.confidence.level").value("high"));
+    }
+
+    @Test
+    void jobCategoryIsDerivedFromTheJobTitleAndConfidenceIsMedium() throws Exception {
+        postEstimate(twelveYears("\"employerName\":\"Bergen kommune\",\"jobTitle\":\"Helsefagarbeider\""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.agreementSuggestion.agreementId").value("ks-hta"))
+                .andExpect(jsonPath("$.salaryGroup").value("102"))
+                .andExpect(jsonPath("$.confidence.level").value("medium"))
+                .andExpect(jsonPath("$.confidence.reasons", hasItem(containsString("job title"))));
+    }
+
+    @Test
+    void osloTrinn26IsThreeCreditedYearsAgainstTwelveCounted() throws Exception {
+        postEstimate(twelveYears("\"agreementId\":\"oslo-kommune\",\"stillingskode\":\"58\",\"lonnstrinn\":26"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.salaryGroup").value("2601"))
+                .andExpect(jsonPath("$.creditedVsCounted.creditedYears").value(3.0))
+                .andExpect(jsonPath("$.creditedVsCounted.countedYears").value(12.0))
+                .andExpect(jsonPath("$.creditedVsCounted.basis").value("lonnstrinn"))
+                .andExpect(jsonPath("$.confidence.level").value("medium"))
+                .andExpect(jsonPath("$.confidence.reasons",
+                        hasItem("Your payslip suggests fewer years than the rules count")))
+                .andExpect(jsonPath("$.confidence.reasons", hasItem(containsString("stillingskode"))));
+    }
+
+    @Test
+    void osloTrinnNotOnTheLadderGivesLowConfidenceAndNoComparison() throws Exception {
+        postEstimate(twelveYears("\"agreementId\":\"oslo-kommune\",\"jobCategory\":\"nurse\",\"lonnstrinn\":60"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.creditedVsCounted").doesNotExist())
+                .andExpect(jsonPath("$.confidence.level").value("low"))
+                .andExpect(jsonPath("$.confidence.reasons", hasItem(containsString("not on the pay ladder"))));
+    }
+
+    @Test
+    void ksUsesTheAnsiennitetsdato() throws Exception {
+        String twoYearsAgo = java.time.YearMonth.now().minusYears(2).toString();
+        postEstimate(twelveYears("\"agreementId\":\"ks-hta\",\"jobCategory\":\"nurse\","
+                + "\"ansiennitetsdato\":\"" + twoYearsAgo + "\""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.creditedVsCounted.creditedYears").value(2.0))
+                .andExpect(jsonPath("$.creditedVsCounted.basis").value("ansiennitetsdato"));
+    }
+
+    @Test
+    void missingAgreementIdAndEmployerNameReturns400() throws Exception {
+        postEstimate(twelveYears("\"jobCategory\":\"nurse\""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("agreementId or employerName is required"));
+    }
+
+    @Test
+    void employerThatCannotBeMatchedReturns422WithTheAvailableAgreements() throws Exception {
+        // The stub suggester answers "unknown", as Claude may.
+        postEstimate(twelveYears("\"employerName\":\"Coop Norge\",\"jobCategory\":\"nurse\""))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.detail", containsString("Could not determine the agreement")))
+                .andExpect(jsonPath("$.availableAgreements[0]").value("ks-hta"))
+                .andExpect(jsonPath("$.availableAgreements[1]").value("oslo-kommune"))
+                .andExpect(jsonPath("$.availableAgreements.length()").value(2))
+                .andExpect(content().string(not(containsString("Coop"))));
+    }
+
+    @Test
+    void employerMatchedToAnAgreementWithoutRulesReturns422() throws Exception {
+        postEstimate(twelveYears("\"employerName\":\"Helse Bergen HF\",\"jobCategory\":\"nurse\""))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.detail", containsString("not available yet")));
+    }
+
+    @Test
+    void jobCategoryThatCannotBeDerivedReturns400WithTheOptions() throws Exception {
+        postEstimate(twelveYears("\"agreementId\":\"oslo-kommune\",\"jobTitle\":\"Avdelingssjef\""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail", containsString("nurse, specialist_nurse, clinical_nurse")))
+                .andExpect(content().string(not(containsString("Avdelingssjef"))));
+    }
+
+    @Test
+    void payslipFieldsAreValidatedWithoutEchoingValues() throws Exception {
+        String base = "\"agreementId\":\"oslo-kommune\",\"jobCategory\":\"nurse\",";
+        postEstimate(twelveYears(base + "\"stillingskode\":\"58x\""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.stillingskode").exists())
+                .andExpect(content().string(not(containsString("58x"))));
+        postEstimate(twelveYears(base + "\"stillingskode\":\"1234567\""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.stillingskode").exists());
+        postEstimate(twelveYears(base + "\"lonnstrinn\":0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.lonnstrinn").exists());
+        postEstimate(twelveYears(base + "\"lonnstrinn\":101"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.lonnstrinn").exists());
+        postEstimate(twelveYears(base + "\"ansiennitetsdato\":\"2099-01\""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail", containsString("ansiennitetsdato")))
+                .andExpect(content().string(not(containsString("2099"))));
+        postEstimate(twelveYears(base + "\"ansiennitetsdato\":\"1949-12\""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail", containsString("ansiennitetsdato")));
+    }
+
+    @Test
+    void employerNameAndJobTitleUseTheSameWhitelist() throws Exception {
+        postEstimate(twelveYears("\"employerName\":\"Acme <user_data>\",\"jobCategory\":\"nurse\""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.employerName").exists())
+                .andExpect(content().string(not(containsString("user_data"))));
+        postEstimate(twelveYears("\"agreementId\":\"ks-hta\",\"jobCategory\":\"nurse\",\"jobTitle\":\""
+                + "a".repeat(61) + "\""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.jobTitle").exists());
+    }
+
     // ---- errors ----
 
     @Test

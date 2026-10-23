@@ -56,40 +56,42 @@ rules:
 
 # Minimum annual pay at 100% position, lowest alternativ, from 1 May 2026.
 # A step applies from the completed year shown (the trinn is unchanged in the years in between).
+# step = the lønnstrinn for that seniority year, from the same NSF tables valid from 1 May 2026. It is used only to
+# read credited seniority from a payslip value; pay always comes from annualSalary.
 salaryLadders:
   "2601": # Stillingskode 58 sykepleier, lønnsramme 26, alternativ 01
-    - { fromYears: 0, annualSalary: 559350 }
-    - { fromYears: 1, annualSalary: 566600 }
-    - { fromYears: 2, annualSalary: 571000 }
-    - { fromYears: 3, annualSalary: 576000 }
-    - { fromYears: 6, annualSalary: 581200 }
-    - { fromYears: 7, annualSalary: 586800 }
-    - { fromYears: 8, annualSalary: 592700 }
-    - { fromYears: 9, annualSalary: 599100 }
-    - { fromYears: 10, annualSalary: 606200 }
-    - { fromYears: 12, annualSalary: 614600 }
-    - { fromYears: 13, annualSalary: 623400 }
-    - { fromYears: 14, annualSalary: 633200 }
-    - { fromYears: 15, annualSalary: 643000 }
-    - { fromYears: 16, annualSalary: 654100 }
+    - { fromYears: 0, annualSalary: 559350, step: 23 }
+    - { fromYears: 1, annualSalary: 566600, step: 24 }
+    - { fromYears: 2, annualSalary: 571000, step: 25 }
+    - { fromYears: 3, annualSalary: 576000, step: 26 }
+    - { fromYears: 6, annualSalary: 581200, step: 27 }
+    - { fromYears: 7, annualSalary: 586800, step: 28 }
+    - { fromYears: 8, annualSalary: 592700, step: 29 }
+    - { fromYears: 9, annualSalary: 599100, step: 30 }
+    - { fromYears: 10, annualSalary: 606200, step: 31 }
+    - { fromYears: 12, annualSalary: 614600, step: 32 }
+    - { fromYears: 13, annualSalary: 623400, step: 33 }
+    - { fromYears: 14, annualSalary: 633200, step: 34 }
+    - { fromYears: 15, annualSalary: 643000, step: 35 }
+    - { fromYears: 16, annualSalary: 654100, step: 36 }
   "3001": # Stillingskode 59, 60, 61, lønnsramme 30, alternativ 01
-    - { fromYears: 0, annualSalary: 586800 }
-    - { fromYears: 2, annualSalary: 614600 }
-    - { fromYears: 4, annualSalary: 623400 }
-    - { fromYears: 9, annualSalary: 633200 }
-    - { fromYears: 10, annualSalary: 643000 }
-    - { fromYears: 12, annualSalary: 666400 }
-    - { fromYears: 15, annualSalary: 689300 }
-    - { fromYears: 16, annualSalary: 726900 }
+    - { fromYears: 0, annualSalary: 586800, step: 28 }
+    - { fromYears: 2, annualSalary: 614600, step: 32 }
+    - { fromYears: 4, annualSalary: 623400, step: 33 }
+    - { fromYears: 9, annualSalary: 633200, step: 34 }
+    - { fromYears: 10, annualSalary: 643000, step: 35 }
+    - { fromYears: 12, annualSalary: 666400, step: 37 }
+    - { fromYears: 15, annualSalary: 689300, step: 39 }
+    - { fromYears: 16, annualSalary: 726900, step: 42 }
   "3009": # Stillingskode 94 klinisk sykepleier, lønnsramme 30, alternativ 3009
-    - { fromYears: 0, annualSalary: 654100 }
-    - { fromYears: 2, annualSalary: 702200 }
-    - { fromYears: 4, annualSalary: 714100 }
-    - { fromYears: 9, annualSalary: 726900 }
-    - { fromYears: 10, annualSalary: 740600 }
-    - { fromYears: 12, annualSalary: 767500 }
-    - { fromYears: 15, annualSalary: 798200 }
-    - { fromYears: 16, annualSalary: 844000 }
+    - { fromYears: 0, annualSalary: 654100, step: 36 }
+    - { fromYears: 2, annualSalary: 702200, step: 40 }
+    - { fromYears: 4, annualSalary: 714100, step: 41 }
+    - { fromYears: 9, annualSalary: 726900, step: 42 }
+    - { fromYears: 10, annualSalary: 740600, step: 43 }
+    - { fromYears: 12, annualSalary: 767500, step: 45 }
+    - { fromYears: 15, annualSalary: 798200, step: 47 }
+    - { fromYears: 16, annualSalary: 844000, step: 50 }
 
 rulesSummary: |
   Source: Oslo kommune's own agreement (Dokument 25), the rules on lønnsansiennitet (seniority), and how Oslo

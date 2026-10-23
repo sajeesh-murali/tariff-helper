@@ -10,9 +10,15 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
-/** Limits only {@code POST /api/estimates}, the endpoint that can call Claude. Answers 429 when over a limit. */
+/**
+ * Limits only the POST endpoints that can call Claude ({@link #LIMITED_PATHS}). They share one budget.
+ * Answers 429 when over a limit.
+ */
 public class RateLimitFilter extends OncePerRequestFilter {
+
+    public static final List<String> LIMITED_PATHS = List.of("/api/estimates", "/api/agreements/suggest");
 
     private final RateLimiter limiter;
 
@@ -22,7 +28,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !(HttpMethod.POST.matches(request.getMethod()) && "/api/estimates".equals(request.getRequestURI()));
+        return !(HttpMethod.POST.matches(request.getMethod()) && LIMITED_PATHS.contains(request.getRequestURI()));
     }
 
     @Override

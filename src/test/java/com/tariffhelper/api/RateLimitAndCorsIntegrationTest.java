@@ -6,6 +6,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
@@ -37,6 +38,29 @@ class RateLimitAndCorsIntegrationTest {
                 .andExpect(status().isTooManyRequests())
                 .andExpect(header().exists("Retry-After"))
                 .andExpect(jsonPath("$.status").value(429));
+    }
+
+    /** Own client address, so this test does not use up the budget of the test above. */
+    @Test
+    void suggestEndpointIsLimitedAndSharesTheBudgetWithEstimates() throws Exception {
+        String suggest = "{\"employerName\":\"Bergen kommune\"}";
+        mvc.perform(post("/api/agreements/suggest").with(from("10.0.0.7"))
+                        .contentType(MediaType.APPLICATION_JSON).content(suggest))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/estimates").with(from("10.0.0.7"))
+                        .contentType(MediaType.APPLICATION_JSON).content(VALID))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/agreements/suggest").with(from("10.0.0.7"))
+                        .contentType(MediaType.APPLICATION_JSON).content(suggest))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().exists("Retry-After"));
+    }
+
+    private static RequestPostProcessor from(String remoteAddr) {
+        return request -> {
+            request.setRemoteAddr(remoteAddr);
+            return request;
+        };
     }
 
     @Test

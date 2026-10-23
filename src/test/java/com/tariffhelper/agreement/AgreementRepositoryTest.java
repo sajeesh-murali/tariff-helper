@@ -78,6 +78,21 @@ class AgreementRepositoryTest {
         assertYearByYear("3009", clinical3009);
     }
 
+    /** Pay step number (lønnstrinn) per ladder entry, from the same NSF tables. Format: fromYears, step. */
+    @Test
+    void osloStepNumbersMatchTheMay2026Table() {
+        assertSteps("2601", 0, 23, 1, 24, 2, 25, 3, 26, 6, 27, 7, 28, 8, 29, 9, 30, 10, 31, 12, 32, 13, 33,
+                14, 34, 15, 35, 16, 36);
+        assertSteps("3001", 0, 28, 2, 32, 4, 33, 9, 34, 10, 35, 12, 37, 15, 39, 16, 42);
+        assertSteps("3009", 0, 36, 2, 40, 4, 41, 9, 42, 10, 43, 12, 45, 15, 47, 16, 50);
+    }
+
+    @Test
+    void ksHasNoStepNumbersYet() {
+        assertThat(ks().salaryLadders().values()).allSatisfy(ladder ->
+                assertThat(ladder).extracting(SalaryStep::step).containsOnlyNulls());
+    }
+
     @Test
     void osloJobCategoriesAreMappedToTheRightPayFrame() {
         assertThat(oslo().findJobCategory("nurse").orElseThrow().salaryGroup()).isEqualTo("2601");
@@ -166,6 +181,16 @@ class AgreementRepositoryTest {
             assertThat(estimator.minimumSalary(ladder, year * 12))
                     .as("ramme %s after %d years", group, year)
                     .isEqualByComparingTo(String.valueOf(expectedByYear[year]));
+        }
+    }
+
+    private void assertSteps(String group, int... fromYearsAndStep) {
+        List<SalaryStep> ladder = oslo().salaryLadders().get(group);
+        assertThat(ladder).as("ramme %s", group).hasSize(fromYearsAndStep.length / 2);
+        for (int i = 0; i < fromYearsAndStep.length; i += 2) {
+            final int from = fromYearsAndStep[i];
+            SalaryStep step = ladder.stream().filter(s -> s.fromYears() == from).findFirst().orElseThrow();
+            assertThat(step.step()).as("ramme %s from %d years", group, from).isEqualTo(fromYearsAndStep[i + 1]);
         }
     }
 
