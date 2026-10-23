@@ -1,0 +1,24 @@
+# Spekter (hospitals / health trusts, område 10). NOT modelled yet: the current rules and pay tables
+# could not be read, so no estimate is given.
+#
+# Researched October 2026. What was found:
+#  - Seniority rules ("Lønnsansiennitet", Del B section 4.13: hovedregel, beregningsdato, fravær som
+#    regnes med) are named in the table of contents of the agreement, but the text was not readable.
+#  - Minimum pay (minstelønn) is set per position group (stillingsgruppe 1-5) with steps at 0, 4, 8, 10 and
+#    16 years, renegotiated each year in the A2 negotiations. The only readable tables were from 2020 and
+#    2021. The 2025 A2 protocol could not be fetched.
+#  - Actual pay differs by hospital trust (a Nov 2024 comparison shows different figures for Helse Stavanger
+#    and Helse Fonna), so a single national figure would be misleading.
+#  - Which position group nurses and health care workers belong to was not confirmed.
+# To finish: the current A2 protocol (minimum pay tables), Del B and the position-group list are needed
+# as readable text or PDF files.
+id: spekter
+name: Spekter hospitals (health trusts)
+sector: health-trusts
+status: placeholder
+unavailableReason: >-
+  Hospital pay under the Spekter agreement depends on a position group, a yearly negotiated minimum pay table
+  and, in practice, on the individual hospital trust, and we could not yet read the current rules and tables.
+  We prefer no estimate to a wrong one. Spekter minimum pay steps up at 4, 8, 10 and 16 years of seniority, so
+  correct seniority matters. If you work in a hospital, ask your employer or union representative how your earlier
+  experience was counted.

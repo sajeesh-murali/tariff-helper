@@ -1,0 +1,124 @@
+# KS Hovedtariffavtale (municipalities). Pilot rules.
+#
+# Sources (checked October 2026):
+#  - Rules: HTA chapter 1 § 12 "Ansiennitet"; municipal application guides
+#    (Lørenskog kommune, Sørfold kommune, Skaun kommune).
+#  - Pay: "Garantilønn/laveste årslønn og tillegg for ansiennitet kapittel 4 pr. 1. mai 2026",
+#    cross-checked against the 1.5.2026 pay ladder for 3-year higher-education positions.
+#
+# NOT verified: the final text of the 2026 agreement (mediated 29 May 2026, member vote closed
+# 18 June 2026). § 12 is assumed unchanged from the 2024-2026 agreement.
+id: ks-hta
+name: KS Hovedtariffavtale (municipalities)
+sector: municipal
+status: available
+effectiveFrom: "2026-05-01"
+
+jobCategories:
+  - id: nurse
+    label: Nurse (sykepleier)
+    educationRequired: true
+    salaryGroup: "201"
+  - id: specialist_nurse
+    label: Specialist nurse (spesialsykepleier)
+    educationRequired: true
+    salaryGroup: "202"
+  - id: kindergarten_teacher
+    label: Kindergarten teacher (barnehagelærer)
+    educationRequired: true
+    salaryGroup: "201"
+  - id: health_care_worker
+    label: Health care worker (helsefagarbeider)
+    educationRequired: true
+    salaryGroup: "102"
+    note: >-
+      We assumed a position that requires a trade certificate (fagbrev) counts as having an
+      education requirement. This has not been confirmed in the rules we found.
+  - id: kindergarten_assistant
+    label: Kindergarten assistant (barnehageassistent)
+    educationRequired: false
+    salaryGroup: "101"
+    note: >-
+      We assumed this position has no specific education requirement (pay group 101).
+      Check the position code in your employment contract.
+  - id: care_assistant
+    label: Care assistant (pleie- or omsorgsassistent)
+    educationRequired: false
+    salaryGroup: "101"
+    note: >-
+      We assumed this position has no specific education requirement (pay group 101).
+      Check the position code in your employment contract.
+
+rules:
+  careWorkMaxYears: 3
+  homeWorkMaxYears: 6
+
+# Minimum annual pay at 100% position, from 1 May 2026.
+# Pay steps up from 6, 8, 10 and 16 completed years of seniority.
+salaryLadders:
+  "101": # Positions without a specific education requirement
+    - { fromYears: 0, annualSalary: 418600 }
+    - { fromYears: 6, annualSalary: 421600 }
+    - { fromYears: 8, annualSalary: 429700 }
+    - { fromYears: 10, annualSalary: 476000 }
+    - { fromYears: 16, annualSalary: 515800 }
+  "102": # Skilled-worker (fagarbeider) positions
+    - { fromYears: 0, annualSalary: 475300 }
+    - { fromYears: 6, annualSalary: 479500 }
+    - { fromYears: 8, annualSalary: 490900 }
+    - { fromYears: 10, annualSalary: 534700 }
+    - { fromYears: 16, annualSalary: 551100 }
+  "201": # Teacher and positions requiring a 3-year university/college degree
+    - { fromYears: 0, annualSalary: 545400 }
+    - { fromYears: 6, annualSalary: 558400 }
+    - { fromYears: 8, annualSalary: 568600 }
+    - { fromYears: 10, annualSalary: 620800 }
+    - { fromYears: 16, annualSalary: 639900 }
+  "202": # Adjunkt and positions requiring a 4-year university/college degree
+    - { fromYears: 0, annualSalary: 586400 }
+    - { fromYears: 6, annualSalary: 601800 }
+    - { fromYears: 8, annualSalary: 622000 }
+    - { fromYears: 10, annualSalary: 647900 }
+    - { fromYears: 16, annualSalary: 673200 }
+
+rulesSummary: |
+  Source: KS Hovedtariffavtale (HTA) chapter 1 § 12 "Ansiennitet" and how municipalities apply it.
+  - Seniority (lønnsansiennitet) is counted from age 18 at the earliest.
+  - Public-sector service counts in full.
+  - Private-sector service counts in full for positions WITHOUT a specific education requirement.
+    For positions WITH an education requirement, private service counts only if it is "of importance
+    for the position" (the employer decides).
+  - Care work (caring for children, or for elderly or sick people) counts up to 3 years in total.
+    It must be documented and must not overlap paid work or education.
+  - Work in the home counts up to 6 years in total, and only for positions WITHOUT an education requirement.
+  - Military service counts in full.
+  - Part-time work counts as full time for the period it lasted.
+  - A period is never counted under more than one provision.
+  - Periods without documentation are not counted.
+  - Self-employment is assessed by the employer, usually from tax records, and may count only partly.
+  - The agreement sets MINIMUM pay (garantilønn) per position group. Minimum pay rises at 6, 8, 10 and 16
+    completed years of seniority. The employer may pay more than the minimum.
+
+caveats:
+  - >-
+    The figures are the minimum pay (garantilønn) in the national agreement for your position group,
+    for a full-time position. Your employer may already pay, or may be willing to pay, more than the minimum.
+  - >-
+    Minimum pay rises only at 6, 8, 10 and 16 years of counted experience. A few extra months of
+    counted experience may not change the minimum at all.
+  - >-
+    Experience counts from age 18 at the earliest. This estimate does not check your age.
+  - >-
+    Every period must be documented (employer, dates, and hours or position percentage).
+    Periods without documentation are not counted.
+  - >-
+    Some employers apply a change to your seniority only from the date they receive your documents,
+    not backdated. Ask your employer.
+  - >-
+    Hourly-paid or on-call work counts only if it averaged at least 14 hours per week over a period
+    of at least six months.
+  - >-
+    The rules we used do not cover work abroad specifically. Your employer decides how it is assessed
+    and what documentation it accepts.
+  - >-
+    Based on the pay tables valid from 1 May 2026.

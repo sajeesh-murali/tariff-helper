@@ -1,0 +1,37 @@
+{
+  "agreementId": "ks-hta",
+  "jobCategory": "kindergarten_assistant",
+  "positionPercent": 100,
+  "currentAnnualSalary": 420000,
+  "experiences": [
+    {
+      "country": "PH",
+      "kind": "private_service",
+      "relevance": "unrelated",
+      "workType": "office_work",
+      "startDate": "2003-06",
+      "endDate": "2008-05"
+    },
+    {
+      "country": "NO",
+      "kind": "home_work",
+      "startDate": "2008-06",
+      "endDate": "2011-05"
+    },
+    {
+      "country": "NO",
+      "kind": "private_service",
+      "relevance": "related",
+      "workType": "elderly_care_private_home",
+      "startDate": "2011-06",
+      "endDate": "2014-05",
+      "positionPercent": 80
+    },
+    {
+      "country": "NO",
+      "kind": "public_service",
+      "startDate": "2014-06",
+      "endDate": "2019-05"
+    }
+  ]
+}

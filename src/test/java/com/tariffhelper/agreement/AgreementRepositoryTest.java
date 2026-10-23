@@ -1,0 +1,194 @@
+package com.tariffhelper.agreement;
+
+import com.tariffhelper.domain.Agreement;
+import com.tariffhelper.domain.HomeWorkRule;
+import com.tariffhelper.domain.JobCategory;
+import com.tariffhelper.domain.PrivateServiceRule;
+import com.tariffhelper.domain.Rules;
+import com.tariffhelper.domain.SalaryStep;
+import com.tariffhelper.service.SalaryEstimator;
+import org.junit.jupiter.api.Test;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+/**
+ * Checks the real rules files. The expected figures are the KS minimum-pay table valid from
+ * 1 May 2026 ("Garantilønn/laveste årslønn og tillegg for ansiennitet kapittel 4"), both the
+ * resulting salaries and the published step increases. A typo in ks-hta.yaml fails here.
+ */
+class AgreementRepositoryTest {
+
+    private final AgreementRepository repository = new AgreementRepository();
+
+    private Agreement ks() {
+        return repository.findById("ks-hta").orElseThrow();
+    }
+
+    private Agreement oslo() {
+        return repository.findById("oslo-kommune").orElseThrow();
+    }
+
+    @Test
+    void loadsAllFourAgreements() {
+        assertThat(repository.findAll()).extracting(Agreement::id)
+                .containsExactly("ks-hta", "oslo-kommune", "spekter", "staten");
+    }
+
+    @Test
+    void ksAndOsloHaveRulesStatenAndSpekterDoNotYet() {
+        assertThat(ks().hasRules()).isTrue();
+        assertThat(oslo().hasRules()).isTrue();
+        assertThat(repository.findById("staten").orElseThrow().hasRules()).isFalse();
+        assertThat(repository.findById("spekter").orElseThrow().hasRules()).isFalse();
+    }
+
+    @Test
+    void ksRuleLimitsAreThreeYearsOfCareAndSixYearsOfHomeWork() {
+        assertThat(ks().rules().careWorkMaxYears()).isEqualTo(3);
+        assertThat(ks().rules().homeWorkMaxYears()).isEqualTo(6);
+        assertThat(ks().rules().privateService()).isEqualTo(PrivateServiceRule.BY_EDUCATION_REQUIREMENT);
+        assertThat(ks().rules().homeWork()).isEqualTo(HomeWorkRule.IF_NO_EDUCATION_REQUIREMENT);
+    }
+
+    @Test
+    void osloRulesCountAllPrivateServiceAndLimitCareToTwoYears() {
+        assertThat(oslo().rules().careWorkMaxYears()).isEqualTo(2);
+        assertThat(oslo().rules().privateService()).isEqualTo(PrivateServiceRule.ALWAYS_FULL);
+        assertThat(oslo().rules().homeWork()).isEqualTo(HomeWorkRule.POSSIBLE_ONLY);
+        assertThat(oslo().effectiveFrom()).isEqualTo("2026-05-01");
+        assertThat(oslo().caveats()).isNotEmpty();
+    }
+
+    /** Year-by-year pay (lowest alternativ) from the NSF Oslo kommune tables valid from 1 May 2026. */
+    @Test
+    void osloNursePayMatchesTheMay2026YearByYearTable() {
+        int[] nurse2601 = {559_350, 566_600, 571_000, 576_000, 576_000, 576_000, 581_200, 586_800, 592_700,
+                599_100, 606_200, 606_200, 614_600, 623_400, 633_200, 643_000, 654_100};
+        int[] specialist3001 = {586_800, 586_800, 614_600, 614_600, 623_400, 623_400, 623_400, 623_400, 623_400,
+                633_200, 643_000, 643_000, 666_400, 666_400, 666_400, 689_300, 726_900};
+        int[] clinical3009 = {654_100, 654_100, 702_200, 702_200, 714_100, 714_100, 714_100, 714_100, 714_100,
+                726_900, 740_600, 740_600, 767_500, 767_500, 767_500, 798_200, 844_000};
+        assertYearByYear("2601", nurse2601);
+        assertYearByYear("3001", specialist3001);
+        assertYearByYear("3009", clinical3009);
+    }
+
+    @Test
+    void osloJobCategoriesAreMappedToTheRightPayFrame() {
+        assertThat(oslo().findJobCategory("nurse").orElseThrow().salaryGroup()).isEqualTo("2601");
+        assertThat(oslo().findJobCategory("specialist_nurse").orElseThrow().salaryGroup()).isEqualTo("3001");
+        assertThat(oslo().findJobCategory("clinical_nurse").orElseThrow().salaryGroup()).isEqualTo("3009");
+    }
+
+    @Test
+    void ksPayLaddersMatchTheMay2026Table() {
+        // steps: 0, 6, 8, 10, 16 years
+        assertLadder("101", 418_600, 421_600, 429_700, 476_000, 515_800);
+        assertLadder("102", 475_300, 479_500, 490_900, 534_700, 551_100);
+        assertLadder("201", 545_400, 558_400, 568_600, 620_800, 639_900);
+        assertLadder("202", 586_400, 601_800, 622_000, 647_900, 673_200);
+    }
+
+    @Test
+    void ksPayLaddersMatchThePublishedStepIncreases() {
+        assertIncreases("101", 3_000, 8_100, 46_300, 39_800);
+        assertIncreases("102", 4_200, 11_400, 43_800, 16_400);
+        assertIncreases("201", 13_000, 10_200, 52_200, 19_100);
+        assertIncreases("202", 15_400, 20_200, 25_900, 25_300);
+    }
+
+    @Test
+    void ksJobCategoriesAreMappedToTheRightGroupAndEducationFlag() {
+        JobCategory nurse = ks().findJobCategory("nurse").orElseThrow();
+        assertThat(nurse.requiresEducation()).isTrue();
+        assertThat(nurse.salaryGroup()).isEqualTo("201");
+
+        JobCategory teacher = ks().findJobCategory("kindergarten_teacher").orElseThrow();
+        assertThat(teacher.requiresEducation()).isTrue();
+        assertThat(teacher.salaryGroup()).isEqualTo("201");
+
+        JobCategory assistant = ks().findJobCategory("kindergarten_assistant").orElseThrow();
+        assertThat(assistant.requiresEducation()).isFalse();
+        assertThat(assistant.salaryGroup()).isEqualTo("101");
+    }
+
+    @Test
+    void ksFileHasRulesSummaryAndCaveats() {
+        assertThat(ks().rulesSummary()).contains("lønnsansiennitet").contains("3 years").contains("6 years");
+        assertThat(ks().caveats()).isNotEmpty();
+        assertThat(ks().effectiveFrom()).isEqualTo("2026-05-01");
+    }
+
+    @Test
+    void validationRejectsAJobCategoryWithAnUnknownSalaryGroup() {
+        Agreement broken = agreementWith(
+                List.of(new JobCategory("nurse", "Nurse", true, "999", null)),
+                Map.of("201", List.of(new SalaryStep(0, BigDecimal.TEN))));
+        assertThatThrownBy(() -> AgreementRepository.validate(broken))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("salary group");
+    }
+
+    @Test
+    void validationRejectsAJobCategoryWithoutTheEducationFlag() {
+        Agreement broken = agreementWith(
+                List.of(new JobCategory("nurse", "Nurse", null, "201", null)),
+                Map.of("201", List.of(new SalaryStep(0, BigDecimal.TEN))));
+        assertThatThrownBy(() -> AgreementRepository.validate(broken))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("educationRequired");
+    }
+
+    @Test
+    void validationRejectsALadderWithoutAZeroYearStep() {
+        Agreement broken = agreementWith(
+                List.of(new JobCategory("nurse", "Nurse", true, "201", null)),
+                Map.of("201", List.of(new SalaryStep(6, BigDecimal.TEN))));
+        assertThatThrownBy(() -> AgreementRepository.validate(broken))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("0 years");
+    }
+
+    private static Agreement agreementWith(List<JobCategory> categories, Map<String, List<SalaryStep>> ladders) {
+        return new Agreement("test", "Test", "test", "available", "2026-05-01",
+                categories, Rules.of(3, 6), ladders, "summary", List.of(), null);
+    }
+
+    private void assertYearByYear(String group, int[] expectedByYear) {
+        SalaryEstimator estimator = new SalaryEstimator();
+        List<SalaryStep> ladder = oslo().salaryLadders().get(group);
+        for (int year = 0; year < expectedByYear.length; year++) {
+            assertThat(estimator.minimumSalary(ladder, year * 12))
+                    .as("ramme %s after %d years", group, year)
+                    .isEqualByComparingTo(String.valueOf(expectedByYear[year]));
+        }
+    }
+
+    private void assertLadder(String group, int... expected) {
+        int[] fromYears = {0, 6, 8, 10, 16};
+        List<SalaryStep> steps = ks().salaryLadders().get(group);
+        assertThat(steps).as("ladder %s", group).hasSize(expected.length);
+        for (int i = 0; i < expected.length; i++) {
+            final int from = fromYears[i];
+            SalaryStep step = steps.stream().filter(s -> s.fromYears() == from).findFirst().orElseThrow();
+            assertThat(step.annualSalary()).as("group %s from %d years", group, from)
+                    .isEqualByComparingTo(String.valueOf(expected[i]));
+        }
+    }
+
+    private void assertIncreases(String group, int... expectedIncreases) {
+        List<SalaryStep> steps = ks().salaryLadders().get(group).stream()
+                .sorted((a, b) -> Integer.compare(a.fromYears(), b.fromYears()))
+                .toList();
+        for (int i = 0; i < expectedIncreases.length; i++) {
+            BigDecimal increase = steps.get(i + 1).annualSalary().subtract(steps.get(i).annualSalary());
+            assertThat(increase).as("group %s step %d", group, i + 1)
+                    .isEqualByComparingTo(String.valueOf(expectedIncreases[i]));
+        }
+    }
+}

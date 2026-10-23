@@ -1,0 +1,49 @@
+spring:
+  application:
+    name: tariff-helper
+  jackson:
+    mapper:
+      accept-case-insensitive-enums: true
+    deserialization:
+      fail-on-unknown-properties: false
+
+server:
+  port: ${PORT:8080}
+  # Set FORWARD_HEADERS=native only when running behind a trusted proxy/load balancer, so the rate
+  # limiter sees the real client address. Without a proxy leave it as none (headers could be spoofed).
+  forward-headers-strategy: ${FORWARD_HEADERS:none}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+app:
+  # Every estimate may cost a Claude call. Limits apply to POST /api/estimates only.
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    per-client-per-minute: ${RATE_LIMIT_PER_MINUTE:5}
+    global-per-day: ${RATE_LIMIT_PER_DAY:500}
+  # Comma-separated origins allowed to call the API from a browser, e.g. https://app.example.com. Empty = closed.
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:}
+  llm:
+    # stub   = returns a placeholder result, no external calls (default)
+    # claude = real Claude client; needs the ANTHROPIC_API_KEY environment variable
+    provider: ${LLM_PROVIDER:stub}
+    claude:
+      # Never put the key in this file. It is read from the environment.
+      api-key: ${ANTHROPIC_API_KEY:}
+      model: ${CLAUDE_MODEL:claude-sonnet-5-5}
+      base-url: https://api.anthropic.com
+      max-tokens: 1500
+      timeout-seconds: 60
+
+# Privacy: never log request or response bodies. Keep logging at INFO.
+logging:
+  level:
+    root: INFO

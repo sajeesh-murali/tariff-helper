@@ -1,0 +1,137 @@
+# Oslo kommune (own agreement, "Dokument 25" overenskomst). Pilot rules, nurse groups only.
+#
+# Sources (checked October 2026):
+#  - Seniority rules: Dok. 25 for 1.5.2022-30.4.2024, chapter 12 "Lønnsansiennitet" (read via a
+#    copy on Law Insider), and Lektorlaget's guide "Beregning av ansiennitet i Oslo kommune", which
+#    cites the same rules as Del A § 9.8 of the later agreements (2024-2026). Same content, new numbering.
+#    The FO summary of the 2026 settlement reports no change to the ansiennitet rules or to the pay-frame
+#    (lønnsramme) system.
+#  - Pay: NSF "Oslo kommune" pay page, tables "valid from 1 May 2026" for stillingskode 58 (ramme 2601),
+#    59/60/61 (ramme 3001) and 94 (ramme 3009). Each row is seniority year -> lønnstrinn -> NOK.
+#    The figures are for the LOWEST alternativ of the ramme (alternativ 01).
+#
+# NOT verified:
+#  - The final text of Dok. 25 for 2026-2028 was not read (the PDF could not be opened as text).
+#  - Other job groups (helsefagarbeider, barnehagelærer, assistants): their lønnsramme and pay tables
+#    could not be obtained in readable form, so they are not offered for Oslo yet.
+#  - Whether the care-work limits add up exactly as modelled (2 years, shared with uncertain work in the home).
+id: oslo-kommune
+name: Oslo kommune (own agreement)
+sector: municipal-oslo
+status: available
+effectiveFrom: "2026-05-01"
+
+jobCategories:
+  - id: nurse
+    label: Nurse (sykepleier, stillingskode 58)
+    educationRequired: true
+    salaryGroup: "2601"
+    note: >-
+      The figures are for the lowest alternativ (alternativ 01) of lønnsramme 26. Oslo employers often
+      offer a higher alternativ, and nurses can negotiate it when they are hired. Your actual offer may be higher.
+  - id: specialist_nurse
+    label: Specialist nurse, public health nurse or midwife (spesialutdannet sykepleier, helsesykepleier, jordmor; stillingskode 59, 60, 61)
+    educationRequired: true
+    salaryGroup: "3001"
+    note: >-
+      The figures are for the lowest alternativ (alternativ 01) of lønnsramme 30. Specialist nurses in geriatrics
+      and psychiatry are placed one alternativ higher (lønnsramme 3002), which this estimate does not include.
+  - id: clinical_nurse
+    label: Clinical nurse (klinisk sykepleier, stillingskode 94)
+    educationRequired: true
+    salaryGroup: "3009"
+    note: >-
+      The figures are for the lowest alternativ (3009) of lønnsramme 30. This position is for nurses with a
+      relevant master's degree where the job requires it.
+
+rules:
+  # Care work (children, elderly, sick) counts up to 2 years. A further 4 years are credited only in positions with
+  # special care functions, which the nurse groups here are not assumed to be.
+  careWorkMaxYears: 2
+  # Work in the home is not mentioned. It is treated as uncertain (possibly care work), sharing the 2-year limit.
+  homeWorkMaxYears: 2
+  # All private and public service with fixed agreed hours counts in full: no split by education or relevance.
+  privateService: ALWAYS_FULL
+  homeWork: POSSIBLE_ONLY
+
+# Minimum annual pay at 100% position, lowest alternativ, from 1 May 2026.
+# A step applies from the completed year shown (the trinn is unchanged in the years in between).
+salaryLadders:
+  "2601": # Stillingskode 58 sykepleier, lønnsramme 26, alternativ 01
+    - { fromYears: 0, annualSalary: 559350 }
+    - { fromYears: 1, annualSalary: 566600 }
+    - { fromYears: 2, annualSalary: 571000 }
+    - { fromYears: 3, annualSalary: 576000 }
+    - { fromYears: 6, annualSalary: 581200 }
+    - { fromYears: 7, annualSalary: 586800 }
+    - { fromYears: 8, annualSalary: 592700 }
+    - { fromYears: 9, annualSalary: 599100 }
+    - { fromYears: 10, annualSalary: 606200 }
+    - { fromYears: 12, annualSalary: 614600 }
+    - { fromYears: 13, annualSalary: 623400 }
+    - { fromYears: 14, annualSalary: 633200 }
+    - { fromYears: 15, annualSalary: 643000 }
+    - { fromYears: 16, annualSalary: 654100 }
+  "3001": # Stillingskode 59, 60, 61, lønnsramme 30, alternativ 01
+    - { fromYears: 0, annualSalary: 586800 }
+    - { fromYears: 2, annualSalary: 614600 }
+    - { fromYears: 4, annualSalary: 623400 }
+    - { fromYears: 9, annualSalary: 633200 }
+    - { fromYears: 10, annualSalary: 643000 }
+    - { fromYears: 12, annualSalary: 666400 }
+    - { fromYears: 15, annualSalary: 689300 }
+    - { fromYears: 16, annualSalary: 726900 }
+  "3009": # Stillingskode 94 klinisk sykepleier, lønnsramme 30, alternativ 3009
+    - { fromYears: 0, annualSalary: 654100 }
+    - { fromYears: 2, annualSalary: 702200 }
+    - { fromYears: 4, annualSalary: 714100 }
+    - { fromYears: 9, annualSalary: 726900 }
+    - { fromYears: 10, annualSalary: 740600 }
+    - { fromYears: 12, annualSalary: 767500 }
+    - { fromYears: 15, annualSalary: 798200 }
+    - { fromYears: 16, annualSalary: 844000 }
+
+rulesSummary: |
+  Source: Oslo kommune's own agreement (Dokument 25), the rules on lønnsansiennitet (seniority), and how Oslo
+  places positions in a pay frame (lønnsramme).
+  - Seniority is counted from age 18 at the earliest. It is fixed when the person is hired.
+  - ALL public and private service with fixed agreed working hours counts in full. Unlike the KS agreement,
+    there is no split by education requirement or by how related the work is to the position.
+  - Hourly or extra-help (ekstrahjelp) work of at least 700 hours in a year counts as one year of seniority.
+  - Care work (caring for children, elderly or sick people) counts up to 2 years. A further 4 years count only
+    in positions with special care functions.
+  - Work in the home is not mentioned in the rules. It may be accepted as care work, so it is uncertain and the
+    employer decides.
+  - Military service (verneplikt) counts.
+  - Two years of an apprenticeship count for people hired as skilled workers.
+  - Unpaid leave counts up to 1 year, and unpaid leave for further education up to 3 years.
+  - A period is never counted under more than one provision. Employment of less than one month is not credited
+    unless hourly work adds up to 700 hours.
+  - Pay: each position (stillingskode) belongs to one pay frame (lønnsramme) with 25 alternatives (alternativ).
+    Seniority years 0 to 16 give a pay step (lønnstrinn) that moves up automatically. Seniority and pay step
+    cannot be negotiated, but the alternativ can be negotiated at hiring. The figures in this estimate are for the
+    lowest alternativ, so the employer may offer more.
+
+caveats:
+  - >-
+    The figures are pay for the LOWEST alternativ of your pay frame (lønnsramme), full time. Oslo kommune often offers a
+    higher alternativ, and it can be negotiated at hiring, so your offer may already be higher than these figures.
+  - >-
+    Your seniority (years) decides your pay step and cannot be negotiated. That is why correct seniority matters.
+  - >-
+    Experience counts from age 18 at the earliest. This estimate does not check your age.
+  - >-
+    Every period must be documented (employer, dates, and working hours or position percentage). Only work with
+    fixed agreed working hours counts in full. Hourly or on-call work needs at least 700 hours in a year to count as a year.
+  - >-
+    Work in another country is not mentioned specifically in the rules we found. Your employer decides how it is assessed
+    and what documentation it accepts.
+  - >-
+    Oslo kommune also pays supplements that are not included here, for example a supplement based on total
+    service in Oslo kommune (stabiliseringstillegg).
+  - >-
+    Only nurse positions are available for Oslo kommune so far. Other roles (for example health care worker or
+    kindergarten staff) have their own pay frames that we could not read yet.
+  - >-
+    Based on the pay tables valid from 1 May 2026. The seniority rules are from the 2022-2024 agreement and later
+    guides; the 2026-2028 agreement text was not read.

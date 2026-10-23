@@ -1,0 +1,22 @@
+# Hovedtariffavtalen i staten (the state: universities, police, NAV, defence, prisons and similar).
+#
+# Researched October 2026 from the Hovedtariffavtale 2026-2028 text (regjeringen.no) and a university
+# salary policy built on it. Result: NO estimate is given, on purpose.
+#  - Annual pay is agreed individually when you are hired ("Årslønnen skal avtales individuelt ved ansettelse"),
+#    from the duties of the position, education and relevant experience.
+#  - Seniority on a pay ladder (stige) counts from the first day in the position, and a new position code
+#    starts at 0. The agreement has no credit rules for private service, care work, work in the home or
+#    military service like KS and Oslo kommune have, so a calculation would be guesswork.
+#  - The employer must review the pay within 12 months of hiring, after a conversation with the employee.
+#  - Not found: the pay plan (Vedlegg 1 lønnsplan) with ranges per position code.
+# Hospitals (health trusts) are not in this agreement; they are in the Spekter agreement.
+id: staten
+name: Hovedtariffavtalen i staten (state)
+sector: state
+status: placeholder
+unavailableReason: >-
+  In the state, pay is agreed individually when you are hired. Your employer looks at the duties of the position,
+  your education and your relevant experience, within the pay range for the position. The agreement has no fixed
+  rules that turn private work, care work or work in the home into seniority years, so we cannot calculate a
+  reliable figure. If you work for a state employer, you can ask how your earlier experience was weighed and ask
+  for a review of your pay. The employer must review your pay within 12 months of hiring.
