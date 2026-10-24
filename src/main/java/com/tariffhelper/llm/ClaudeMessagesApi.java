@@ -17,7 +17,7 @@ import java.util.Map;
  *
  * Privacy: prompts and model answers are never logged. Only status codes and token counts are.
  */
-public class ClaudeMessagesApi {
+public class ClaudeMessagesApi implements ChatApi {
 
     private static final Logger log = LoggerFactory.getLogger(ClaudeMessagesApi.class);
 
@@ -31,11 +31,18 @@ public class ClaudeMessagesApi {
         this.props = props;
     }
 
+    @Override
     public String model() {
         return props.model();
     }
 
+    @Override
+    public int maxTokens() {
+        return props.maxTokens();
+    }
+
     /** Sends one user message and returns the joined text blocks of the answer (may be empty). */
+    @Override
     public String send(String system, String user, int maxTokens) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("model", props.model());

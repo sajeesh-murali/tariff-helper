@@ -13,14 +13,14 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
- * Call 1 through Claude. The answer is parsed defensively and checked against allowlists; anything
+ * Call 1 through the configured model. The answer is parsed defensively and checked against allowlists; anything
  * unexpected, and any failure, becomes "unknown". This never throws to the caller.
  *
  * Privacy: prompts and model answers are never logged, only which check failed.
  */
-public class ClaudeAgreementSuggester implements AgreementSuggester {
+public class ChatAgreementSuggester implements AgreementSuggester {
 
-    private static final Logger log = LoggerFactory.getLogger(ClaudeAgreementSuggester.class);
+    private static final Logger log = LoggerFactory.getLogger(ChatAgreementSuggester.class);
 
     static final int MAX_TOKENS = 200;
     static final int MAX_REASON_CHARS = 200;
@@ -34,12 +34,12 @@ public class ClaudeAgreementSuggester implements AgreementSuggester {
     private static final Pattern SAFE_REASON = Pattern.compile("^[\\p{L}\\p{N} .,:;!?&()/'\"-]*$");
     private static final Pattern CODE_FENCE = Pattern.compile("^```(?:json)?\\s*(.*?)\\s*```$", Pattern.DOTALL);
 
-    private final ClaudeMessagesApi api;
+    private final ChatApi api;
     private final PromptBuilder prompts;
     private final ObjectMapper mapper = new ObjectMapper()
             .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
 
-    public ClaudeAgreementSuggester(ClaudeMessagesApi api, PromptBuilder prompts) {
+    public ChatAgreementSuggester(ChatApi api, PromptBuilder prompts) {
         this.api = api;
         this.prompts = prompts;
     }
@@ -51,7 +51,7 @@ public class ClaudeAgreementSuggester implements AgreementSuggester {
             answer = api.send(prompts.suggestSystemPrompt(),
                     prompts.suggestUserPrompt(employerName, jobTitle, allowedAgreementIds), MAX_TOKENS);
         } catch (RuntimeException e) {
-            // ClaudeMessagesApi has already logged the status; the user just gets no suggestion.
+            // The API client has already logged the status; the user just gets no suggestion.
             log.warn("Agreement suggestion failed, using unknown: {}", e.getClass().getSimpleName());
             return AgreementSuggestion.unknown();
         }

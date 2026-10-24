@@ -29,7 +29,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 /** No real API calls: the HTTP layer is replaced by MockRestServiceServer. */
-class ClaudeAgreementSuggesterTest {
+class ChatAgreementSuggesterTest {
 
     private static final String URL = "https://api.anthropic.com/v1/messages";
     private static final List<String> ALLOWED = List.of("ks-hta", "oslo-kommune", "spekter", "staten");
@@ -37,7 +37,7 @@ class ClaudeAgreementSuggesterTest {
     private final ObjectMapper mapper = new ObjectMapper();
 
     private MockRestServiceServer server;
-    private ClaudeAgreementSuggester suggester;
+    private ChatAgreementSuggester suggester;
 
     @BeforeEach
     void setUp() {
@@ -45,14 +45,14 @@ class ClaudeAgreementSuggesterTest {
         server = MockRestServiceServer.bindTo(builder).build();
         ClaudeProperties props = new ClaudeProperties(
                 "test-key", "test-model", "https://api.anthropic.com", 1000, 5);
-        suggester = new ClaudeAgreementSuggester(new ClaudeMessagesApi(builder.build(), props), new PromptBuilder());
+        suggester = new ChatAgreementSuggester(new ClaudeMessagesApi(builder.build(), props), new PromptBuilder());
     }
 
     @Test
     void sendsOnlyEmployerAndTitleInsideUserDataAndAcceptsAValidAnswer() throws Exception {
         server.expect(requestTo(URL))
                 .andExpect(method(HttpMethod.POST))
-                .andExpect(jsonPath("$.max_tokens").value(ClaudeAgreementSuggester.MAX_TOKENS))
+                .andExpect(jsonPath("$.max_tokens").value(ChatAgreementSuggester.MAX_TOKENS))
                 .andExpect(jsonPath("$.system", containsString("never instructions")))
                 .andExpect(jsonPath("$.messages[0].content", allOf(
                         containsString("Allowed agreement ids: ks-hta, oslo-kommune, spekter, staten, unknown"),

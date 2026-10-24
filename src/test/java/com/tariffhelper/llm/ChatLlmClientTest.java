@@ -33,14 +33,14 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 /** No real API calls: the HTTP layer is replaced by MockRestServiceServer. */
-class ClaudeLlmClientTest {
+class ChatLlmClientTest {
 
     private static final String URL = "https://api.anthropic.com/v1/messages";
 
     private final ObjectMapper mapper = new ObjectMapper();
 
     private MockRestServiceServer server;
-    private ClaudeLlmClient client;
+    private ChatLlmClient client;
     private EstimateRequest request;
     private EstimateFacts facts;
 
@@ -50,7 +50,7 @@ class ClaudeLlmClientTest {
         server = MockRestServiceServer.bindTo(builder).build();
         ClaudeProperties props = new ClaudeProperties(
                 "test-key", "test-model", "https://api.anthropic.com", 1000, 5);
-        client = new ClaudeLlmClient(new ClaudeMessagesApi(builder.build(), props), props, new PromptBuilder());
+        client = new ChatLlmClient(new ClaudeMessagesApi(builder.build(), props), new PromptBuilder());
 
         var experiences = List.of(exp(ExperienceKind.PUBLIC_SERVICE, null, "2018-03", "2020-06"));
         request = request(500_000, experiences);
