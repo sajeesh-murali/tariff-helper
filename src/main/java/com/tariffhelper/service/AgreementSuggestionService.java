@@ -1,8 +1,8 @@
 package com.tariffhelper.service;
 
 import com.tariffhelper.agreement.AgreementRepository;
-import com.tariffhelper.api.dto.SuggestResponse;
-import com.tariffhelper.api.dto.SuggestResponse.Suggestion;
+import com.tariffhelper.api.dto.response.SuggestResponse;
+import com.tariffhelper.api.dto.response.SuggestResponse.Suggestion;
 import com.tariffhelper.domain.Agreement;
 import com.tariffhelper.domain.AgreementMatch;
 import com.tariffhelper.domain.SuggestionSource;

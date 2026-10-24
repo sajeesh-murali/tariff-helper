@@ -1,6 +1,6 @@
 package com.tariffhelper.llm;
 
-import com.tariffhelper.api.dto.EstimateRequest;
+import com.tariffhelper.api.dto.request.EstimateRequest;
 import com.tariffhelper.domain.EstimateFacts;
 
 /** Used when {@code app.llm.provider=stub}. Makes no external calls; the numbers in the result are still real. */

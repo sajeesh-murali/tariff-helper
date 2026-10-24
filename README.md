@@ -121,6 +121,9 @@ mvn spring-boot:run   # http://localhost:8080 (override with PORT)
 | POST | `/api/estimates` | Submit the form, get an estimate |
 | GET | `/actuator/health` | Health check |
 
+Full reference for the three `/api` endpoints (purpose, request fields, how the response is decided, every response
+field, errors): [docs/API.md](docs/API.md).
+
 ### Suggest the agreement
 
 ```json

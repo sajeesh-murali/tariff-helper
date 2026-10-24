@@ -1,6 +1,6 @@
 package com.tariffhelper.api;
-import com.tariffhelper.api.dto.EstimateResponse;
-import com.tariffhelper.api.dto.EstimateRequest;
+import com.tariffhelper.api.dto.response.EstimateResponse;
+import com.tariffhelper.api.dto.request.EstimateRequest;
 
 import com.tariffhelper.service.EstimateService;
 import jakarta.validation.Valid;

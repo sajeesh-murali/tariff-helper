@@ -1,4 +1,4 @@
-package com.tariffhelper.api.dto;
+package com.tariffhelper.api.dto.request;
 import com.tariffhelper.api.FormText;
 
 import jakarta.validation.constraints.NotBlank;

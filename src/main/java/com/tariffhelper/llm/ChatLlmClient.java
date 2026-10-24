@@ -1,6 +1,6 @@
 package com.tariffhelper.llm;
 
-import com.tariffhelper.api.dto.EstimateRequest;
+import com.tariffhelper.api.dto.request.EstimateRequest;
 import com.tariffhelper.domain.EstimateFacts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

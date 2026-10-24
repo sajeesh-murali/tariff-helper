@@ -1,4 +1,4 @@
-package com.tariffhelper.api.dto;
+package com.tariffhelper.api.dto.response;
 
 import com.tariffhelper.domain.ConfidenceLevel;
 import com.tariffhelper.domain.SuggestionSource;

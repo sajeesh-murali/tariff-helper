@@ -2,7 +2,7 @@ package com.tariffhelper.llm;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.tariffhelper.api.dto.EstimateRequest;
+import com.tariffhelper.api.dto.request.EstimateRequest;
 import com.tariffhelper.domain.EstimateFacts;
 import com.tariffhelper.domain.ExperienceKind;
 import org.junit.jupiter.api.BeforeEach;
