@@ -1,0 +1,4 @@
+app:
+  llm:
+    # Tests never call a real model.
+    provider: stub

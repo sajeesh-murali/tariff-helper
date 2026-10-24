@@ -36,7 +36,7 @@ app:
     # openai    = OpenAI; needs the OPENAI_API_KEY environment variable
     # anthropic = Claude; needs the ANTHROPIC_API_KEY environment variable
     # stub      = placeholder result, no external calls
-    provider: ${LLM_PROVIDER:llama}
+    provider: ${LLM_PROVIDER:stub}
     llama:
       # Ollama's default address. The key is optional.
       api-key: ${LLAMA_API_KEY:}
