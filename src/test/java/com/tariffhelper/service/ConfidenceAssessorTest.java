@@ -1,7 +1,7 @@
 package com.tariffhelper.service;
 
-import com.tariffhelper.api.EstimateResponse.AgreementSuggestionInfo;
-import com.tariffhelper.api.EstimateResponse.Confidence;
+import com.tariffhelper.api.dto.EstimateResponse.AgreementSuggestionInfo;
+import com.tariffhelper.api.dto.EstimateResponse.Confidence;
 import com.tariffhelper.domain.ConfidenceLevel;
 import com.tariffhelper.domain.CreditedSeniority;
 import com.tariffhelper.domain.PerExperience;

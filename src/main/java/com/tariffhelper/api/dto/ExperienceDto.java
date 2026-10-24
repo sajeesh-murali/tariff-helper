@@ -1,4 +1,4 @@
-package com.tariffhelper.api;
+package com.tariffhelper.api.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.tariffhelper.domain.ExperienceKind;

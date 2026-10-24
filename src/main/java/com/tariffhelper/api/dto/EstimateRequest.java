@@ -1,4 +1,5 @@
-package com.tariffhelper.api;
+package com.tariffhelper.api.dto;
+import com.tariffhelper.api.FormText;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;

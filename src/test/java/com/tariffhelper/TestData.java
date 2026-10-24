@@ -1,7 +1,7 @@
 package com.tariffhelper;
 
-import com.tariffhelper.api.EstimateRequest;
-import com.tariffhelper.api.ExperienceDto;
+import com.tariffhelper.api.dto.EstimateRequest;
+import com.tariffhelper.api.dto.ExperienceDto;
 import com.tariffhelper.domain.Agreement;
 import com.tariffhelper.domain.EstimateFacts;
 import com.tariffhelper.domain.ExperienceKind;

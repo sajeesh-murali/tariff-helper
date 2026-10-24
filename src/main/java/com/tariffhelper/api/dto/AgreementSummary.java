@@ -1,4 +1,4 @@
-package com.tariffhelper.api;
+package com.tariffhelper.api.dto;
 
 import com.tariffhelper.domain.Agreement;
 

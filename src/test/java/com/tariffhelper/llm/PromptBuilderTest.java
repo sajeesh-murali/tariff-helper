@@ -1,6 +1,6 @@
 package com.tariffhelper.llm;
 
-import com.tariffhelper.api.EstimateRequest;
+import com.tariffhelper.api.dto.EstimateRequest;
 import com.tariffhelper.domain.EstimateFacts;
 import com.tariffhelper.domain.ExperienceKind;
 import com.tariffhelper.domain.Relevance;
@@ -120,7 +120,7 @@ class PromptBuilderTest {
 
     @Test
     void emptyHistoryIsStated() {
-        List<com.tariffhelper.api.ExperienceDto> none = List.of();
+        List<com.tariffhelper.api.dto.ExperienceDto> none = List.of();
         String user = builder.userPrompt(request(500_000, none), nurseFacts(500_000, none));
         assertThat(user).contains("no previous work history entered");
     }

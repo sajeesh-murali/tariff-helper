@@ -1,6 +1,6 @@
 package com.tariffhelper.service;
 
-import com.tariffhelper.api.ExperienceDto;
+import com.tariffhelper.api.dto.ExperienceDto;
 import com.tariffhelper.domain.ExperienceKind;
 import com.tariffhelper.domain.Relevance;
 import com.tariffhelper.domain.SeniorityResult;
