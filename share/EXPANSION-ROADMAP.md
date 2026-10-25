@@ -255,4 +255,4 @@ their members are covered, so **breadth of coverage is the product's main commer
 *Technical note for developers: a new agreement is a YAML file in `src/main/resources/agreements/` (rules, job
 categories, pay steps, source comments) plus tests in `AgreementRepositoryTest` and the estimate tests. Range-based
 (State) and per-trust (Spekter) results need changes in `domain`, `service` and `api` as described in section 5.
-See [README.md](../README.md) for current behaviour and [API.md](API.md) for the endpoints.*
+See [README.md](README.md) for current behaviour and [API.md](API.md) for the endpoints.*
