@@ -59,14 +59,27 @@ class LlmConfigTest {
     }
 
     @Test
-    void defaultProviderIsLlamaAndNeedsNoKey() {
-        runner.run(context -> {
+    void llamaProviderNeedsNoKey() {
+        runner.withPropertyValues("app.llm.provider=llama").run(context -> {
             assertThat(context).hasNotFailed();
             assertThat(context.getBean(ChatApi.class)).isInstanceOf(OpenAiChatApi.class);
             assertThat(context.getBean(ChatApi.class).model()).isEqualTo("llama3.1");
             assertThat(context.getBean(LlmClient.class)).isInstanceOf(ChatLlmClient.class);
             assertThat(context.getBean(AgreementSuggester.class)).isInstanceOf(ChatAgreementSuggester.class);
         });
+    }
+
+    @Test
+    void openRouterProviderUsesLlamaModelByDefault() {
+        runner.withPropertyValues("app.llm.provider=openrouter", "app.llm.openrouter.api-key=k").run(context -> {
+            assertThat(context.getBean(ChatApi.class)).isInstanceOf(OpenAiChatApi.class);
+            assertThat(context.getBean(ChatApi.class).model()).isEqualTo("meta-llama/llama-3.3-70b-instruct");
+        });
+    }
+
+    @Test
+    void openRouterWithoutKeyStopsStartup() {
+        runner.run(context -> assertThat(context).hasFailed());
     }
 
     @Test
@@ -113,7 +126,7 @@ class LlmConfigTest {
     void payslipReadingFollowsTheProvider() {
         runner.withPropertyValues("app.llm.provider=stub").run(context ->
                 assertThat(context.getBean(PayslipFieldExtractor.class)).isInstanceOf(StubPayslipFieldExtractor.class));
-        runner.run(context ->
+        runner.withPropertyValues("app.llm.provider=llama").run(context ->
                 assertThat(context.getBean(PayslipFieldExtractor.class)).isInstanceOf(ChatPayslipFieldExtractor.class));
     }
 
@@ -124,8 +137,8 @@ class LlmConfigTest {
     }
 
     @Test
-    void llamaIsTheDefaultInTheProperties() {
-        runner.run(context -> assertThat(context.getBean(LlmProperties.class).provider())
-                .isEqualTo(LlmProvider.LLAMA));
+    void openRouterIsTheDefaultInTheProperties() {
+        runner.withPropertyValues("app.llm.openrouter.api-key=k").run(context -> assertThat(context.getBean(LlmProperties.class).provider())
+                .isEqualTo(LlmProvider.OPENROUTER));
     }
 }

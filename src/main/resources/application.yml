@@ -37,11 +37,19 @@ app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:}
   llm:
+    # openrouter = OpenRouter with a Llama model (default); needs the OPENROUTER_API_KEY environment variable
     # llama     = open-source Llama via Ollama or a hosted OpenAI-compatible server (default)
     # openai    = OpenAI; needs the OPENAI_API_KEY environment variable
     # anthropic = Claude; needs the ANTHROPIC_API_KEY environment variable
     # stub      = placeholder result, no external calls
-    provider: ${LLM_PROVIDER:llama}
+    provider: ${LLM_PROVIDER:openrouter}
+    openrouter:
+      # Never put the key in this file. It is read from the environment.
+      api-key: ${OPENROUTER_API_KEY:}
+      model: ${OPENROUTER_MODEL:meta-llama/llama-3.3-70b-instruct}
+      base-url: https://openrouter.ai/api
+      max-tokens: 1500
+      timeout-seconds: 60
     llama:
       # Local default is Ollama (no key). On the web, set LLAMA_BASE_URL to a hosted provider and LLAMA_API_KEY to
       # its key, for example Groq: https://api.groq.com/openai. Leave off /v1: the client adds /v1/chat/completions.
