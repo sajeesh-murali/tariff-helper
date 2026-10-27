@@ -204,8 +204,12 @@ Errors: `400` invalid input, `404` unknown agreement, `422` agreement without ru
 
 ## Postman
 
-Import `postman/tariff-helper.postman_collection.json` (27 requests: KS, Oslo, not-available agreements, error
-cases, payslip upload and payslip values, each with checks on the expected numbers). The `baseUrl` variable defaults to `http://localhost:8080`.
+Import `postman/tariff-helper.postman_collection.json` (28 requests: KS, Oslo, not-available agreements, error
+cases, payslip upload, payslip values and screening answers, each with checks on the expected numbers). The `baseUrl` variable defaults to `http://localhost:8080`.
+The payslip upload request has an empty `file` field: choose a PDF in its Body tab before sending. You can use
+`src/test/resources/payslips/sample-payslip.pdf` (invented data, Oslo kommune nurse). Without a model
+(`LLM_PROVIDER=stub`) the upload answers `200` with all values empty, so use a Llama, OpenAI or Anthropic provider to see
+the values filled in.
 To run the whole collection, start the app with a higher rate limit, otherwise some requests return `429`:
 
 ```powershell
