@@ -4,6 +4,7 @@ import com.tariffhelper.llm.AgreementSuggester;
 import com.tariffhelper.llm.ChatAgreementSuggester;
 import com.tariffhelper.llm.ChatApi;
 import com.tariffhelper.llm.ChatLlmClient;
+import com.tariffhelper.llm.ChatPayslipFieldExtractor;
 import com.tariffhelper.llm.ClaudeMessagesApi;
 import com.tariffhelper.llm.ClaudeProperties;
 import com.tariffhelper.llm.LlamaProperties;
@@ -12,9 +13,11 @@ import com.tariffhelper.llm.LlmProperties;
 import com.tariffhelper.llm.LlmProvider;
 import com.tariffhelper.llm.OpenAiChatApi;
 import com.tariffhelper.llm.OpenAiProperties;
+import com.tariffhelper.llm.PayslipFieldExtractor;
 import com.tariffhelper.llm.PromptBuilder;
 import com.tariffhelper.llm.StubAgreementSuggester;
 import com.tariffhelper.llm.StubLlmClient;
+import com.tariffhelper.llm.StubPayslipFieldExtractor;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
@@ -104,6 +107,14 @@ class LlmConfigTest {
             assertThat(context.getBean(LlmClient.class)).isInstanceOf(StubLlmClient.class);
             assertThat(context.getBean(AgreementSuggester.class)).isInstanceOf(StubAgreementSuggester.class);
         });
+    }
+
+    @Test
+    void payslipReadingFollowsTheProvider() {
+        runner.withPropertyValues("app.llm.provider=stub").run(context ->
+                assertThat(context.getBean(PayslipFieldExtractor.class)).isInstanceOf(StubPayslipFieldExtractor.class));
+        runner.run(context ->
+                assertThat(context.getBean(PayslipFieldExtractor.class)).isInstanceOf(ChatPayslipFieldExtractor.class));
     }
 
     @Test

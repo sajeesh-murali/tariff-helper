@@ -21,8 +21,9 @@ import java.util.List;
  *
  * agreementId and jobCategory are optional: without agreementId the agreement is suggested from
  * employerName; without jobCategory it is derived from stillingskode or jobTitle.
- * stillingskode, lonnstrinn and ansiennitetsdato are typed in from the payslip (optional). They are used
- * only to compare with the calculated seniority, and are never sent to the LLM.
+ * stillingskode, lonnstrinn and ansiennitetsdato come from the payslip (optional), typed in or filled from
+ * POST /api/payslips/parse after the person checked them. They are used only to compare with the calculated
+ * seniority, and are never sen     t to the LLM by this endpoint.
  */
 public record EstimateRequest(
         @Size(max = 40) String agreementId,
@@ -34,12 +35,23 @@ public record EstimateRequest(
         @Size(max = 60) @Pattern(regexp = FormText.REGEX, message = FormText.MESSAGE) String jobTitle,
         @Pattern(regexp = "^\\d{1,6}$", message = "must be up to 6 digits") String stillingskode,
         @Min(1) @Max(100) Integer lonnstrinn,
-        YearMonth ansiennitetsdato) {
+        YearMonth ansiennitetsdato,
+        // Optional answers to the questions asked before the estimate, as total time without dates.
+        @Valid ScreeningDto screening) {
 
-    /** The original form without employer or payslip fields. */
+    /** The form without the screening answers. */
+    public EstimateRequest(String agreementId, String jobCategory, Integer positionPercent,
+                           BigDecimal currentAnnualSalary, List<ExperienceDto> experiences,
+                           String employerName, String jobTitle, String stillingskode, Integer lonnstrinn,
+                           YearMonth ansiennitetsdato) {
+        this(agreementId, jobCategory, positionPercent, currentAnnualSalary, experiences,
+                employerName, jobTitle, stillingskode, lonnstrinn, ansiennitetsdato, null);
+    }
+
+    /** The original form without employer, payslip or screening fields. */
     public EstimateRequest(String agreementId, String jobCategory, Integer positionPercent,
                            BigDecimal currentAnnualSalary, List<ExperienceDto> experiences) {
         this(agreementId, jobCategory, positionPercent, currentAnnualSalary, experiences,
-                null, null, null, null, null);
+                null, null, null, null, null, null);
     }
 }

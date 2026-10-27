@@ -121,6 +121,7 @@ public class SeniorityCalculator {
             case PUBLIC_SERVICE, MILITARY_SERVICE -> Credit.FULL;
             case PRIVATE_SERVICE -> classifyPrivate(e, job, rules);
             case SELF_EMPLOYED -> Credit.POSSIBLE;
+            case AU_PAIR -> Credit.NOT_CREDITED;
             case CARE_WORK -> Credit.CARE;
             case HOME_WORK -> {
                 if (rules.homeWork() == HomeWorkRule.POSSIBLE_ONLY) {
@@ -157,7 +158,10 @@ public class SeniorityCalculator {
                     + "requirement counts only if it is of importance for the position.";
             case CARE -> limitNote("Care work", rules.careWorkMaxYears(), wonMonths, countedMonths);
             case HOME -> limitNote("Work in the home", rules.homeWorkMaxYears(), wonMonths, countedMonths);
-            case NOT_CREDITED -> "Does not count: work in the home is credited only for positions "
+            case NOT_CREDITED -> e.kind() == ExperienceKind.AU_PAIR
+                    ? "Does not count: au pair is not credited by the rules we have modelled. "
+                    + "The employer may assess it."
+                    : "Does not count: work in the home is credited only for positions "
                     + "without an education requirement.";
         };
         int overlap = totalMonths - wonMonths;

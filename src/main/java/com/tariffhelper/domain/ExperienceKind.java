@@ -13,5 +13,10 @@ public enum ExperienceKind {
     /** Unpaid work in the home. */
     HOME_WORK,
     /** Compulsory military service. */
-    MILITARY_SERVICE
+    MILITARY_SERVICE,
+    /**
+     * An au pair stay. The rules we have modelled do not credit it (no source found yet), so it earns no seniority.
+     * The employer may assess it. It never takes a month away from a period that does count.
+     */
+    AU_PAIR
 }

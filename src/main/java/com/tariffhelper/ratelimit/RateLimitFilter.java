@@ -13,12 +13,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
- * Limits only the POST endpoints that can call Claude ({@link #LIMITED_PATHS}). They share one budget.
+ * Limits only the POST endpoints that can call the LLM ({@link #LIMITED_PATHS}). They share one budget.
  * Answers 429 when over a limit.
  */
 public class RateLimitFilter extends OncePerRequestFilter {
 
-    public static final List<String> LIMITED_PATHS = List.of("/api/estimates", "/api/agreements/suggest");
+    public static final List<String> LIMITED_PATHS = List.of("/api/estimates", "/api/payslips/parse");
 
     private final RateLimiter limiter;
 

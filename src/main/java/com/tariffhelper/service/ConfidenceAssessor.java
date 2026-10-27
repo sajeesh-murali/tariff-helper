@@ -17,8 +17,8 @@ import java.util.List;
  * plain-English reasons, not a probability.
  *
  * - low: the agreement came from the AI below high confidence, or the payslip step could not be reconciled.
- * - medium: uncertain months, a medium agreement match (or any AI match), an inferred job group, or payslip
- *   values that disagree with the counted years.
+ * - medium: uncertain months, a medium agreement match (or any AI match), an inferred job group, payslip
+ *   values that disagree with the counted years, or work history given as totals without dates.
  * - high: everything else (agreement given or matched by rules with high confidence, nothing uncertain).
  */
 @Component
@@ -33,6 +33,13 @@ public class ConfidenceAssessor {
     /** @param suggestion null when the person chose the agreement */
     public Confidence assess(AgreementSuggestionInfo suggestion, SeniorityResult seniority,
                              JobCategoryBasis jobBasis, CreditedSeniority credited) {
+        return assess(suggestion, seniority, jobBasis, credited, ScreeningSeniorityCalculator.Info.NONE);
+    }
+
+    /** @param screening what the questionnaire answers (totals without dates) contributed */
+    public Confidence assess(AgreementSuggestionInfo suggestion, SeniorityResult seniority,
+                             JobCategoryBasis jobBasis, CreditedSeniority credited,
+                             ScreeningSeniorityCalculator.Info screening) {
         List<String> reasons = new ArrayList<>();
         boolean low = false;
         boolean medium = false;
@@ -61,6 +68,20 @@ public class ConfidenceAssessor {
             medium = true;
         } else {
             reasons.add("No period depends on the employer's decision");
+        }
+
+        if (screening.used()) {
+            reasons.add("Part of your work history was entered as total time without dates, so this is a "
+                    + "preliminary estimate");
+            medium = true;
+        }
+        if (screening.approximate()) {
+            reasons.add("You marked some answers as approximate");
+            medium = true;
+        }
+        if (screening.overlapUncertain()) {
+            reasons.add("Some periods may have happened at the same time, so the total is shown as a range");
+            medium = true;
         }
 
         if (jobBasis == JobCategoryBasis.STILLINGSKODE) {

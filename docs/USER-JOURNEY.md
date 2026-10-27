@@ -3,6 +3,11 @@
 This page is for business readers. It follows a person through the Tariff Helper web page: what they
 can choose, what the page does in the background after each step, and what they get back.
 
+> **Update:** service **B** below (`POST /api/agreements/suggest`) no longer exists. The agreement is now suggested by
+> the payslip upload (`POST /api/payslips/parse`, see [API.md](API.md) section 3), which also reads the employer, job
+> title, position percentage, salary and the other payslip values for the person to check. The rest of this page still
+> describes the steps the person sees.
+
 > **Note:** this repository contains the back end only. The web page itself is a separate piece of
 > work. This page describes how the page is designed to use the three back-end services (called
 > *endpoints* below). The wording of buttons and labels may differ in the final page.

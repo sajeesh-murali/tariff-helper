@@ -11,9 +11,12 @@ import com.tariffhelper.llm.LlmClient;
 import com.tariffhelper.llm.LlmProperties;
 import com.tariffhelper.llm.OpenAiChatApi;
 import com.tariffhelper.llm.OpenAiProperties;
+import com.tariffhelper.llm.ChatPayslipFieldExtractor;
+import com.tariffhelper.llm.PayslipFieldExtractor;
 import com.tariffhelper.llm.PromptBuilder;
 import com.tariffhelper.llm.StubAgreementSuggester;
 import com.tariffhelper.llm.StubLlmClient;
+import com.tariffhelper.llm.StubPayslipFieldExtractor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -56,6 +59,12 @@ public class LlmConfig {
     public AgreementSuggester agreementSuggester(ObjectProvider<ChatApi> api, PromptBuilder promptBuilder) {
         ChatApi chatApi = api.getIfAvailable();
         return chatApi == null ? new StubAgreementSuggester() : new ChatAgreementSuggester(chatApi, promptBuilder);
+    }
+
+    @Bean
+    public PayslipFieldExtractor payslipFieldExtractor(ObjectProvider<ChatApi> api, PromptBuilder promptBuilder) {
+        ChatApi chatApi = api.getIfAvailable();
+        return chatApi == null ? new StubPayslipFieldExtractor() : new ChatPayslipFieldExtractor(chatApi, promptBuilder);
     }
 
     ChatApi claudeApi(ClaudeProperties props) {
