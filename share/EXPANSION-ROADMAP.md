@@ -8,7 +8,7 @@ is the basis for revenue.
 Everything below marked **(verify)** is our understanding from public sources and must be confirmed with the
 agreement owners or a union/employer contact before we build on it.
 
----
+---  
 
 ## 1. Where we are today
 
@@ -169,8 +169,10 @@ means adding a file and tests. But three kinds of agreement need new capability,
   all numbers come from code, not from the language model.
 - **Foreign experience.** Rules for how work abroad counts are unclear in the KS and Oslo sources. We should get
   an official answer. This is the single biggest question for our main user group.
-- **Payslip and contract upload (later, careful).** Reading an uploaded payslip would remove typing but has privacy
-  consequences. Our principle is that nothing is stored. Any design must keep that.
+- **Payslip upload (done for text PDFs) and contract upload (later, careful).** Payslip upload is built
+  (`POST /api/payslips/parse`): the PDF is read in memory and never stored, only a few redacted lines reach the model,
+  and the person checks every value. Still open: scanned payslips (OCR) and contracts. Any design must keep the
+  principle that nothing is stored.
 - **Letter/e-mail template.** After the estimate, produce a polite Norwegian draft that the user can send to HR
   asking for a seniority review, with the calculation attached. Practical, and the point where users feel the value.
 - **Authorisation and qualifications.** Many nurses and health workers wait for authorisation or recognition of

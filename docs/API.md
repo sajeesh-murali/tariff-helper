@@ -1,12 +1,14 @@
 # REST API reference
 
-Tariff Helper has three endpoints. Base URL when running locally: `http://localhost:8080`.
+Tariff Helper has three endpoints. The web page uses two, in this order: **Step 1** `POST /api/payslips/parse` (upload
+the payslip) and **Step 2** `POST /api/estimates` (the estimate). `GET /api/agreements` is kept for tools and tests; the
+page does not show agreements to the person. Base URL when running locally: `http://localhost:8080`.
 Request and response bodies are JSON (`Content-Type: application/json`), except the payslip upload, which is
 `multipart/form-data`. Dates are `yyyy-MM` (year and month only).
 
 | Method | Path | Purpose | Calls an LLM? | Rate limited? |
 |---|---|---|---|---|
-| GET | `/api/agreements` | List agreements and job categories for the form dropdowns | No | No |
+| GET | `/api/agreements` | List agreements and job categories. Kept, but not used by the web page | No | No |
 | POST | `/api/estimates` | Calculate seniority and minimum pay from a work history | Yes, to write the explanation (and to suggest the agreement if needed) | Yes |
 | POST | `/api/payslips/parse` | Read the form values from a payslip PDF and suggest the agreement from the employer, for the person to check | Yes: a small redacted excerpt, then (only if the fixed rules cannot decide the agreement) the employer name and job title | Yes |
 
@@ -96,7 +98,7 @@ See `requests/sample-estimate.json` and `requests/sample-estimate-employer.json`
 
 | Field | Required | Rules and meaning |
 |---|---|---|
-| `agreementId` | no | Max 40 characters. An id from `GET /api/agreements`. If omitted, `employerName` is required and the agreement is suggested from it. |
+| `agreementId` | no | Max 40 characters. An id from `GET /api/agreements` (the page passes the one from Step 1). If omitted, `employerName` is required and the agreement is suggested from it. |
 | `jobCategory` | no | Max 60 characters. An id from that agreement's `jobCategories`. If omitted it is derived (see below). |
 | `positionPercent` | yes | Integer 1 to 100. The person's **current** position percentage. |
 | `currentAnnualSalary` | yes | Greater than 0, at most 5,000,000. What the person actually earns per year at `positionPercent`. The app converts it to full time. |
@@ -335,8 +337,8 @@ curl -F "file=@payslip.pdf;type=application/pdf" http://localhost:8080/api/paysl
 | `ansiennitetsdato` | Registrert ansiennitet (a date), as `yyyy-MM` | `ansiennitetsdato` |
 
 `agreement` is the agreement suggested from `employerName` (and `jobTitle`), to be confirmed by the person. It is
-`null` when the employer was not read or neither the rules nor the model could decide; the person then picks one
-from `GET /api/agreements`. `agreement.status` is `placeholder` for `spekter` and `staten` (no rules yet): an estimate
+`null` when the employer was not read or neither the rules nor the model could decide; the person then types the
+employer name and job title and `POST /api/estimates` works the agreement out from them. `agreement.status` is `placeholder` for `spekter` and `staten` (no rules yet): an estimate
 for those returns `422`, so the UI can say so before asking the experience questions. `agreement.source` is `rules`
 (fixed rules in code) or `ai` (the model, validated against the list of agreements). `jobCategory` is
 set only when the job title matches one of that agreement's job categories.
@@ -400,7 +402,7 @@ exists in the chosen agreement, it is returned as `jobCategory`. Otherwise `null
 | `429` | Rate limit exceeded (shares the budget of the other POST endpoints) |
 
 If the LLM call that reads the payslip fails the endpoint still answers `200` with all values `null`, and if the
-agreement suggestion fails `agreement` is `null`, so the person can type the values in and pick the agreement.
+agreement suggestion fails `agreement` is `null`, so the person can type the values in.
 
 ---
 

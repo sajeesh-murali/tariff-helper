@@ -7,20 +7,37 @@ a higher salary under their collective agreement (tariffavtale).
 researched but **not modelled**: they are listed, and an estimate request returns `422` with the reason (shown in
 `unavailableReason` on `GET /api/agreements`). See "State and Spekter" below.
 
-## How an estimate is produced
+## How it works: two steps
 
-1. **Which agreement (if the person does not know).** Fixed rules on the employer name decide first
-   (`AgreementMatcher`). Only if they cannot decide, Claude is asked (Call 1) with the employer name and job title
-   only. Its answer must be JSON with an id from the allowlist, or it is treated as `unknown`.
-2. **The code does the numbers.** It counts seniority month by month using the agreement rules, looks up
+The person does two things in the web page. They are not shown a list of agreements and do not pick one: the agreement
+is worked out from the payslip.
+
+**Step 1. Upload the payslip** (`POST /api/payslips/parse`)
+
+- The PDF is read in memory and never stored. Only a few masked lines go to the AI, which copies out the employer,
+  job title, position percentage, full-time salary, stillingskode, lønnstrinn and seniority date. Each value must
+  appear in those lines and be in range, or it is dropped.
+- The code calculates the person's current salary at their own percentage. The AI does not.
+- The agreement is suggested from the employer name (see below). The person only checks the values and answers the
+  work-history questions.
+
+**Step 2. Estimate** (`POST /api/estimates`)
+
+1. **The code does the numbers.** It counts seniority month by month using the agreement rules, looks up
    the minimum pay step, converts the person's current pay to a full-time figure, compares with the seniority
    the payslip shows (if given), and sets the confidence level.
-3. **Claude only explains** (Call 2). The prompt contains the rules summary and the calculated results. Claude writes
+2. **Claude only explains.** The prompt contains the rules summary and the calculated results. Claude writes
    a plain-English explanation. It is told not to change any number.
 
 The result is a range: *what counts* up to *what counts if the employer accepts the uncertain periods*.
 
+`GET /api/agreements` is kept in the API (for tools, tests and a later manual path) but the UI does not use it.
+
 ### Agreement from the employer name (rules, tried in this order)
+
+Runs inside Step 1, on the employer read from the payslip. Step 2 runs it again only if no `agreementId` is sent.
+Fixed rules go first. Only if they cannot decide, Claude is asked with the employer name and job title only. Its
+answer must be JSON with an id from the allowlist, or it is treated as `unknown`.
 
 | Employer name (lowercase, trimmed) | Agreement | Confidence |
 |---|---|---|
@@ -28,7 +45,7 @@ The result is a range: *what counts* up to *what counts if the employer accepts 
 | ends with ` kommune` | `ks-hta` | high |
 | matches `helse … hf`, ends with ` hf`, or contains `sykehus` (incl. `universitetssykehus`) | `spekter` | medium |
 | contains `universitet`, `forsvar`, `kriminalomsorg`, `skatteetaten`, the word `nav`, or `politi…` (not `politisk`) | `staten` | medium |
-| anything else | Claude (Call 1), else none | |
+| anything else | Claude, else none | |
 
 `source` in the answer is `rules`, `ai` or `none`. State and Spekter can be suggested, but an estimate for them still returns `422`.
 
@@ -116,27 +133,30 @@ mvn spring-boot:run   # http://localhost:8080 (override with PORT)
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/agreements` | Agreements, their status (`available` or `placeholder`) and job categories for the form |
-| POST | `/api/agreements/suggest` | Suggest the agreement from the employer name (and job title) |
-| POST | `/api/estimates` | Submit the form, get an estimate |
+| GET | `/api/agreements` | Agreements, their status (`available` or `placeholder`) and job categories. Kept, but not used by the UI |
+| POST | `/api/payslips/parse` | **Step 1.** Upload a payslip PDF: read the form values and suggest the agreement, for the person to check |
+| POST | `/api/estimates` | **Step 2.** Submit the checked values and work history, get an estimate |
 | GET | `/actuator/health` | Health check |
 
 Full reference for the three `/api` endpoints (purpose, request fields, how the response is decided, every response
 field, errors): [docs/API.md](docs/API.md).
 
-### Suggest the agreement
+### Step 1: read a payslip
 
-```json
-{ "employerName": "Bydel Grünerløkka", "jobTitle": "sykepleier" }
+```bash
+curl -F "file=@payslip.pdf;type=application/pdf" http://localhost:8080/api/payslips/parse
 ```
 
-- `employerName`: required, 2 to 100 characters. `jobTitle`: optional, up to 60. Both allow only letters, digits,
-  spaces and `. , & ( ) / ' -`.
-- Answer: `{"suggestions": [{"agreementId": "oslo-kommune", "confidence": "high", "reason": "...", "jobCategory": "nurse"}], "source": "rules"}`.
-  `jobCategory` is set only when the title matches one of that agreement's categories. `suggestions` is empty
-  (`source: "none"`) when nothing matched.
+- A PDF with a text layer, at most 2 MB and 5 pages. Scanned payslips are not supported yet.
+- Answer: `employerName`, `jobTitle`, `positionPercent`, `annualSalaryFullTime` (as printed),
+  `currentAnnualSalary` (calculated by the application), `stillingskode`, `lonnstrinn`, `ansiennitetsdato`, and
+  `agreement`: the agreement suggested from the employer (`agreementId`, `name`, `status`, `confidence`, `reason`,
+  `source` = `rules` or `ai`, `jobCategory`). Any value is `null` when it was not found or did not pass the checks.
+- The person checks the values and the agreement in the UI, answers the work-history questions, and the page then
+  calls `POST /api/estimates` with the agreement id and job category from this answer. If no agreement was suggested,
+  the page asks for the employer name again; the estimate then returns `422` if it still cannot be determined.
 
-### Request
+### Step 2: request an estimate
 
 See `requests/sample-estimate.json`, or `requests/sample-estimate-employer.json` for an estimate from the employer
 name and payslip values (Postman or curl):
@@ -151,16 +171,23 @@ curl -X POST http://localhost:8080/api/estimates \
   (`400` if both are missing, `422` with `availableAgreements` if no agreement can be determined).
 - `jobCategory`: optional, an id from `GET /api/agreements`. Without it, it is derived from `stillingskode`
   (Oslo: 58 nurse, 59/60/61 specialist nurse, 94 clinical nurse) or `jobTitle`; otherwise `400` lists the options.
-- `employerName`, `jobTitle`: same rules as for the suggestion endpoint.
+- `employerName`, `jobTitle`: letters, digits, spaces and `. , & ( ) / ' -` only; 2 to 100 and up to 60 characters.
 - Payslip values (all optional): `stillingskode` (up to 6 digits), `lonnstrinn` (1 to 100),
   `ansiennitetsdato` (`yyyy-MM`, between 1950-01 and the current month).
 - `positionPercent` and `currentAnnualSalary`: the person's **current** job. The salary is what they actually earn per
   year at that percentage; the app converts it to full time.
 - Each entry in `experiences`:
-  - `kind`: `public_service`, `private_service`, `self_employed`, `care_work`, `home_work`, `military_service`
+  - `kind`: `public_service`, `private_service`, `self_employed`, `care_work`, `home_work`, `military_service`,
+    `au_pair` (earns nothing: the rules we modelled do not credit it)
   - `relevance`: `related`, `partly_related` or `unrelated`. Required only for `private_service` when the job requires education.
   - `startDate`, `endDate`: `yyyy-MM`, between 1950-01 and the current month
   - `country`: 2-letter code. `workType` (optional): lowercase letters, digits, underscore. `positionPercent` (optional): informational.
+- `screening` (optional): the questions asked before the estimate, answered as total time (`years`, `months`) without
+  dates: `workInNorway`, `workAbroad` (with an optional `selfEmployed` part), `auPair`, `militaryService`, `childCare`,
+  `otherHome` (`type` = `care_work` or `home_work`) and `periodsOverlap` (`no`, `yes`, `unsure`). Mark an answer
+  `approximate: true` when unsure. It sits beside `experiences`, uses the same agreement rules, and gives a range when
+  periods may have overlapped. The estimate is then preliminary. See `requests/sample-estimate-screening.json` and
+  `docs/API.md`.
 
 ### Response
 
@@ -178,7 +205,7 @@ Errors: `400` invalid input, `404` unknown agreement, `422` agreement without ru
 ## Postman
 
 Import `postman/tariff-helper.postman_collection.json` (27 requests: KS, Oslo, not-available agreements, error
-cases, agreement suggestion and payslip values, each with checks on the expected numbers). The `baseUrl` variable defaults to `http://localhost:8080`.
+cases, payslip upload and payslip values, each with checks on the expected numbers). The `baseUrl` variable defaults to `http://localhost:8080`.
 To run the whole collection, start the app with a higher rate limit, otherwise some requests return `429`:
 
 ```powershell
@@ -191,28 +218,37 @@ mvn spring-boot:run
 | Variable | Default | Meaning |
 |---|---|---|
 | `PORT` | 8080 | HTTP port |
-| `LLM_PROVIDER` | stub | `stub` (no external calls, canned explanation) or `claude` |
-| `ANTHROPIC_API_KEY` | none | Required when `LLM_PROVIDER=claude`. The app refuses to start without it. Never commit it. |
+| `LLM_PROVIDER` | llama | `llama` (Ollama or a hosted Llama API), `openai`, `anthropic`, or `stub` (no external calls, canned explanation) |
+| `LLAMA_BASE_URL` | http://localhost:11434 | Llama server. For a hosted provider use its OpenAI-compatible base URL without `/v1`, for example `https://api.groq.com/openai` |
+| `LLAMA_API_KEY` | none | Key from the hosted Llama provider. Not needed for local Ollama. Never commit it. |
+| `LLAMA_MODEL` | llama3.1 | Model name as the provider spells it, for example `llama-3.3-70b-versatile` on Groq |
+| `ANTHROPIC_API_KEY` | none | Required when `LLM_PROVIDER=anthropic`. The app refuses to start without it. Never commit it. |
 | `CLAUDE_MODEL` | claude-sonnet-5-5 | Claude model for the explanation and the agreement suggestion. A smaller model may be enough; compare on test cases. |
-| `RATE_LIMIT_PER_MINUTE` | 5 | Max requests to `POST /api/estimates` and `POST /api/agreements/suggest` together, per client address per minute (`429` with `Retry-After` above this) |
+| `RATE_LIMIT_PER_MINUTE` | 5 | Max requests to `POST /api/estimates` and `POST /api/payslips/parse` together, per client address per minute (`429` with `Retry-After` above this) |
 | `RATE_LIMIT_PER_DAY` | 500 | Max of those requests for the whole service per UTC day. This caps Claude spend. |
 | `RATE_LIMIT_ENABLED` | true | Turn the limiter off (local testing only) |
 | `FORWARD_HEADERS` | none | Set to `native` only behind a trusted proxy/load balancer, so limits use the real client address |
 | `CORS_ALLOWED_ORIGINS` | empty (closed) | Comma-separated browser origins allowed to call `/api/**`, for example the front end URL |
 
+Hosted Llama (for a web deployment, where `localhost` Ollama is not available), here with Groq:
+
 ```bash
-export ANTHROPIC_API_KEY=your-key-here
-export LLM_PROVIDER=claude
+export LLM_PROVIDER=llama
+export LLAMA_BASE_URL=https://api.groq.com/openai
+export LLAMA_API_KEY=your-key-here
+export LLAMA_MODEL=llama-3.3-70b-versatile
 mvn spring-boot:run
 ```
 
-With the stub, the numbers are real but the explanation is a placeholder. Each Claude call costs API tokens.
+Local Ollama needs only `ollama pull llama3.1` and `mvn spring-boot:run`. With the stub, the numbers are real but the
+explanation is a placeholder. Hosted calls may cost API tokens depending on the provider.
 
 ## Docker
 
 ```bash
 docker build -t tariff-helper .
-docker run -p 8080:8080 -e LLM_PROVIDER=claude -e ANTHROPIC_API_KEY=your-key-here tariff-helper
+docker run -p 8080:8080 -e LLM_PROVIDER=llama -e LLAMA_BASE_URL=https://api.groq.com/openai \
+  -e LLAMA_API_KEY=your-key-here -e LLAMA_MODEL=llama-3.3-70b-versatile tariff-helper
 ```
 
 The image has no key in it. The limiter is in memory and per instance, so with several instances each has its own limits.
@@ -224,10 +260,15 @@ The image has no key in it. The limiter is in memory and per instance, so with s
 - Error responses name the invalid field but never echo submitted values.
 - `workType`, `country`, `employerName` and `jobTitle` accept only safe characters, because they may be placed in an
   LLM prompt. The employer name is never logged.
-- With `LLM_PROVIDER=claude`, the work history and current pay from the form are sent to Anthropic's API (Call 2).
-  When the rules cannot match the employer, the employer name and job title (and nothing else) are sent in Call 1.
-  Payslip values (stillingskode, lønnstrinn, ansiennitetsdato) are never sent; only the code's conclusion is.
-  Check Anthropic's data retention terms for your account and tell users before a real pilot.
+- With a hosted provider (`LLM_PROVIDER=llama` with a hosted `LLAMA_BASE_URL`, `openai` or `anthropic`), the work
+  history and current pay from the form are sent to that provider's API when the explanation is written (Step 2).
+  When the rules cannot match the employer, the employer name and job title (and nothing else) are sent for the agreement suggestion (Step 1).
+  Payslip values typed into the estimate (stillingskode, lønnstrinn, ansiennitetsdato) are never sent; only the code's
+  conclusion is. If a payslip PDF is uploaded to `POST /api/payslips/parse`, the PDF is read in memory and never stored.
+  Only a few lines around the payslip labels are sent, with ID, account, phone and email numbers masked and lines
+  with a name or address label dropped. See `docs/API.md` section 4 for the limits.
+  Check the provider's data retention and training terms and tell users before a real pilot. With local Ollama,
+  nothing leaves your machine.
 
 ## Layout
 
@@ -237,10 +278,10 @@ com.tariffhelper
 ├── domain      Agreement, JobCategory, Rules, SalaryStep, results, enums
 ├── service     SeniorityCalculator, SalaryEstimator, EstimateService, AgreementMatcher, JobCategoryResolver,
 │               AgreementSuggestionService, CreditedSeniorityCalculator, ConfidenceAssessor
-├── llm         LlmClient, StubLlmClient, ClaudeLlmClient (Call 2), AgreementSuggester, StubAgreementSuggester,
-│               ClaudeAgreementSuggester (Call 1), ClaudeMessagesApi (shared HTTP call), PromptBuilder
-├── config      LlmConfig (stub or Claude), WebConfig (rate limiting, CORS)
-├── ratelimit   RateLimiter, RateLimitFilter (429 on POST /api/estimates and /api/agreements/suggest)
+├── llm         LlmClient, StubLlmClient, ClaudeLlmClient (explanation, Step 2), AgreementSuggester, StubAgreementSuggester,
+│               ClaudeAgreementSuggester (agreement suggestion, Step 1), ClaudeMessagesApi (shared HTTP call), PromptBuilder
+├── config      LlmConfig (Llama, OpenAI, Claude or stub), WebConfig (rate limiting, CORS)
+├── ratelimit   RateLimiter, RateLimitFilter (429 on POST /api/estimates and /api/payslips/parse)
 └── agreement   loads and validates src/main/resources/agreements/*.yaml
 ```
 
