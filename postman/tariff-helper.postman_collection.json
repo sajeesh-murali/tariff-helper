@@ -981,6 +981,51 @@
           ]
         },
         {
+          "name": "KS payslip: ansiennitetsdato 2020-06 (KS has no step numbers, so the date is used)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/estimates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "estimates"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agreementId\": \"ks-hta\",\n  \"jobCategory\": \"nurse\",\n  \"ansiennitetsdato\": \"2020-06\",\n  \"positionPercent\": 100,\n  \"currentAnnualSalary\": 500000,\n  \"experiences\": [\n    {\n      \"country\": \"NO\",\n      \"kind\": \"public_service\",\n      \"startDate\": \"2010-01\",\n      \"endDate\": \"2019-12\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "const j = pm.response.json();",
+                  "pm.test('Compared on ansiennitetsdato', function () { pm.expect(j.creditedVsCounted).to.not.be.null; pm.expect(j.creditedVsCounted.basis).to.eql('ansiennitetsdato'); });",
+                  "pm.test('Counted years come from the experiences, not the date', function () { pm.expect(j.creditedVsCounted.countedYears).to.eql(10); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "No agreementId and no employerName (400)",
           "request": {
             "method": "POST",

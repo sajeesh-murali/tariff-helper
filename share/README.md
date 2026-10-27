@@ -204,7 +204,7 @@ Errors: `400` invalid input, `404` unknown agreement, `422` agreement without ru
 
 ## Postman
 
-Import `postman/tariff-helper.postman_collection.json` (28 requests: KS, Oslo, not-available agreements, error
+Import `postman/tariff-helper.postman_collection.json` (29 requests: KS, Oslo, not-available agreements, error
 cases, payslip upload, payslip values and screening answers, each with checks on the expected numbers). The `baseUrl` variable defaults to `http://localhost:8080`.
 The payslip upload request has an empty `file` field: choose a PDF in its Body tab before sending. You can use
 `src/test/resources/payslips/sample-payslip.pdf` (invented data, Oslo kommune nurse). Without a model
