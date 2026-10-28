@@ -5,8 +5,8 @@
  *   POST /api/payslips/parse    read a payslip PDF into the form (the person checks the values)
  *   POST /api/estimates         the estimate; the code calculates, the AI only explains
  *
- * Uses globals from index.html: intake, state, go, render, esc, money, title, intakeProgress, intakeError,
- * historyTopics, CUR_YM. Nothing is stored in the browser.
+ * Uses globals from index.html: intake, state, go, render, esc, money, title, intakeProgress, intakeError, invalidateIntake,
+ * CUR_YM. Nothing is stored in the browser.
  */
 
 const MAX_PAYSLIP_BYTES = 2 * 1024 * 1024;
@@ -220,45 +220,172 @@ function confirmIntake() {
   }
   if (intake.error) { render(); return; }
   intake.confirmed = true;
-  intake.q = 0;
   go(2);
 }
 
-/* ---------- step 2 -> 3: build the estimate request from the answers ---------- */
+/* ---------- step 2: the six screening questions ---------- */
 
-function monthsBetween(from, to) {
-  const [fy, fm] = from.split('-').map(Number);
-  const [ty, tm] = to.split('-').map(Number);
-  return (ty - fy) * 12 + (tm - fm) + 1;
+/*
+ * The answers are total time without dates (years + months), each with "this is an estimate". They are sent as
+ * `screening` to POST /api/estimates, which turns them into periods and applies the agreement's rules.
+ * The current job is part of question 1, so no dated periods are sent.
+ */
+
+function freshScreen() {
+  const time = () => ({ y: '', m: '', approx: false });
+  return {
+    norway: { ...time(), own: false, ownY: '', ownM: '' },
+    abroad: { ...time(), own: false, ownY: '', ownM: '' },
+    aupair: { has: '', ...time() },
+    military: { has: '', ...time(), country: 'NO' },
+    children: { has: '', count: '', ...time() },
+    otherHome: { has: '', type: 'care_work', ...time() },
+    overlap: ''
+  };
 }
 
-function toDuration(months) {
-  const capped = Math.min(months, 60 * 12 + 11);
-  return { years: Math.floor(capped / 12), months: capped % 12 };
+function S() {
+  if (!intake.screen) intake.screen = freshScreen();
+  return intake.screen;
 }
 
-/** Total months of a history topic, whether any period was approximate, and the overlap answers given. */
-function topicTotal(key) {
-  const answer = intake.answers[key];
-  const total = { months: 0, approx: false, overlaps: [], answeredYes: false };
-  if (!answer || answer.choice !== 'yes') return total;
-  total.answeredYes = true;
-  for (const p of answer.periods) {
-    let m = 0;
-    if (p.approx) {
-      const years = Number(p.years);
-      if (years > 0) { m = Math.round(years * 12); total.approx = true; }
-    } else if (p.start && p.end) {
-      m = monthsBetween(p.start, p.end);
+function scr(key, field, value) {
+  invalidateIntake();
+  S()[key][field] = value;
+}
+
+function scrToggle(key, field, value) {
+  scr(key, field, value);
+  render();
+}
+
+function scrOverlap(value) {
+  invalidateIntake();
+  S().overlap = value;
+}
+
+function timeFields(key, yField = 'y', mField = 'm') {
+  const a = S()[key];
+  const id = `scr-${key}-${yField}`;
+  return `<div class="fieldgrid"><div><label for="${id}">År</label>`
+    + `<input id="${id}" type="number" min="0" max="60" step="1" value="${esc(a[yField])}" oninput="scr('${key}','${yField}',this.value)"></div>`
+    + `<div><label for="${id}-m">Måneder</label>`
+    + `<input id="${id}-m" type="number" min="0" max="11" step="1" value="${esc(a[mField])}" oninput="scr('${key}','${mField}',this.value)"></div></div>`;
+}
+
+function approxBox(key) {
+  return `<label class="checkline"><input type="checkbox" ${S()[key].approx ? 'checked' : ''} `
+    + `onchange="scr('${key}','approx',this.checked)">Dette er et anslag</label>`;
+}
+
+function yesNo(key, label) {
+  const a = S()[key];
+  return `<div class="answer-buttons" role="group" aria-label="${esc(label)}">`
+    + [['yes', 'Ja'], ['no', 'Nei']].map(([v, t]) =>
+      `<button type="button" aria-pressed="${a.has === v}" onclick="scrToggle('${key}','has','${v}')">${t}</button>`).join('')
+    + `</div>`;
+}
+
+function ownFirmFields(key) {
+  const a = S()[key];
+  return `<label class="checkline"><input type="checkbox" ${a.own ? 'checked' : ''} `
+    + `onchange="scrToggle('${key}','own',this.checked)">Noe av dette var arbeid i eget firma eller som selvstendig</label>`
+    + (a.own ? `<p class="small">Hvor lenge av tiden over var det eget firma? Den erfaringen vurderes separat.</p>${timeFields(key, 'ownY', 'ownM')}` : '');
+}
+
+function qCard(n, text, inner) {
+  return `<div class="card question-card"><h2>${n}. ${text}</h2>${inner}</div>`;
+}
+
+function intakeHistory() {
+  const s = S();
+  const q1 = qCard(1, 'Hvor lenge har du jobbet i Norge til sammen?',
+    `<p class="small">Ta med nåværende jobb, tidligere jobber, deltidsjobber og arbeid i eget firma. Ikke ta med au pair eller verneplikt.</p>`
+    + timeFields('norway') + approxBox('norway') + ownFirmFields('norway'));
+  const q2 = qCard(2, 'Hvor lenge har du jobbet i andre land enn Norge?',
+    `<p class="small">Ikke ta med au pair eller verneplikt.</p>`
+    + timeFields('abroad') + approxBox('abroad') + ownFirmFields('abroad'));
+  const q3 = qCard(3, 'Har du jobbet som au pair?', yesNo('aupair', 'Har du jobbet som au pair?')
+    + (s.aupair.has === 'yes' ? timeFields('aupair') + approxBox('aupair') : ''));
+  const q4 = qCard(4, 'Har du avtjent verneplikt i Norge eller et annet land?', yesNo('military', 'Har du avtjent verneplikt?')
+    + (s.military.has === 'yes'
+      ? timeFields('military')
+        + `<label for="scr-military-country">Land</label><select id="scr-military-country" onchange="scr('military','country',this.value)">`
+        + `<option value="NO" ${s.military.country === 'NO' ? 'selected' : ''}>Norge</option>`
+        + `<option value="" ${s.military.country === '' ? 'selected' : ''}>Annet land</option></select>` + approxBox('military')
+      : ''));
+  const q5 = qCard(5, 'Har du barn?', yesNo('children', 'Har du barn?')
+    + (s.children.has === 'yes'
+      ? `<label for="scr-children-count">Hvor mange barn?</label><input id="scr-children-count" type="number" min="1" max="20" step="1" `
+        + `value="${esc(s.children.count)}" oninput="scr('children','count',this.value)">`
+        + `<p>Hvor lenge har du samlet vært hjemme med omsorg for barn?</p>` + timeFields('children') + approxBox('children')
+        + `<p class="small">Antall barn alene gir ikke ansiennitet. Vi trenger hvor lenge du var hjemme med omsorg.</p>`
+      : ''));
+  const q6 = qCard(6, 'Har du hatt andre perioder med arbeid eller omsorg i hjemmet?',
+    `<p class="small">Ikke ta med tiden du allerede har oppgitt for omsorg for barn.</p>` + yesNo('otherHome', 'Andre perioder i hjemmet?')
+    + (s.otherHome.has === 'yes'
+      ? `<label for="scr-other-type">Hva slags periode?</label><select id="scr-other-type" onchange="scr('otherHome','type',this.value)">`
+        + `<option value="care_work" ${s.otherHome.type === 'care_work' ? 'selected' : ''}>Omsorg (barn, eldre eller syke)</option>`
+        + `<option value="home_work" ${s.otherHome.type === 'home_work' ? 'selected' : ''}>Arbeid i hjemmet</option></select>`
+        + timeFields('otherHome') + approxBox('otherHome')
+      : ''));
+  const overlap = `<div class="card question-card"><h2>Har noen av periodene du har oppgitt vært samtidig?</h2>`
+    + `<p class="small">Ellers risikerer vi å summere jobb, au pair og omsorg for samme tidsrom.</p>`
+    + `<select aria-label="Samtidige perioder" onchange="scrOverlap(this.value)">`
+    + [['', 'Velg'], ['no', 'Nei'], ['yes', 'Ja'], ['unsure', 'Usikker']].map(([v, t]) =>
+      `<option value="${v}" ${s.overlap === v ? 'selected' : ''}>${t}</option>`).join('') + `</select></div>`;
+  return intakeProgress(2) + `<section class="intake-work">${title('Arbeid og erfaring', 'Hvilken erfaring har du?',
+    'Oppgi omtrent hvor lenge hver erfaring varte. Deltidsarbeid oppgir du som tiden du var ansatt, ikke omregnet til heltidsarbeid. '
+    + 'Har du hatt flere jobber samtidig, teller du perioden én gang. Du trenger ikke finne frem attester nå.')}`
+    + q1 + q2 + q3 + q4 + q5 + q6 + overlap + intakeError()
+    + `<div class="actions"><button class="btn" onclick="submitScreening()">Se resultatet</button>`
+    + `<button class="textbtn" onclick="go(1)">Tilbake</button></div></section>`;
+}
+
+function timeValue(a, yField = 'y', mField = 'm') {
+  const y = a[yField] === '' ? 0 : Number(a[yField]);
+  const m = a[mField] === '' ? 0 : Number(a[mField]);
+  if (!Number.isInteger(y) || y < 0 || y > 60 || !Number.isInteger(m) || m < 0 || m > 11) return null;
+  return { years: y, months: m, total: y * 12 + m };
+}
+
+/** Returns an error text in Norwegian, or '' when the answers can be sent. */
+function screeningError() {
+  const s = S();
+  for (const [key, n] of [['norway', 1], ['abroad', 2]]) {
+    const t = timeValue(s[key]);
+    if (!t) return `Spørsmål ${n}: oppgi år (0–60) og måneder (0–11) som hele tall.`;
+    if (s[key].own) {
+      const own = timeValue(s[key], 'ownY', 'ownM');
+      if (!own || own.total === 0) return `Spørsmål ${n}: oppgi hvor lenge det var eget firma.`;
+      if (own.total > t.total) return `Spørsmål ${n}: tiden i eget firma kan ikke være lengre enn den totale tiden.`;
     }
-    if (m > 0) { total.months += m; total.overlaps.push(p.overlap); }
   }
-  return total;
+  for (const [key, n] of [['aupair', 3], ['military', 4], ['children', 5], ['otherHome', 6]]) {
+    const a = s[key];
+    if (a.has === '') return `Spørsmål ${n}: svar ja eller nei.`;
+    if (a.has === 'yes') {
+      const t = timeValue(a);
+      if (!t) return `Spørsmål ${n}: oppgi år (0–60) og måneder (0–11) som hele tall.`;
+      if (t.total === 0) return `Spørsmål ${n}: oppgi hvor lenge, eller svar nei.`;
+    }
+  }
+  if (s.children.has === 'yes') {
+    const c = Number(s.children.count);
+    if (!Number.isInteger(c) || c < 1 || c > 20) return 'Spørsmål 5: oppgi antall barn (1–20).';
+  }
+  return '';
 }
 
-/** Returns the request body and the list of answers that are not part of the calculation. */
+function submitScreening() {
+  intake.error = screeningError();
+  if (intake.error) { render(); return; }
+  submitEstimate();
+}
+
+/** The request body for POST /api/estimates. Payslip values are sent only as the estimate API accepts them. */
 function buildEstimate() {
-  const ag = agreementById(intake.agreementId);
+  const s = S();
   const pct = Number(intake.percent);
   const body = {
     positionPercent: pct,
@@ -279,60 +406,37 @@ function buildEstimate() {
   if (intake.lonnstrinn !== '') body.lonnstrinn = Number(intake.lonnstrinn);
   if (intake.ansiennitetsdato) body.ansiennitetsdato = intake.ansiennitetsdato;
 
-  // The current job: dated when the start month is known, otherwise part of "work in Norway".
-  const current = intake.current;
-  const privateEmployer = ag && String(ag.sector).startsWith('private');
-  let norwayMonths = 0;
-  let norwayApprox = false;
-  if (!current.approx && current.start) {
-    body.experiences.push({
-      country: 'NO',
-      kind: privateEmployer ? 'private_service' : 'public_service',
-      startDate: current.start,
-      endDate: CUR_YM,
-      positionPercent: pct
-    });
-  } else if (current.approx && Number(current.years) > 0) {
-    norwayMonths += Math.round(Number(current.years) * 12);
-    norwayApprox = true;
-  }
-
-  const norway = topicTotal('norway');
-  const enk = topicTotal('enk');
-  const abroad = topicTotal('abroad');
-  const aupair = topicTotal('aupair');
-  const care = topicTotal('care');
-  const notCounted = [];
-  for (const key of ['leave', 'other']) {
-    if (topicTotal(key).answeredYes) notCounted.push(historyTopics.find(t => t[0] === key)[1]);
-  }
-
+  const dur = t => ({ years: t.years, months: t.months });
   const screening = {};
-  const workInNorway = norwayMonths + norway.months + enk.months;
-  if (workInNorway > 0) {
-    screening.workInNorway = {
-      duration: toDuration(workInNorway),
-      approximate: norwayApprox || norway.approx || enk.approx
-    };
-    if (enk.months > 0) screening.workInNorway.selfEmployed = toDuration(enk.months);
-  }
-  if (abroad.months > 0) screening.workAbroad = { duration: toDuration(abroad.months), approximate: abroad.approx };
-  if (aupair.months > 0) screening.auPair = { duration: toDuration(aupair.months), approximate: aupair.approx };
-  if (care.months > 0) screening.otherHome = { type: 'care_work', duration: toDuration(care.months), approximate: care.approx };
-
-  if (Object.keys(screening).length) {
-    const overlaps = [norway, enk, abroad, aupair, care].flatMap(t => t.overlaps);
-    if (overlaps.length > 1) {
-      screening.periodsOverlap = overlaps.includes('yes') ? 'YES' : overlaps.every(o => o === 'no') ? 'NO' : 'UNSURE';
+  for (const [key, field] of [['norway', 'workInNorway'], ['abroad', 'workAbroad']]) {
+    const t = timeValue(s[key]);
+    if (t.total > 0) {
+      screening[field] = { duration: dur(t), approximate: s[key].approx };
+      if (s[key].own) screening[field].selfEmployed = dur(timeValue(s[key], 'ownY', 'ownM'));
     }
-    body.screening = screening;
   }
-  return { body, notCounted };
+  if (s.aupair.has === 'yes') {
+    screening.auPair = { duration: dur(timeValue(s.aupair)), approximate: s.aupair.approx };
+  }
+  if (s.military.has === 'yes') {
+    screening.militaryService = { duration: dur(timeValue(s.military)), approximate: s.military.approx };
+    if (s.military.country) screening.militaryService.country = s.military.country;
+  }
+  if (s.children.has === 'yes') {
+    screening.childCare = { children: Number(s.children.count), duration: dur(timeValue(s.children)),
+      approximate: s.children.approx };
+  }
+  if (s.otherHome.has === 'yes') {
+    screening.otherHome = { type: s.otherHome.type, duration: dur(timeValue(s.otherHome)),
+      approximate: s.otherHome.approx };
+  }
+  if (s.overlap) screening.periodsOverlap = s.overlap.toUpperCase();
+  if (Object.keys(screening).length) body.screening = screening;
+  return body;
 }
 
 async function submitEstimate() {
-  const { body, notCounted } = buildEstimate();
-  intake.notCounted = notCounted;
+  const body = buildEstimate();
   setBusy('Beregner anslaget …');
   const res = await callApi('/api/estimates', {
     method: 'POST',
@@ -408,8 +512,6 @@ function resultCard(r) {
     ? `<div class="notice">Avtalen er antatt ut fra arbeidsgivernavnet. Kontroller at den stemmer.</div>` : '';
   const allYears = Number(d.countedYearsIfAllAccepted) > Number(d.countedYears)
     ? ` (opptil ${fmtYears(d.countedYearsIfAllAccepted)} hvis alt usikkert godtas)` : '';
-  const notCounted = (intake.notCounted || []).length
-    ? `<div class="notice">Disse svarene er ikke med i beregningen ennå: ${intake.notCounted.map(t => esc(t)).join(' · ')}</div>` : '';
   return head + assumed
     + `<div class="card"><h2>Slik kom vi frem til anslaget</h2>`
     + `<div class="paper-row"><span>Tariffavtale</span><b>${esc(d.agreementApplied)} (satser fra ${esc(d.rulesValidFrom)})</b></div>`
@@ -421,7 +523,6 @@ function resultCard(r) {
     + `<div class="paper-row"><span>Forskjell per år (100 % stilling)</span><b>${fmtRange(d.differenceFromCurrent)}</b></div>`
     + `<div class="paper-row"><span>Hvor sikkert er anslaget?</span><b>${esc(LEVELS[conf.level] || conf.level)}</b></div>`
     + `<ul class="small">${(conf.reasons || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`
-    + notCounted
     + `<div class="card"><h2>Forklaring</h2><p class="small">Skrevet av en KI-modell, på engelsk, ut fra tallene over. `
     + `Tallene er regnet ut av programkode, ikke av KI.</p>${paragraphs(d.explanation)}</div>`
     + `<div class="card"><h2>Forbehold</h2><ul class="small">${(d.caveats || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul>`
