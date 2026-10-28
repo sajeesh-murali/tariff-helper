@@ -36,7 +36,7 @@ A JSON array. One element per agreement:
 
 | Field | Type | Meaning |
 |---|---|---|
-| `id` | string | Agreement id. Use it as `agreementId` in `POST /api/estimates`. Currently `ks-hta`, `oslo-kommune`, `spekter`, `staten`. |
+| `id` | string | Agreement id. Use it as `agreementId` in `POST /api/estimates`. Currently `fus`, `ks-hta`, `oslo-kommune`, `pbl`, `spekter`, `staten`, `virke-barnehager`, `virke-helse`. |
 | `name` | string | Display name, for example `KS Hovedtariffavtale (municipalities)`. |
 | `sector` | string | `municipal`, `municipal-oslo`, `health-trusts` or `state`. |
 | `status` | string | `available` (estimates work) or `placeholder` (listed, but `POST /api/estimates` returns `422`). |

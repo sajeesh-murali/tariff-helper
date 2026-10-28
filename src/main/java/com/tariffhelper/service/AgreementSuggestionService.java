@@ -38,7 +38,11 @@ public class AgreementSuggestionService {
         if (byRules.isPresent()) {
             return response(byRules.get(), jobTitle, SuggestionSource.RULES);
         }
-        List<String> allowed = agreements.findAll().stream().map(Agreement::id).toList();
+        // Which private agreement (PBL, Virke, FUS, ...) binds an employer cannot be told from its name,
+        // so the AI may only choose among the public-sector agreements.
+        List<String> allowed = agreements.findAll().stream()
+                .filter(a -> !a.sector().startsWith("private"))
+                .map(Agreement::id).toList();
         AgreementSuggestion byAi = suggester.suggest(employerName, jobTitle, allowed);
         if (byAi.isUnknown()) {
             return SuggestResponse.none();

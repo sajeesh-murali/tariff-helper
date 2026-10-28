@@ -51,12 +51,14 @@ class EstimateApiIntegrationTest {
     void listsAgreementsWithoutExposingInternalRules() throws Exception {
         mvc.perform(get("/api/agreements"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(4))
+                .andExpect(jsonPath("$.length()").value(8))
                 .andExpect(jsonPath("$[?(@.id=='ks-hta')].status", hasItem("available")))
                 .andExpect(jsonPath("$[?(@.id=='oslo-kommune')].status", hasItem("available")))
                 .andExpect(jsonPath("$[?(@.id=='staten')].status", hasItem("placeholder")))
                 .andExpect(jsonPath("$[?(@.id=='staten')].unavailableReason", hasItem(containsString("agreed individually"))))
-                .andExpect(jsonPath("$[0].jobCategories[?(@.id=='nurse')]").exists())
+                .andExpect(jsonPath("$[?(@.id=='pbl')].status", hasItem("available")))
+                .andExpect(jsonPath("$[?(@.id=='virke-helse')].status", hasItem("available")))
+                .andExpect(jsonPath("$[?(@.id=='ks-hta')].jobCategories[?(@.id=='nurse')]").exists())
                 .andExpect(jsonPath("$[0].salaryLadders").doesNotExist())
                 .andExpect(jsonPath("$[0].rulesSummary").doesNotExist());
     }
@@ -204,6 +206,26 @@ class EstimateApiIntegrationTest {
     }
 
     @Test
+    void pblCountsPrivateServiceInFullEvenForAPositionWithEducationRequirement() throws Exception {
+        // 12 years of private service without a relevance answer: PBL counts all earlier service, KS would ask.
+        postEstimate(body("pbl", "kindergarten_teacher", 100, 600_000,
+                experience("private_service", null, "2010-01", "2021-12")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.agreementApplied").value("PBL private kindergartens (PBL hovedtariffavtale)"))
+                .andExpect(jsonPath("$.countedYears").value(12.00))
+                .andExpect(jsonPath("$.estimatedMinimumSalary.min").value(634_600))
+                .andExpect(jsonPath("$.caveats[?(@ =~ /.*member vote.*/)]").exists());
+    }
+
+    @Test
+    void virkeHealthEstimateUsesTheSharedTable() throws Exception {
+        postEstimate(twelveYears("\"agreementId\":\"virke-helse\",\"jobCategory\":\"nurse\""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.salaryGroup").value("3-year-degree"))
+                .andExpect(jsonPath("$.estimatedMinimumSalary.min").value(620_800));
+    }
+
+    @Test
     void missingAgreementIdIsMatchedFromTheEmployerAndShownAsAssumed() throws Exception {
         postEstimate(twelveYears("\"employerName\":\"Bydel Frogner\",\"jobCategory\":\"nurse\""))
                 .andExpect(status().isOk())
@@ -272,9 +294,9 @@ class EstimateApiIntegrationTest {
         postEstimate(twelveYears("\"employerName\":\"Coop Norge\",\"jobCategory\":\"nurse\""))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.detail", containsString("Could not determine the agreement")))
-                .andExpect(jsonPath("$.availableAgreements[0]").value("ks-hta"))
-                .andExpect(jsonPath("$.availableAgreements[1]").value("oslo-kommune"))
-                .andExpect(jsonPath("$.availableAgreements.length()").value(2))
+                .andExpect(jsonPath("$.availableAgreements").value(
+                        org.hamcrest.Matchers.contains("fus", "ks-hta", "oslo-kommune", "pbl",
+                                "virke-barnehager", "virke-helse")))
                 .andExpect(content().string(not(containsString("Coop"))));
     }
 

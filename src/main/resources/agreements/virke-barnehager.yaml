@@ -1,0 +1,102 @@
+# Virke HUK private kindergartens (landsoverenskomst for barnehager). Pilot rules.
+#
+# Sources (read via the Lansi pages, reviewed September-October 2026):
+#  - Rules: Landsoverenskomst for barnehager 2024-2026, kap. 1 § 12.1-12.1.3
+#    https://www.virke.no/globalassets/6.tariff-og-lonn/tariffavtaler/landsoverenskomst-for-barnehager-2024-2026.pdf
+#    Protocol 18 June 2026:
+#    https://www.virke.no/globalassets/6.tariff-og-lonn/protokoller-og-lonnssatser/landsoverenskomst-for-barnehager/protokoll-18.06.26---hovedoppgjoret-2026---landsoverenskomst-for-barnehager.pdf
+#  - Pay: Virke "Garantilønn og tillegg for ansiennitet 2026", from 1 May 2026, one table published for the HUK agreements
+#    https://www.virke.no/globalassets/6.tariff-og-lonn/2026-hovedoppgjor/forhandlinger/garantilonn-og-tillegg-for-ansiennitet-2026.pdf
+#    Only the three position groups used below are included.
+#
+# NOT verified:
+#  - The figures and rules were taken from the Lansi guide pages (src/main/resources/static) and have not been checked against the PDF files named above. Check them against the PDFs before relying on the output.
+#  - The 2026 settlement (protocol of 18 June 2026) and the 2024-2026 base text must be read together, and Virke said
+#    the combined text was still being edited. Rules are assumed unchanged.
+#  - Unpaid parental leave and further education (up to 2 years together) are not modelled.
+id: virke-barnehager
+name: Virke HUK private kindergartens (landsoverenskomst for barnehager)
+sector: private-kindergarten
+status: available
+effectiveFrom: "2026-05-01"
+
+jobCategories:
+  - id: kindergarten_assistant
+    label: Kindergarten assistant (barnehageassistent)
+    educationRequired: false
+    salaryGroup: "no-education"
+    note: >-
+      We assumed this position has no specific education requirement. Check the position code in your employment contract.
+  - id: skilled_worker
+    label: Skilled worker or child and youth worker (fagarbeider, barne- og ungdomsarbeider)
+    educationRequired: true
+    salaryGroup: "skilled-worker"
+    note: >-
+      We assumed a position that requires a trade certificate (fagbrev) counts as having an education requirement. This has not been confirmed in the rules we found.
+  - id: kindergarten_teacher
+    label: Kindergarten teacher (barnehagelærer)
+    educationRequired: true
+    salaryGroup: "3-year-degree"
+
+rules:
+  careWorkMaxYears: 3
+  homeWorkMaxYears: 6
+  # All earlier public and private service counts in full: no split by education or relevance.
+  privateService: ALWAYS_FULL
+  homeWork: IF_NO_EDUCATION_REQUIREMENT
+
+# Minimum annual pay at 100% position, from 1 May 2026. Pay steps up from 6, 8, 10 and 16 completed years.
+salaryLadders:
+  "no-education": # Positions without a specific education requirement
+    - { fromYears: 0, annualSalary: 418600 }
+    - { fromYears: 6, annualSalary: 421600 }
+    - { fromYears: 8, annualSalary: 429700 }
+    - { fromYears: 10, annualSalary: 476000 }
+    - { fromYears: 16, annualSalary: 515800 }
+  "skilled-worker": # Skilled-worker (fagarbeider) positions
+    - { fromYears: 0, annualSalary: 475300 }
+    - { fromYears: 6, annualSalary: 479500 }
+    - { fromYears: 8, annualSalary: 490900 }
+    - { fromYears: 10, annualSalary: 534700 }
+    - { fromYears: 16, annualSalary: 551100 }
+  "3-year-degree": # Positions requiring a 3-year university/college degree
+    - { fromYears: 0, annualSalary: 545400 }
+    - { fromYears: 6, annualSalary: 558400 }
+    - { fromYears: 8, annualSalary: 568600 }
+    - { fromYears: 10, annualSalary: 620800 }
+    - { fromYears: 16, annualSalary: 639900 }
+
+rulesSummary: |
+  Source: Virke landsoverenskomst for barnehager, kap. 1 § 12 "Ansiennitet".
+  - Seniority (lønnsansiennitet) is counted from age 18 at the earliest.
+  - All earlier public and private service counts in full, also outside the kindergarten or health sector.
+  - Care work (caring for children, or for elderly or sick people) counts up to 3 years in total.
+    It must be documented.
+  - Work in the home counts up to 6 years in total, and only for positions WITHOUT an education requirement.
+  - Overlapping periods are counted once.
+  - Periods without documentation are not counted.
+  - Self-employment must be documented with the work actually done, not only a registered business.
+  - Unpaid parental leave and further education count together up to 2 years (not modelled here).
+  - The agreement sets MINIMUM pay per position group. Minimum pay rises at 6, 8, 10 and 16 completed years of
+    seniority. The employer may pay more than the minimum.
+
+caveats:
+  - >-
+    The figures are the minimum pay in the agreement for your position group, for a full-time position.
+    Your employer may already pay, or may be willing to pay, more than the minimum.
+  - >-
+    Minimum pay rises only at 6, 8, 10 and 16 years of counted experience. A few extra months of counted experience
+    may not change the minimum at all.
+  - >-
+    Experience counts from age 18 at the earliest. This estimate does not check your age.
+  - >-
+    Every period must be documented (employer, dates, and hours or position percentage).
+    Periods without documentation are not counted.
+  - >-
+    Hourly-paid or on-call work may be subject to a special rule (an average of at least 14 hours per week
+    over a period of at least six months). This estimate does not check it.
+  - >-
+    The rules do not cover work abroad specifically. Your employer decides how it is assessed
+    and what documentation it accepts.
+  - >-
+    Based on the pay table valid from 1 May 2026.

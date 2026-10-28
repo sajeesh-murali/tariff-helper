@@ -3,7 +3,8 @@
 Helps public-sector workers in Norway check whether their previous work experience should give them
 a higher salary under their collective agreement (tariffavtale).
 
-**Status:** KS (municipalities) and Oslo kommune (nurse groups only) are implemented. The state and Spekter are
+**Status:** KS (municipalities), Oslo kommune (nurse groups only) and four private agreements (PBL, Virke
+kindergartens, Virke health and social, FUS) are implemented. The state and Spekter are
 researched but **not modelled**: they are listed, and an estimate request returns `422` with the reason (shown in
 `unavailableReason` on `GET /api/agreements`). See "State and Spekter" below.
 
@@ -84,6 +85,23 @@ answer must be JSON with an id from the allowlist, or it is treated as `unknown`
 
 Rules and pay tables live in `src/main/resources/agreements/ks-hta.yaml`. `AgreementRepositoryTest` checks every
 pay figure and step increase against the published table.
+
+## Private agreements (PBL, Virke, FUS)
+
+Added from the Lansi guide pages (`src/main/resources/static`), which cite the agreement texts. Rules in all four: all
+earlier public and private service counts in full, care work up to 3 years, work in the home up to 6 years for positions
+without an education requirement. The figures were **not** checked against the original PDFs.
+
+| Id | Pay table | Steps (years) | Caveat |
+|---|---|---|---|
+| `pbl` | 1 May 2026 mediation result | 0, 4, 8, 10, 16 | Preliminary: member vote was pending when sourced |
+| `virke-barnehager` | 1 May 2026 Virke table | 0, 6, 8, 10, 16 | Rules assumed unchanged by the 2026 settlement |
+| `virke-helse` | same Virke table | 0, 6, 8, 10, 16 | Private and non-profit employers only |
+| `fus` | 1 May 2025 | 0, 4, 8, 10, 16 | Old table, agreement on extended validity |
+
+The employer name cannot tell which private agreement applies, so these are chosen with `agreementId` only. They are
+not matched from the employer name and the AI is not asked to choose between them. NHO 590 is not modelled (it counts
+only experience "of importance for the position").
 
 ## Oslo kommune rules implemented (Dokument 25, pay tables from 1 May 2026)
 

@@ -34,9 +34,10 @@ class AgreementRepositoryTest {
     }
 
     @Test
-    void loadsAllFourAgreements() {
+    void loadsAllAgreements() {
         assertThat(repository.findAll()).extracting(Agreement::id)
-                .containsExactly("ks-hta", "oslo-kommune", "spekter", "staten");
+                .containsExactly("fus", "ks-hta", "oslo-kommune", "pbl", "spekter", "staten",
+                        "virke-barnehager", "virke-helse");
     }
 
     @Test
@@ -130,6 +131,75 @@ class AgreementRepositoryTest {
         JobCategory assistant = ks().findJobCategory("kindergarten_assistant").orElseThrow();
         assertThat(assistant.requiresEducation()).isFalse();
         assertThat(assistant.salaryGroup()).isEqualTo("101");
+    }
+
+    @Test
+    void privateAgreementsCountAllPrivateServiceAndAreMarkedAvailable() {
+        for (String id : List.of("pbl", "virke-barnehager", "virke-helse", "fus")) {
+            Agreement a = repository.findById(id).orElseThrow();
+            assertThat(a.hasRules()).as(id).isTrue();
+            assertThat(a.rules().careWorkMaxYears()).as(id).isEqualTo(3);
+            assertThat(a.rules().homeWorkMaxYears()).as(id).isEqualTo(6);
+            assertThat(a.rules().privateService()).as(id).isEqualTo(PrivateServiceRule.ALWAYS_FULL);
+            assertThat(a.rules().homeWork()).as(id).isEqualTo(HomeWorkRule.IF_NO_EDUCATION_REQUIREMENT);
+            assertThat(a.caveats()).as(id).isNotEmpty();
+            assertThat(a.rulesSummary()).as(id).contains("3 years").contains("6 years");
+        }
+    }
+
+    @Test
+    void pblPayMatchesTheMay2026MediationTable() {
+        // steps: 0, 4, 8, 10, 16 years (preliminary table, member vote pending when sourced)
+        assertLadder("pbl", "assistant", new int[] {0, 4, 8, 10, 16}, 420_500, 427_800, 440_900, 483_000, 519_300);
+        assertLadder("pbl", "skilled-worker", new int[] {0, 4, 8, 10, 16}, 478_400, 489_000, 501_600, 543_700, 559_900);
+        assertLadder("pbl", "kindergarten-teacher", new int[] {0, 4, 8, 10, 16}, 558_400, 562_800, 577_400, 634_600, 651_800);
+        assertLadder("pbl", "pedagogical-leader", new int[] {0, 4, 8, 10, 16}, 593_400, 597_800, 612_400, 670_100, 687_300);
+        assertLadder("pbl", "special-educator", new int[] {0, 4, 8, 10, 16}, 594_200, 602_600, 613_300, 671_300, 689_700);
+        assertThat(repository.findById("pbl").orElseThrow().caveats()).anyMatch(c -> c.contains("member vote"));
+    }
+
+    @Test
+    void virkeAgreementsUseTheSharedMay2026Table() {
+        int[] years = {0, 6, 8, 10, 16};
+        for (String id : List.of("virke-barnehager", "virke-helse")) {
+            assertLadder(id, "no-education", years, 418_600, 421_600, 429_700, 476_000, 515_800);
+            assertLadder(id, "skilled-worker", years, 475_300, 479_500, 490_900, 534_700, 551_100);
+            assertLadder(id, "3-year-degree", years, 545_400, 558_400, 568_600, 620_800, 639_900);
+        }
+    }
+
+    @Test
+    void virkeJobCategoriesAreMappedToTheRightGroup() {
+        Agreement helse = repository.findById("virke-helse").orElseThrow();
+        assertThat(helse.findJobCategory("nurse").orElseThrow().salaryGroup()).isEqualTo("3-year-degree");
+        assertThat(helse.findJobCategory("care_assistant").orElseThrow().requiresEducation()).isFalse();
+        Agreement bhg = repository.findById("virke-barnehager").orElseThrow();
+        assertThat(bhg.findJobCategory("kindergarten_teacher").orElseThrow().salaryGroup()).isEqualTo("3-year-degree");
+        assertThat(bhg.findJobCategory("kindergarten_assistant").orElseThrow().requiresEducation()).isFalse();
+    }
+
+    @Test
+    void fusUsesTheMay2025TableAndSaysSo() {
+        Agreement fus = repository.findById("fus").orElseThrow();
+        assertThat(fus.effectiveFrom()).isEqualTo("2025-05-01");
+        int[] years = {0, 4, 8, 10, 16};
+        assertLadder("fus", "assistant", years, 403_800, 410_600, 422_700, 463_900, 499_300);
+        assertLadder("fus", "child-youth-worker", years, 459_900, 470_000, 481_600, 522_700, 537_900);
+        assertLadder("fus", "kindergarten-teacher", years, 536_400, 540_600, 554_600, 609_600, 626_100);
+        assertLadder("fus", "pedagogical-leader", years, 569_900, 574_100, 588_100, 643_600, 660_100);
+        assertLadder("fus", "special-educator", years, 570_200, 578_300, 588_400, 644_100, 661_800);
+        assertThat(fus.caveats()).anyMatch(c -> c.contains("extended validity"));
+    }
+
+    private void assertLadder(String agreementId, String group, int[] fromYears, int... expected) {
+        List<SalaryStep> steps = repository.findById(agreementId).orElseThrow().salaryLadders().get(group);
+        assertThat(steps).as("%s ladder %s", agreementId, group).hasSize(expected.length);
+        for (int i = 0; i < expected.length; i++) {
+            final int from = fromYears[i];
+            SalaryStep step = steps.stream().filter(x -> x.fromYears() == from).findFirst().orElseThrow();
+            assertThat(step.annualSalary()).as("%s %s from %d years", agreementId, group, from)
+                    .isEqualByComparingTo(String.valueOf(expected[i]));
+        }
     }
 
     @Test
