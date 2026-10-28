@@ -9,12 +9,16 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.time.Clock;
 import java.util.List;
 
-/** Rate limiting and CORS. CORS is closed unless {@code app.cors.allowed-origins} lists origins. */
+/**
+ * Rate limiting, CORS and the static site. CORS is closed unless {@code app.cors.allowed-origins} lists origins.
+ * Spring Boot serves index.html only at the root, so each folder page of the static site is forwarded here.
+ */
 @Configuration
 @EnableConfigurationProperties({RateLimitProperties.class, WebConfig.CorsProperties.class})
 public class WebConfig implements WebMvcConfigurer {
@@ -27,10 +31,23 @@ public class WebConfig implements WebMvcConfigurer {
         }
     }
 
+    /** Folders under static/ that hold an index.html (the home page is served by Spring Boot itself). */
+    public static final List<String> PAGE_FOLDERS = List.of("guider", "lonnsansiennitet", "feil-lonnsansiennitet",
+            "ansiennitet/barnehage", "ansiennitet/barnehageassistent", "ansiennitet/helsefagarbeider",
+            "ansiennitet/kommune", "ansiennitet/sykehus", "ansiennitet/sykepleier");
+
     private final CorsProperties cors;
 
     public WebConfig(CorsProperties cors) {
         this.cors = cors;
+    }
+
+    @Override
+    public void addViewControllers(ViewControllerRegistry registry) {
+        for (String folder : PAGE_FOLDERS) {
+            registry.addViewController("/" + folder).setViewName("forward:/" + folder + "/index.html");
+            registry.addViewController("/" + folder + "/").setViewName("forward:/" + folder + "/index.html");
+        }
     }
 
     @Override

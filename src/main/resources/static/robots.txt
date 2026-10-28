@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Demo pages carry noindex. Enable indexing only when ready for public launch.
+Sitemap: https://medregnet-demo.legelisten-8482.chatgpt.site/sitemap.xml
