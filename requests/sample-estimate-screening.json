@@ -1,0 +1,16 @@
+{
+  "agreementId": "ks-hta",
+  "jobCategory": "kindergarten_assistant",
+  "positionPercent": 100,
+  "currentAnnualSalary": 420000,
+  "experiences": [],
+  "screening": {
+    "workInNorway": { "duration": { "years": 3, "months": 6 }, "selfEmployed": { "years": 1 } },
+    "workAbroad": { "duration": { "years": 5 }, "approximate": true },
+    "auPair": { "duration": { "years": 1 } },
+    "militaryService": { "duration": { "years": 1 }, "country": "NO" },
+    "childCare": { "children": 2, "duration": { "years": 2, "months": 6 } },
+    "otherHome": { "type": "care_work", "duration": { "years": 1 } },
+    "periodsOverlap": "unsure"
+  }
+}

@@ -5,10 +5,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
+import java.nio.charset.StandardCharsets;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -42,16 +46,19 @@ class RateLimitAndCorsIntegrationTest {
 
     /** Own client address, so this test does not use up the budget of the test above. */
     @Test
-    void suggestEndpointIsLimitedAndSharesTheBudgetWithEstimates() throws Exception {
-        String suggest = "{\"employerName\":\"Bergen kommune\"}";
-        mvc.perform(post("/api/agreements/suggest").with(from("10.0.0.7"))
-                        .contentType(MediaType.APPLICATION_JSON).content(suggest))
-                .andExpect(status().isOk());
+    void payslipEndpointIsLimitedAndSharesTheBudgetWithEstimates() throws Exception {
+        // Not a PDF, so it is answered with 400 before any model call; it still counts against the limit.
+        byte[] notAPdf = "x".getBytes(StandardCharsets.UTF_8);
+        mvc.perform(multipart("/api/payslips/parse")
+                        .file(new MockMultipartFile("file", "p.pdf", "application/pdf", notAPdf))
+                        .with(from("10.0.0.7")))
+                .andExpect(status().isBadRequest());
         mvc.perform(post("/api/estimates").with(from("10.0.0.7"))
                         .contentType(MediaType.APPLICATION_JSON).content(VALID))
                 .andExpect(status().isOk());
-        mvc.perform(post("/api/agreements/suggest").with(from("10.0.0.7"))
-                        .contentType(MediaType.APPLICATION_JSON).content(suggest))
+        mvc.perform(multipart("/api/payslips/parse")
+                        .file(new MockMultipartFile("file", "p.pdf", "application/pdf", notAPdf))
+                        .with(from("10.0.0.7")))
                 .andExpect(status().isTooManyRequests())
                 .andExpect(header().exists("Retry-After"));
     }

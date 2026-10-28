@@ -2,7 +2,9 @@ package com.tariffhelper.llm;
 
 /** Which model answers the LLM calls. Chosen with {@code app.llm.provider} (any letter case). */
 public enum LlmProvider {
-    /** Open-source Llama served by Ollama (or any OpenAI-compatible server). Default. */
+    /** Hosted models through OpenRouter, Llama by default. Default provider. */
+    OPENROUTER,
+    /** Open-source Llama served by Ollama (or any OpenAI-compatible server). */
     LLAMA,
     OPENAI,
     ANTHROPIC,

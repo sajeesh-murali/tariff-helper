@@ -36,9 +36,11 @@ In short:
 - **It is cheaper and faster.** The calculation costs nothing to run. The AI is only used for the
   wording.
 
-**What the AI is good for here:** turning a table of results into a friendly explanation, and
-suggesting which agreement may apply when the employer name is unclear. Even then, its suggestion
-must be one from our own fixed list, or it is ignored.
+**What the AI is good for here:** turning a table of results into a friendly explanation,
+suggesting which agreement may apply when the employer name is unclear, and copying labelled values
+(employer, job title, salary, position percentage) out of an uploaded payslip. Even then, its suggestion
+must be one from our own fixed list, and every value it copies must literally appear in the payslip text
+and pass range checks, or it is ignored. Salary figures are still calculated by the code.
 
 ---
 

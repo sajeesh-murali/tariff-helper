@@ -159,4 +159,20 @@ class SeniorityCalculatorTest {
         assertThat(r.countedMonths()).isEqualTo(132);
         assertThat(r.countedYears()).isEqualByComparingTo("11.00");
     }
+
+    @Test
+    void auPairPeriodEarnsNothingAndNeverTakesAMonthFromAPeriodThatCounts() {
+        SeniorityResult r = calculator.calculate(List.of(
+                exp(ExperienceKind.AU_PAIR, null, "2010-01", "2011-12"),
+                exp(ExperienceKind.PUBLIC_SERVICE, null, "2011-01", "2011-12")), NURSE, RULES);
+
+        // The au pair stay covers 24 months, but its last 12 are public service, which counts.
+        assertThat(r.countedMonths()).isEqualTo(12);
+        assertThat(r.possibleExtraMonths()).isZero();
+        assertThat(r.perExperience().get(0).countedMonths()).isZero();
+        assertThat(r.perExperience().get(0).note())
+                .contains("au pair is not credited by the rules we have modelled")
+                .contains("12 month(s) overlap with other periods");
+        assertThat(r.perExperience().get(1).countedMonths()).isEqualTo(12);
+    }
 }

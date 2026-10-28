@@ -1,5 +1,11 @@
 # Spec: agreement suggestion + payslip fields + coded confidence
 
+> **Update:** `POST /api/agreements/suggest` ("Endpoint 1" below) has been removed. The same suggestion logic now
+> runs inside `POST /api/payslips/parse`; see `API.md` section 3. The person no longer picks an agreement in the UI: the
+> web page has two steps, upload the payslip (which yields the agreement) and then the estimate. `GET /api/agreements`
+> is kept but not used by the page. In the sections below, "Call 1" is now part of Step 1 and "Call 2" is Step 2.
+> The rest of this spec is unchanged history.
+
 Goal: the person may not know which agreement applies. They give an employer name and job title (and optionally a few
 typed-in payslip values). The app suggests the agreement, the code calculates the estimate, and the code computes a
 confidence level. Claude is used twice, for two small jobs. It never produces the salary.

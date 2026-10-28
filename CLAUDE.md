@@ -31,4 +31,4 @@ collective agreement. Output is in English. Read README.md for the current behav
 `config` (LlmConfig wires the provider), `ratelimit`, `agreement` (YAML loader).
 
 ## Status of agreements
-KS and Oslo kommune (nurse groups) are modelled. The state and Spekter return 422 with `unavailableReason`.
+KS, Oslo kommune (nurse groups) and the private PBL, Virke (kindergartens, health) and FUS agreements are modelled. The state and Spekter return 422 with `unavailableReason`.

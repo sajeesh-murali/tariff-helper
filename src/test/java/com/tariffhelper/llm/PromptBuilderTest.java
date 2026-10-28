@@ -124,4 +124,64 @@ class PromptBuilderTest {
         String user = builder.userPrompt(request(500_000, none), nurseFacts(500_000, none));
         assertThat(user).contains("no previous work history entered");
     }
+
+    @Test
+    void summaryAnswersAreListedInsideUserDataAndMarkedPreliminary() {
+        var dated = List.of(exp(ExperienceKind.PUBLIC_SERVICE, null, "2018-03", "2020-06"));
+        var screening = new com.tariffhelper.api.dto.request.ScreeningDto(
+                new com.tariffhelper.api.dto.request.ScreeningDto.WorkAnswer(
+                        new com.tariffhelper.api.dto.request.ScreeningDto.Duration(1, 6), null, null),
+                null,
+                new com.tariffhelper.api.dto.request.ScreeningDto.PeriodAnswer(
+                        new com.tariffhelper.api.dto.request.ScreeningDto.Duration(0, 9), null),
+                null, null, null, com.tariffhelper.domain.PeriodOverlap.NO);
+        var datedResult = new com.tariffhelper.service.SeniorityCalculator().calculate(dated,
+                com.tariffhelper.TestData.NURSE, com.tariffhelper.TestData.RULES);
+        var combined = new com.tariffhelper.service.ScreeningSeniorityCalculator(
+                new com.tariffhelper.service.SeniorityCalculator())
+                .combine(datedResult, 1, screening, com.tariffhelper.TestData.NURSE, com.tariffhelper.TestData.RULES);
+        EstimateFacts base = nurseFacts(500_000, dated);
+        EstimateFacts facts = new EstimateFacts(base.agreement(), base.jobCategory(), combined,
+                base.currentFullTimeSalary(), base.estimatedMinimumSalary(), base.difference());
+        EstimateRequest request = new EstimateRequest("ks-hta", "nurse", 100, java.math.BigDecimal.valueOf(500_000),
+                dated, null, null, null, null, null, screening);
+
+        String user = builder.userPrompt(request, facts);
+
+        int open = user.indexOf("<user_data>");
+        int close = user.indexOf("</user_data>");
+        assertThat(user.substring(0, open)).contains("summary answers (total time without dates)")
+                .contains("preliminary estimate");
+        assertThat(user.substring(open, close))
+                .contains("Entry 1:")
+                .contains("Summary answer 1 (total time only):")
+                .contains("Work in Norway (summary answer, no dates)")
+                .contains("18 more month(s) only if the employer accepts it")
+                .contains("Summary answer 2 (total time only):")
+                .contains("Au pair (summary answer, no dates)");
+        assertThat(user).doesNotContain("no previous work history entered");
+        assertThat(builder.systemPrompt()).contains("summary answers").contains("preliminary");
+    }
+
+    @Test
+    void historyThatIsOnlySummaryAnswersIsNotCalledEmpty() {
+        var screening = new com.tariffhelper.api.dto.request.ScreeningDto(
+                new com.tariffhelper.api.dto.request.ScreeningDto.WorkAnswer(
+                        new com.tariffhelper.api.dto.request.ScreeningDto.Duration(2, 0), null, null),
+                null, null, null, null, null, null);
+        List<com.tariffhelper.api.dto.request.ExperienceDto> none = List.of();
+        var combined = new com.tariffhelper.service.ScreeningSeniorityCalculator(
+                new com.tariffhelper.service.SeniorityCalculator())
+                .combine(new com.tariffhelper.domain.SeniorityResult(0, 0, List.of()), 0, screening,
+                        com.tariffhelper.TestData.ASSISTANT, com.tariffhelper.TestData.RULES);
+        EstimateFacts base = nurseFacts(500_000, none);
+        EstimateFacts facts = new EstimateFacts(base.agreement(), base.jobCategory(), combined,
+                base.currentFullTimeSalary(), base.estimatedMinimumSalary(), base.difference());
+        EstimateRequest request = new EstimateRequest("ks-hta", "nurse", 100, java.math.BigDecimal.valueOf(500_000),
+                none, null, null, null, null, null, screening);
+
+        String user = builder.userPrompt(request, facts);
+
+        assertThat(user).contains("Summary answer 1 (total time only):").doesNotContain("no previous work history");
+    }
 }

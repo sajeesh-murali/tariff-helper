@@ -11,6 +11,7 @@ import com.tariffhelper.api.dto.response.EstimateResponse.AgreementSuggestionInf
 import com.tariffhelper.api.dto.response.EstimateResponse.Confidence;
 import com.tariffhelper.api.dto.response.EstimateResponse.CreditedVsCounted;
 import com.tariffhelper.api.dto.request.ExperienceDto;
+import com.tariffhelper.api.dto.request.ScreeningDto;
 import com.tariffhelper.api.dto.response.SuggestResponse;
 import com.tariffhelper.domain.Agreement;
 import com.tariffhelper.domain.CreditedSeniority;
@@ -43,11 +44,16 @@ public class EstimateService {
     static final String DISCLAIMER = "This is an estimate, not legal or financial advice. "
             + "Your employer makes the final decision on seniority and salary.";
 
+    static final String SCREENING_CAVEAT = "Part of your work history was entered as total time without dates, so "
+            + "this is a preliminary estimate. Exact start and end dates, and documents for every period, are needed "
+            + "before you ask your employer to review your seniority.";
+
     private static final YearMonth EARLIEST_START = YearMonth.of(1950, 1);
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
 
     private final AgreementRepository agreements;
     private final SeniorityCalculator calculator;
+    private final ScreeningSeniorityCalculator screeningCalculator;
     private final SalaryEstimator salaryEstimator;
     private final LlmClient llm;
     private final AgreementSuggestionService suggestions;
@@ -56,11 +62,12 @@ public class EstimateService {
     private final ConfidenceAssessor confidenceAssessor;
 
     public EstimateService(AgreementRepository agreements, SeniorityCalculator calculator,
-                           SalaryEstimator salaryEstimator, LlmClient llm, AgreementSuggestionService suggestions,
+                           ScreeningSeniorityCalculator screeningCalculator, SalaryEstimator salaryEstimator, LlmClient llm, AgreementSuggestionService suggestions,
                            JobCategoryResolver jobCategories, CreditedSeniorityCalculator creditedCalculator,
                            ConfidenceAssessor confidenceAssessor) {
         this.agreements = agreements;
         this.calculator = calculator;
+        this.screeningCalculator = screeningCalculator;
         this.salaryEstimator = salaryEstimator;
         this.llm = llm;
         this.suggestions = suggestions;
@@ -85,8 +92,13 @@ public class EstimateService {
         JobChoice jobChoice = chooseJobCategory(request, agreement);
         JobCategory job = jobChoice.job();
         validateExperiences(request, job, agreement.rules());
+        validateScreening(request.screening());
 
-        SeniorityResult seniority = calculator.calculate(request.experiences(), job, agreement.rules());
+        SeniorityResult dated = calculator.calculate(request.experiences(), job, agreement.rules());
+        int datedCount = request.experiences().size();
+        SeniorityResult seniority = screeningCalculator.combine(dated, datedCount, request.screening(), job,
+                agreement.rules());
+        ScreeningSeniorityCalculator.Info screening = screeningCalculator.describe(request.screening(), datedCount > 0);
 
         List<SalaryStep> ladder = agreement.salaryLadders().get(job.salaryGroup());
         if (ladder == null) {
@@ -104,7 +116,8 @@ public class EstimateService {
 
         CreditedSeniority credited = creditedCalculator.calculate(
                 ladder, request.lonnstrinn(), request.ansiennitetsdato(), YearMonth.now());
-        Confidence confidence = confidenceAssessor.assess(choice.suggestion(), seniority, jobChoice.basis(), credited);
+        Confidence confidence = confidenceAssessor.assess(choice.suggestion(), seniority, jobChoice.basis(), credited,
+                screening);
         CreditedVsCounted creditedVsCounted = credited.compared()
                 ? new CreditedVsCounted(credited.creditedYears(), seniority.countedYears(), credited.basis())
                 : null;
@@ -118,6 +131,9 @@ public class EstimateService {
             caveats.add(job.note().trim());
         }
         caveats.addAll(agreement.caveats());
+        if (screening.used()) {
+            caveats.add(SCREENING_CAVEAT);
+        }
 
         return new EstimateResponse(
                 agreement.name(),
@@ -214,6 +230,26 @@ public class EstimateService {
         YearMonth date = request.ansiennitetsdato();
         if (date != null && (date.isBefore(EARLIEST_START) || date.isAfter(YearMonth.now()))) {
             throw new InvalidRequestException("ansiennitetsdato must be between 1950-01 and the current month");
+        }
+    }
+
+    /** Messages name the field only, never the submitted values. */
+    private static void validateScreening(ScreeningDto screening) {
+        if (screening == null) {
+            return;
+        }
+        checkOwnFirm(screening.workInNorway(), "workInNorway");
+        checkOwnFirm(screening.workAbroad(), "workAbroad");
+        ScreeningDto.OtherHomeAnswer other = screening.otherHome();
+        if (other != null && ScreeningDto.months(other.duration()) > 0
+                && other.type() != ExperienceKind.CARE_WORK && other.type() != ExperienceKind.HOME_WORK) {
+            throw new InvalidRequestException("screening.otherHome.type must be care_work or home_work");
+        }
+    }
+
+    private static void checkOwnFirm(ScreeningDto.WorkAnswer answer, String field) {
+        if (answer != null && ScreeningDto.months(answer.selfEmployed()) > ScreeningDto.months(answer.duration())) {
+            throw new InvalidRequestException("screening." + field + ".selfEmployed is longer than the total time");
         }
     }
 

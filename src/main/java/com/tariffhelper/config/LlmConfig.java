@@ -11,9 +11,13 @@ import com.tariffhelper.llm.LlmClient;
 import com.tariffhelper.llm.LlmProperties;
 import com.tariffhelper.llm.OpenAiChatApi;
 import com.tariffhelper.llm.OpenAiProperties;
+import com.tariffhelper.llm.OpenRouterProperties;
+import com.tariffhelper.llm.ChatPayslipFieldExtractor;
+import com.tariffhelper.llm.PayslipFieldExtractor;
 import com.tariffhelper.llm.PromptBuilder;
 import com.tariffhelper.llm.StubAgreementSuggester;
 import com.tariffhelper.llm.StubLlmClient;
+import com.tariffhelper.llm.StubPayslipFieldExtractor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -26,22 +30,23 @@ import java.time.Duration;
 
 /**
  * Picks the model behind both LLM calls (explanation and agreement suggestion) from
- * {@code app.llm.provider}: LLAMA (default), OPENAI, ANTHROPIC, or STUB for no external calls.
+ * {@code app.llm.provider}: OPENROUTER (default, Llama model), LLAMA, OPENAI, ANTHROPIC, or STUB for no external calls.
  */
 @Configuration
 @EnableConfigurationProperties({LlmProperties.class, ClaudeProperties.class, OpenAiProperties.class,
-        LlamaProperties.class})
+        LlamaProperties.class, OpenRouterProperties.class})
 public class LlmConfig {
 
     /** Not created for STUB, so the clients below fall back to the stubs. */
     @Bean
-    @ConditionalOnExpression("!'${app.llm.provider:llama}'.equalsIgnoreCase('stub')")
+    @ConditionalOnExpression("!'${app.llm.provider:openrouter}'.equalsIgnoreCase('stub')")
     public ChatApi chatApi(LlmProperties llm, ClaudeProperties claude, OpenAiProperties openAi,
-                           LlamaProperties llama) {
+                           LlamaProperties llama, OpenRouterProperties openRouter) {
         return switch (llm.provider()) {
             case ANTHROPIC -> claudeApi(claude);
             case OPENAI -> openAiApi(openAi);
             case LLAMA -> llamaApi(llama);
+            case OPENROUTER -> openRouterApi(openRouter);
             case STUB -> throw new IllegalStateException("No ChatApi for the stub provider");
         };
     }
@@ -58,6 +63,12 @@ public class LlmConfig {
         return chatApi == null ? new StubAgreementSuggester() : new ChatAgreementSuggester(chatApi, promptBuilder);
     }
 
+    @Bean
+    public PayslipFieldExtractor payslipFieldExtractor(ObjectProvider<ChatApi> api, PromptBuilder promptBuilder) {
+        ChatApi chatApi = api.getIfAvailable();
+        return chatApi == null ? new StubPayslipFieldExtractor() : new ChatPayslipFieldExtractor(chatApi, promptBuilder);
+    }
+
     ChatApi claudeApi(ClaudeProperties props) {
         requireKey(props.apiKey(), "anthropic", "ANTHROPIC_API_KEY");
         return new ClaudeMessagesApi(restClient(props.baseUrl(), props.timeoutSeconds()), props);
@@ -71,6 +82,12 @@ public class LlmConfig {
 
     ChatApi llamaApi(LlamaProperties props) {
         return new OpenAiChatApi(restClient(props.baseUrl(), props.timeoutSeconds()), "Llama",
+                props.model(), props.apiKey(), props.maxTokens(), "max_tokens");
+    }
+
+    ChatApi openRouterApi(OpenRouterProperties props) {
+        requireKey(props.apiKey(), "openrouter", "OPENROUTER_API_KEY");
+        return new OpenAiChatApi(restClient(props.baseUrl(), props.timeoutSeconds()), "OpenRouter",
                 props.model(), props.apiKey(), props.maxTokens(), "max_tokens");
     }
 

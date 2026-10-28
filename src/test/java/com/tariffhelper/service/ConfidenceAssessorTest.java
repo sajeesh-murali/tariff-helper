@@ -138,4 +138,29 @@ class ConfidenceAssessorTest {
         assertThat(c.level()).isEqualTo(ConfidenceLevel.HIGH);
         assertThat(c.reasons()).anyMatch(r -> r.contains("cannot be checked"));
     }
+
+    @Test
+    void summaryAnswersMakeItMediumWithReasonsForTotalsApproximationAndOverlap() {
+        Confidence plain = assessor.assess(null, CERTAIN_12_YEARS, JobCategoryBasis.GIVEN, CreditedSeniority.NONE,
+                new ScreeningSeniorityCalculator.Info(true, false, false));
+        assertThat(plain.level()).isEqualTo(ConfidenceLevel.MEDIUM);
+        assertThat(plain.reasons()).anyMatch(r -> r.contains("total time without dates"))
+                .noneMatch(r -> r.contains("approximate")).noneMatch(r -> r.contains("same time"));
+
+        Confidence all = assessor.assess(null, CERTAIN_12_YEARS, JobCategoryBasis.GIVEN, CreditedSeniority.NONE,
+                new ScreeningSeniorityCalculator.Info(true, true, true));
+        assertThat(all.level()).isEqualTo(ConfidenceLevel.MEDIUM);
+        assertThat(all.reasons()).anyMatch(r -> r.contains("preliminary estimate"))
+                .contains("You marked some answers as approximate")
+                .anyMatch(r -> r.contains("same time"));
+    }
+
+    @Test
+    void noSummaryAnswersLeavesTheLevelUnchanged() {
+        Confidence c = assessor.assess(null, CERTAIN_12_YEARS, JobCategoryBasis.GIVEN, CreditedSeniority.NONE,
+                ScreeningSeniorityCalculator.Info.NONE);
+
+        assertThat(c.level()).isEqualTo(ConfidenceLevel.HIGH);
+        assertThat(c.reasons()).noneMatch(r -> r.contains("preliminary"));
+    }
 }

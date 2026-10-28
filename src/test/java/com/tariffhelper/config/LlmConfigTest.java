@@ -4,6 +4,7 @@ import com.tariffhelper.llm.AgreementSuggester;
 import com.tariffhelper.llm.ChatAgreementSuggester;
 import com.tariffhelper.llm.ChatApi;
 import com.tariffhelper.llm.ChatLlmClient;
+import com.tariffhelper.llm.ChatPayslipFieldExtractor;
 import com.tariffhelper.llm.ClaudeMessagesApi;
 import com.tariffhelper.llm.ClaudeProperties;
 import com.tariffhelper.llm.LlamaProperties;
@@ -12,9 +13,11 @@ import com.tariffhelper.llm.LlmProperties;
 import com.tariffhelper.llm.LlmProvider;
 import com.tariffhelper.llm.OpenAiChatApi;
 import com.tariffhelper.llm.OpenAiProperties;
+import com.tariffhelper.llm.PayslipFieldExtractor;
 import com.tariffhelper.llm.PromptBuilder;
 import com.tariffhelper.llm.StubAgreementSuggester;
 import com.tariffhelper.llm.StubLlmClient;
+import com.tariffhelper.llm.StubPayslipFieldExtractor;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
@@ -56,14 +59,27 @@ class LlmConfigTest {
     }
 
     @Test
-    void defaultProviderIsLlamaAndNeedsNoKey() {
-        runner.run(context -> {
+    void llamaProviderNeedsNoKey() {
+        runner.withPropertyValues("app.llm.provider=llama").run(context -> {
             assertThat(context).hasNotFailed();
             assertThat(context.getBean(ChatApi.class)).isInstanceOf(OpenAiChatApi.class);
             assertThat(context.getBean(ChatApi.class).model()).isEqualTo("llama3.1");
             assertThat(context.getBean(LlmClient.class)).isInstanceOf(ChatLlmClient.class);
             assertThat(context.getBean(AgreementSuggester.class)).isInstanceOf(ChatAgreementSuggester.class);
         });
+    }
+
+    @Test
+    void openRouterProviderUsesLlamaModelByDefault() {
+        runner.withPropertyValues("app.llm.provider=openrouter", "app.llm.openrouter.api-key=k").run(context -> {
+            assertThat(context.getBean(ChatApi.class)).isInstanceOf(OpenAiChatApi.class);
+            assertThat(context.getBean(ChatApi.class).model()).isEqualTo("meta-llama/llama-3.3-70b-instruct");
+        });
+    }
+
+    @Test
+    void openRouterWithoutKeyStopsStartup() {
+        runner.run(context -> assertThat(context).hasFailed());
     }
 
     @Test
@@ -107,14 +123,22 @@ class LlmConfigTest {
     }
 
     @Test
+    void payslipReadingFollowsTheProvider() {
+        runner.withPropertyValues("app.llm.provider=stub").run(context ->
+                assertThat(context.getBean(PayslipFieldExtractor.class)).isInstanceOf(StubPayslipFieldExtractor.class));
+        runner.withPropertyValues("app.llm.provider=llama").run(context ->
+                assertThat(context.getBean(PayslipFieldExtractor.class)).isInstanceOf(ChatPayslipFieldExtractor.class));
+    }
+
+    @Test
     void unknownProviderStopsStartup() {
         runner.withPropertyValues("app.llm.provider=gemini")
                 .run(context -> assertThat(context).hasFailed());
     }
 
     @Test
-    void llamaIsTheDefaultInTheProperties() {
-        runner.run(context -> assertThat(context.getBean(LlmProperties.class).provider())
-                .isEqualTo(LlmProvider.LLAMA));
+    void openRouterIsTheDefaultInTheProperties() {
+        runner.withPropertyValues("app.llm.openrouter.api-key=k").run(context -> assertThat(context.getBean(LlmProperties.class).provider())
+                .isEqualTo(LlmProvider.OPENROUTER));
     }
 }

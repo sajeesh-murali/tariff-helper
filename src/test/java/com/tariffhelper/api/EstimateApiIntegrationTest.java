@@ -51,12 +51,14 @@ class EstimateApiIntegrationTest {
     void listsAgreementsWithoutExposingInternalRules() throws Exception {
         mvc.perform(get("/api/agreements"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(4))
+                .andExpect(jsonPath("$.length()").value(8))
                 .andExpect(jsonPath("$[?(@.id=='ks-hta')].status", hasItem("available")))
                 .andExpect(jsonPath("$[?(@.id=='oslo-kommune')].status", hasItem("available")))
                 .andExpect(jsonPath("$[?(@.id=='staten')].status", hasItem("placeholder")))
                 .andExpect(jsonPath("$[?(@.id=='staten')].unavailableReason", hasItem(containsString("agreed individually"))))
-                .andExpect(jsonPath("$[0].jobCategories[?(@.id=='nurse')]").exists())
+                .andExpect(jsonPath("$[?(@.id=='pbl')].status", hasItem("available")))
+                .andExpect(jsonPath("$[?(@.id=='virke-helse')].status", hasItem("available")))
+                .andExpect(jsonPath("$[?(@.id=='ks-hta')].jobCategories[?(@.id=='nurse')]").exists())
                 .andExpect(jsonPath("$[0].salaryLadders").doesNotExist())
                 .andExpect(jsonPath("$[0].rulesSummary").doesNotExist());
     }
@@ -204,6 +206,26 @@ class EstimateApiIntegrationTest {
     }
 
     @Test
+    void pblCountsPrivateServiceInFullEvenForAPositionWithEducationRequirement() throws Exception {
+        // 12 years of private service without a relevance answer: PBL counts all earlier service, KS would ask.
+        postEstimate(body("pbl", "kindergarten_teacher", 100, 600_000,
+                experience("private_service", null, "2010-01", "2021-12")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.agreementApplied").value("PBL private kindergartens (PBL hovedtariffavtale)"))
+                .andExpect(jsonPath("$.countedYears").value(12.00))
+                .andExpect(jsonPath("$.estimatedMinimumSalary.min").value(634_600))
+                .andExpect(jsonPath("$.caveats[?(@ =~ /.*member vote.*/)]").exists());
+    }
+
+    @Test
+    void virkeHealthEstimateUsesTheSharedTable() throws Exception {
+        postEstimate(twelveYears("\"agreementId\":\"virke-helse\",\"jobCategory\":\"nurse\""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.salaryGroup").value("3-year-degree"))
+                .andExpect(jsonPath("$.estimatedMinimumSalary.min").value(620_800));
+    }
+
+    @Test
     void missingAgreementIdIsMatchedFromTheEmployerAndShownAsAssumed() throws Exception {
         postEstimate(twelveYears("\"employerName\":\"Bydel Frogner\",\"jobCategory\":\"nurse\""))
                 .andExpect(status().isOk())
@@ -272,9 +294,9 @@ class EstimateApiIntegrationTest {
         postEstimate(twelveYears("\"employerName\":\"Coop Norge\",\"jobCategory\":\"nurse\""))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.detail", containsString("Could not determine the agreement")))
-                .andExpect(jsonPath("$.availableAgreements[0]").value("ks-hta"))
-                .andExpect(jsonPath("$.availableAgreements[1]").value("oslo-kommune"))
-                .andExpect(jsonPath("$.availableAgreements.length()").value(2))
+                .andExpect(jsonPath("$.availableAgreements").value(
+                        org.hamcrest.Matchers.contains("fus", "ks-hta", "oslo-kommune", "pbl",
+                                "virke-barnehager", "virke-helse")))
                 .andExpect(content().string(not(containsString("Coop"))));
     }
 
@@ -422,5 +444,142 @@ class EstimateApiIntegrationTest {
     void wrongContentTypeReturns415NotServerError() throws Exception {
         mvc.perform(post("/api/estimates").contentType(MediaType.TEXT_PLAIN).content("hello"))
                 .andExpect(status().isUnsupportedMediaType());
+    }
+
+    // ---- questions asked before the estimate (screening answers: total time, no dates) ----
+
+    private static String screeningBody(String jobCategory, String experiences, String screening) {
+        return "{\"agreementId\":\"ks-hta\",\"jobCategory\":\"" + jobCategory
+                + "\",\"positionPercent\":100,\"currentAnnualSalary\":420000,\"experiences\":[" + experiences
+                + "],\"screening\":" + screening + "}";
+    }
+
+    @Test
+    void screeningAnswersAreAddedWhenTheyDoNotOverlap() throws Exception {
+        String screening = "{\"workInNorway\":{\"duration\":{\"years\":3}},"
+                + "\"childCare\":{\"children\":2,\"duration\":{\"years\":2}},\"periodsOverlap\":\"no\"}";
+
+        postEstimate(screeningBody("kindergarten_assistant", "", screening))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.countedYears").value(5.0))
+                .andExpect(jsonPath("$.countedYearsIfAllAccepted").value(5.0))
+                .andExpect(jsonPath("$.perExperience.length()").value(2))
+                .andExpect(jsonPath("$.perExperience[0].index").value(0))
+                .andExpect(jsonPath("$.perExperience[0].note", containsString("Work in Norway (summary answer")))
+                .andExpect(jsonPath("$.perExperience[1].note", containsString("Care for your own children")))
+                .andExpect(jsonPath("$.caveats", hasItem(containsString("preliminary estimate"))))
+                .andExpect(jsonPath("$.confidence.level").value("medium"))
+                .andExpect(jsonPath("$.confidence.reasons", hasItem(containsString("total time without dates"))));
+    }
+
+    @Test
+    void screeningAnswersGiveARangeWhenPeriodsMayHaveOverlapped() throws Exception {
+        String work = "\"workInNorway\":{\"duration\":{\"years\":3}},"
+                + "\"childCare\":{\"duration\":{\"years\":2}}";
+
+        for (String overlap : new String[]{",\"periodsOverlap\":\"yes\"", ",\"periodsOverlap\":\"unsure\"", ""}) {
+            postEstimate(screeningBody("kindergarten_assistant", "", "{" + work + overlap + "}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.countedYears").value(3.0))
+                    .andExpect(jsonPath("$.countedYearsIfAllAccepted").value(5.0))
+                    .andExpect(jsonPath("$.confidence.reasons", hasItem(containsString("same time"))));
+        }
+    }
+
+    @Test
+    void workInAPositionThatNeedsAnEducationIsOnlyUncertainWithoutDates() throws Exception {
+        postEstimate(screeningBody("nurse", "", "{\"workAbroad\":{\"duration\":{\"years\":3,\"months\":6},"
+                + "\"approximate\":true}}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.countedYears").value(0.0))
+                .andExpect(jsonPath("$.countedYearsIfAllAccepted").value(3.5))
+                .andExpect(jsonPath("$.confidence.reasons", hasItem("You marked some answers as approximate")));
+    }
+
+    @Test
+    void auPairTimeEarnsNothingAndIsExplained() throws Exception {
+        postEstimate(screeningBody("kindergarten_assistant", "",
+                "{\"auPair\":{\"duration\":{\"years\":2}}}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.countedYears").value(0.0))
+                .andExpect(jsonPath("$.perExperience[0].note",
+                        containsString("au pair is not credited by the rules we have modelled")));
+    }
+
+    @Test
+    void screeningAnswersAreCombinedWithDatedPeriods() throws Exception {
+        String dated = experience("public_service", null, "2018-01", "2018-12");
+        String screening = "{\"workAbroad\":{\"duration\":{\"years\":2}},\"periodsOverlap\":\"no\"}";
+
+        postEstimate(screeningBody("kindergarten_assistant", dated, screening))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.countedYears").value(3.0))
+                .andExpect(jsonPath("$.perExperience.length()").value(2))
+                .andExpect(jsonPath("$.perExperience[1].index").value(1));
+    }
+
+    @Test
+    void aDatedAuPairPeriodIsAcceptedAndEarnsNothing() throws Exception {
+        postEstimate(body("ks-hta", "kindergarten_assistant", 100, 420000,
+                experience("au_pair", null, "2012-01", "2012-12")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.countedYears").value(0.0))
+                .andExpect(jsonPath("$.perExperience[0].note", containsString("au pair is not credited")));
+    }
+
+    @Test
+    void screeningWithoutAnyTimeChangesNothing() throws Exception {
+        postEstimate(screeningBody("kindergarten_assistant",
+                experience("public_service", null, "2018-01", "2018-12"),
+                "{\"workInNorway\":{\"duration\":{\"years\":0,\"months\":0}},\"auPair\":{}}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.countedYears").value(1.0))
+                .andExpect(jsonPath("$.perExperience.length()").value(1))
+                .andExpect(jsonPath("$.caveats", not(hasItem(containsString("preliminary estimate")))));
+    }
+
+    @Test
+    void invalidScreeningAnswersAreRejectedWithoutEchoingValues() throws Exception {
+        postEstimate(screeningBody("nurse", "", "{\"workInNorway\":{\"duration\":{\"years\":1,\"months\":12}}}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.[\"screening.workInNorway.duration.months\"]").exists());
+        postEstimate(screeningBody("nurse", "", "{\"workInNorway\":{\"duration\":{\"years\":-1}}}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.[\"screening.workInNorway.duration.years\"]").exists());
+        postEstimate(screeningBody("nurse", "", "{\"childCare\":{\"children\":21,\"duration\":{\"years\":1}}}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.[\"screening.childCare.children\"]").exists());
+        postEstimate(screeningBody("nurse", "", "{\"militaryService\":{\"country\":\"NORWAY\","
+                + "\"duration\":{\"years\":1}}}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.[\"screening.militaryService.country\"]").exists())
+                .andExpect(content().string(not(containsString("NORWAY"))));
+    }
+
+    @Test
+    void ownFirmTimeCannotBeLongerThanTheTotal() throws Exception {
+        postEstimate(screeningBody("nurse", "", "{\"workInNorway\":{\"duration\":{\"years\":1},"
+                + "\"selfEmployed\":{\"years\":2}}}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("screening.workInNorway.selfEmployed is longer than the total time"));
+    }
+
+    @Test
+    void otherHomeAnswerNeedsACareOrHomeWorkType() throws Exception {
+        for (String type : new String[]{"", ",\"type\":\"public_service\""}) {
+            postEstimate(screeningBody("nurse", "", "{\"otherHome\":{\"duration\":{\"years\":1}" + type + "}}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.detail").value("screening.otherHome.type must be care_work or home_work"));
+        }
+        postEstimate(screeningBody("kindergarten_assistant", "",
+                "{\"otherHome\":{\"type\":\"care_work\",\"duration\":{\"years\":1}}}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.countedYears").value(1.0));
+    }
+
+    @Test
+    void anUnknownOverlapAnswerIsRejected() throws Exception {
+        postEstimate(screeningBody("nurse", "", "{\"periodsOverlap\":\"maybe\"}"))
+                .andExpect(status().isBadRequest());
     }
 }

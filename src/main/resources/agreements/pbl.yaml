@@ -1,0 +1,123 @@
+# PBL (Private Barnehagers Landsforbund), private kindergartens. Pilot rules.
+#
+# Sources (read via the Lansi pages ansiennitet/barnehage and ansiennitet/barnehageassistent, reviewed 2 October 2026):
+#  - Rules: PBL Hovedtariffavtale 2024-2026, kap. 1 pkt. 10.1-10.6
+#    https://pbl.no/tariff-og-loenn/hovedavtale-og-hovedtariffavtale-2024-2026
+#    The mediation result of 29 September 2026 does not change pkt. 10.
+#  - Pay: mediation result of 29 September 2026, in force from 1 May 2026, minimum pay at 100% position
+#    https://www.delta.no/lonn-og-avtaler/private-barnehagers-landsforbund-pbl/pbl-2025-2026/loysing-i-meklinga-for-private-barnehagar
+#    https://pbl.no/assets/protokoll-hovedoppgjor-2026.pdf
+#
+# NOT verified:
+#  - The pay table is PRELIMINARY: when the Lansi page was written the mediation result was waiting for a member
+#    vote (23 October 2026). Check the outcome before relying on the figures.
+#  - The figures and rules were taken from the Lansi guide pages (src/main/resources/static) and have not been checked against the PDF files named above. Check them against the PDFs before relying on the output.
+#  - Unpaid parental leave (up to 3 years) and the 14-hour rule for hourly-paid work (pkt. 10.6) are not modelled.
+id: pbl
+name: PBL private kindergartens (PBL hovedtariffavtale)
+sector: private-kindergarten
+status: available
+effectiveFrom: "2026-05-01"
+
+jobCategories:
+  - id: kindergarten_assistant
+    label: Kindergarten assistant (barnehageassistent)
+    educationRequired: false
+    salaryGroup: "assistant"
+    note: >-
+      We assumed this position has no specific education requirement. Check the position code in your employment contract.
+  - id: skilled_worker
+    label: Skilled worker or child and youth worker (fagarbeider, barne- og ungdomsarbeider, barnepleier)
+    educationRequired: true
+    salaryGroup: "skilled-worker"
+    note: >-
+      We assumed a position that requires a trade certificate (fagbrev) counts as having an education requirement. This has not been confirmed in the rules we found.
+  - id: kindergarten_teacher
+    label: Kindergarten teacher (barnehagelærer)
+    educationRequired: true
+    salaryGroup: "kindergarten-teacher"
+  - id: pedagogical_leader
+    label: Pedagogical leader (pedagogisk leder)
+    educationRequired: true
+    salaryGroup: "pedagogical-leader"
+  - id: special_educator
+    label: Specially educated pedagogue (spesialutdannet)
+    educationRequired: true
+    salaryGroup: "special-educator"
+
+rules:
+  careWorkMaxYears: 3
+  homeWorkMaxYears: 6
+  # All earlier public and private service counts in full: no split by education or relevance.
+  privateService: ALWAYS_FULL
+  homeWork: IF_NO_EDUCATION_REQUIREMENT
+
+# Minimum annual pay at 100% position, from 1 May 2026 (preliminary). Pay steps up from 4, 8, 10 and 16 completed years.
+salaryLadders:
+  "assistant": # Assistant
+    - { fromYears: 0, annualSalary: 420500 }
+    - { fromYears: 4, annualSalary: 427800 }
+    - { fromYears: 8, annualSalary: 440900 }
+    - { fromYears: 10, annualSalary: 483000 }
+    - { fromYears: 16, annualSalary: 519300 }
+  "skilled-worker": # Fagarbeider / barnepleier
+    - { fromYears: 0, annualSalary: 478400 }
+    - { fromYears: 4, annualSalary: 489000 }
+    - { fromYears: 8, annualSalary: 501600 }
+    - { fromYears: 10, annualSalary: 543700 }
+    - { fromYears: 16, annualSalary: 559900 }
+  "kindergarten-teacher": # Barnehagelærer
+    - { fromYears: 0, annualSalary: 558400 }
+    - { fromYears: 4, annualSalary: 562800 }
+    - { fromYears: 8, annualSalary: 577400 }
+    - { fromYears: 10, annualSalary: 634600 }
+    - { fromYears: 16, annualSalary: 651800 }
+  "pedagogical-leader": # Pedagogisk leder
+    - { fromYears: 0, annualSalary: 593400 }
+    - { fromYears: 4, annualSalary: 597800 }
+    - { fromYears: 8, annualSalary: 612400 }
+    - { fromYears: 10, annualSalary: 670100 }
+    - { fromYears: 16, annualSalary: 687300 }
+  "special-educator": # Spesialutdannet
+    - { fromYears: 0, annualSalary: 594200 }
+    - { fromYears: 4, annualSalary: 602600 }
+    - { fromYears: 8, annualSalary: 613300 }
+    - { fromYears: 10, annualSalary: 671300 }
+    - { fromYears: 16, annualSalary: 689700 }
+
+rulesSummary: |
+  Source: PBL Hovedtariffavtale 2024-2026, kap. 1 pkt. 10 "Ansiennitet".
+  - Seniority (lønnsansiennitet) is counted from age 18 at the earliest.
+  - All earlier public and private service counts in full, also outside the kindergarten or health sector.
+  - Care work (caring for children, or for elderly or sick people) counts up to 3 years in total.
+    It must be documented.
+  - Work in the home counts up to 6 years in total, and only for positions WITHOUT an education requirement.
+  - Overlapping periods are counted once.
+  - Periods without documentation are not counted.
+  - Self-employment must be documented with the work actually done, not only a registered business.
+  - The agreement sets MINIMUM pay per position group. Minimum pay rises at 4, 8, 10 and 16 completed years of
+    seniority. The employer may pay more than the minimum.
+
+caveats:
+  - >-
+    The figures are the minimum pay in the agreement for your position group, for a full-time position.
+    Your employer may already pay, or may be willing to pay, more than the minimum.
+  - >-
+    Minimum pay rises only at 4, 8, 10 and 16 years of counted experience. A few extra months of counted experience
+    may not change the minimum at all.
+  - >-
+    Experience counts from age 18 at the earliest. This estimate does not check your age.
+  - >-
+    Every period must be documented (employer, dates, and hours or position percentage).
+    Periods without documentation are not counted.
+  - >-
+    Hourly-paid or on-call work may be subject to a special rule (an average of at least 14 hours per week
+    over a period of at least six months). This estimate does not check it.
+  - >-
+    The rules do not cover work abroad specifically. Your employer decides how it is assessed
+    and what documentation it accepts.
+  - >-
+    The pay table is a mediation result that was still awaiting a member vote when the source was written.
+    The figures may change.
+  - >-
+    Based on the PBL pay table valid from 1 May 2026.
