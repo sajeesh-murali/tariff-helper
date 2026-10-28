@@ -38,6 +38,13 @@ class StaticSiteIntegrationTest {
     }
 
     @Test
+    void homePageLoadsTheScriptThatCallsTheBackend() throws Exception {
+        mvc.perform(get("/js/intake-api.js")).andExpect(status().isOk());
+        String html = mvc.perform(get("/index.html")).andReturn().getResponse().getContentAsString();
+        org.assertj.core.api.Assertions.assertThat(html).contains("/js/intake-api.js");
+    }
+
+    @Test
     void unknownFolderIsStill404() throws Exception {
         mvc.perform(get("/finnes-ikke/")).andExpect(status().isNotFound());
     }
