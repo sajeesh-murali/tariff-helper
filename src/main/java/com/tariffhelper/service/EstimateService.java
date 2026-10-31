@@ -41,12 +41,12 @@ import java.util.Optional;
 @Service
 public class EstimateService {
 
-    static final String DISCLAIMER = "This is an estimate, not legal or financial advice. "
-            + "Your employer makes the final decision on seniority and salary.";
+    static final String DISCLAIMER = "Dette er et anslag, ikke juridisk eller økonomisk rådgivning. "
+            + "Arbeidsgiveren din tar den endelige avgjørelsen om ansiennitet og lønn.";
 
-    static final String SCREENING_CAVEAT = "Part of your work history was entered as total time without dates, so "
-            + "this is a preliminary estimate. Exact start and end dates, and documents for every period, are needed "
-            + "before you ask your employer to review your seniority.";
+    static final String SCREENING_CAVEAT = "Deler av arbeidshistorikken din ble oppgitt som samlet tid uten datoer, "
+            + "så dette er et foreløpig anslag. Nøyaktige start- og sluttdatoer, og dokumentasjon for hver periode, "
+            + "trengs før du ber arbeidsgiveren din om å gjennomgå ansienniteten din.";
 
     private static final YearMonth EARLIEST_START = YearMonth.of(1950, 1);
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);

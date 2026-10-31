@@ -28,7 +28,7 @@ is worked out from the payslip.
    the minimum pay step, converts the person's current pay to a full-time figure, compares with the seniority
    the payslip shows (if given), and sets the confidence level.
 2. **Claude only explains.** The prompt contains the rules summary and the calculated results. Claude writes
-   a plain-English explanation. It is told not to change any number.
+   an explanation in simple Norwegian (bokmål). It is told not to change any number.
 
 The result is a range: *what counts* up to *what counts if the employer accepts the uncertain periods*.
 
@@ -240,9 +240,9 @@ mvn spring-boot:run
 | Variable | Default | Meaning |
 |---|---|---|
 | `PORT` | 8080 | HTTP port |
-| `LLM_PROVIDER` | openrouter | `openrouter` (OpenRouter, Llama model), `llama` (Ollama or a hosted Llama API), `openai`, `anthropic`, or `stub` (no external calls, canned explanation) |
+| `LLM_PROVIDER` | openrouter | `openrouter` (OpenRouter, Claude Haiku 5.5 by default), `llama` (Ollama or a hosted Llama API), `openai`, `anthropic`, or `stub` (no external calls, canned explanation) |
 | `OPENROUTER_API_KEY` | none | OpenRouter key, required for the default provider. Never commit it. |
-| `OPENROUTER_MODEL` | meta-llama/llama-3.3-70b-instruct | Any model id from openrouter.ai/models |
+| `OPENROUTER_MODEL` | anthropic/claude-haiku-5.5 | Any model id from openrouter.ai/models |
 | `LLAMA_BASE_URL` | http://localhost:11434 | Llama server. For a hosted provider use its OpenAI-compatible base URL without `/v1`, for example `https://api.groq.com/openai` |
 | `LLAMA_API_KEY` | none | Key from the hosted Llama provider. Not needed for local Ollama. Never commit it. |
 | `LLAMA_MODEL` | llama3.1 | Model name as the provider spells it, for example `llama-3.3-70b-versatile` on Groq |

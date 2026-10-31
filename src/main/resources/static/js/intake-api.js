@@ -483,6 +483,20 @@ function paragraphs(text) {
   return String(text || '').split(/\n\s*\n/).map(t => `<p>${esc(t.trim())}</p>`).join('');
 }
 
+// Decorative: the text next to it carries the meaning, so colour is never the only signal.
+const STATUS_ICONS = {
+  potential: ['green', '<path class="mark" d="M22 42q14 14 28 0"/>'],
+  possible: ['yellow', '<path class="mark" d="M24 43q12 6 24 0"/>'],
+  none: ['yellow', '<path class="mark" d="M24 44h24"/>']
+};
+
+function statusIcon(kind) {
+  const [color, mouth] = STATUS_ICONS[kind] || STATUS_ICONS.none;
+  return `<svg class="status-icon ${color}" viewBox="0 0 72 72" aria-hidden="true" focusable="false">`
+    + `<circle class="face" cx="36" cy="36" r="31"/><circle class="dot" cx="26" cy="29" r="3.5"/>`
+    + `<circle class="dot" cx="46" cy="29" r="3.5"/>${mouth}</svg>`;
+}
+
 function resultCard(r) {
   const d = r.api;
   const pct = Number(intake.percent) / 100;
@@ -512,7 +526,7 @@ function resultCard(r) {
     ? `<div class="notice">Avtalen er antatt ut fra arbeidsgivernavnet. Kontroller at den stemmer.</div>` : '';
   const allYears = Number(d.countedYearsIfAllAccepted) > Number(d.countedYears)
     ? ` (opptil ${fmtYears(d.countedYearsIfAllAccepted)} hvis alt usikkert godtas)` : '';
-  return head + assumed
+  return statusIcon(r.kind) + head + assumed
     + `<div class="card"><h2>Slik kom vi frem til anslaget</h2>`
     + `<div class="paper-row"><span>Tariffavtale</span><b>${esc(d.agreementApplied)} (satser fra ${esc(d.rulesValidFrom)})</b></div>`
     + `<div class="paper-row"><span>Stilling</span><b>${esc(d.jobCategory)}</b></div>`
@@ -523,7 +537,7 @@ function resultCard(r) {
     + `<div class="paper-row"><span>Forskjell per år (100 % stilling)</span><b>${fmtRange(d.differenceFromCurrent)}</b></div>`
     + `<div class="paper-row"><span>Hvor sikkert er anslaget?</span><b>${esc(LEVELS[conf.level] || conf.level)}</b></div>`
     + `<ul class="small">${(conf.reasons || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`
-    + `<div class="card"><h2>Forklaring</h2><p class="small">Skrevet av en KI-modell, på engelsk, ut fra tallene over. `
+    + `<div class="card"><h2>Forklaring</h2><p class="small">Skrevet av en KI-modell, på norsk, ut fra tallene over. `
     + `Tallene er regnet ut av programkode, ikke av KI.</p>${paragraphs(d.explanation)}</div>`
     + `<div class="card"><h2>Forbehold</h2><ul class="small">${(d.caveats || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul>`
     + `<p class="small">${esc(d.disclaimer)}</p></div>`

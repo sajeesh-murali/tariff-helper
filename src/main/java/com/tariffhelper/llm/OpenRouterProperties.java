@@ -10,7 +10,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 @ConfigurationProperties(prefix = "app.llm.openrouter")
 public record OpenRouterProperties(
         String apiKey,
-        @DefaultValue("meta-llama/llama-3.3-70b-instruct") String model,
+        @DefaultValue("anthropic/claude-haiku-5.5") String model,
         @DefaultValue("https://openrouter.ai/api") String baseUrl,
         @DefaultValue("1500") int maxTokens,
         @DefaultValue("60") int timeoutSeconds) {

@@ -73,7 +73,7 @@ class LlmConfigTest {
     void openRouterProviderUsesLlamaModelByDefault() {
         runner.withPropertyValues("app.llm.provider=openrouter", "app.llm.openrouter.api-key=k").run(context -> {
             assertThat(context.getBean(ChatApi.class)).isInstanceOf(OpenAiChatApi.class);
-            assertThat(context.getBean(ChatApi.class).model()).isEqualTo("meta-llama/llama-3.3-70b-instruct");
+            assertThat(context.getBean(ChatApi.class).model()).isEqualTo("anthropic/claude-haiku-5.5");
         });
     }
 

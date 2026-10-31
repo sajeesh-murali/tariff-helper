@@ -155,7 +155,7 @@ class AgreementRepositoryTest {
         assertLadder("pbl", "kindergarten-teacher", new int[] {0, 4, 8, 10, 16}, 558_400, 562_800, 577_400, 634_600, 651_800);
         assertLadder("pbl", "pedagogical-leader", new int[] {0, 4, 8, 10, 16}, 593_400, 597_800, 612_400, 670_100, 687_300);
         assertLadder("pbl", "special-educator", new int[] {0, 4, 8, 10, 16}, 594_200, 602_600, 613_300, 671_300, 689_700);
-        assertThat(repository.findById("pbl").orElseThrow().caveats()).anyMatch(c -> c.contains("member vote"));
+        assertThat(repository.findById("pbl").orElseThrow().caveats()).anyMatch(c -> c.contains("avstemning"));
     }
 
     @Test
@@ -188,7 +188,7 @@ class AgreementRepositoryTest {
         assertLadder("fus", "kindergarten-teacher", years, 536_400, 540_600, 554_600, 609_600, 626_100);
         assertLadder("fus", "pedagogical-leader", years, 569_900, 574_100, 588_100, 643_600, 660_100);
         assertLadder("fus", "special-educator", years, 570_200, 578_300, 588_400, 644_100, 661_800);
-        assertThat(fus.caveats()).anyMatch(c -> c.contains("extended validity"));
+        assertThat(fus.caveats()).anyMatch(c -> c.contains("forlenget gyldighet"));
     }
 
     private void assertLadder(String agreementId, String group, int[] fromYears, int... expected) {
