@@ -540,30 +540,22 @@ function resultCard(r) {
     + `<div><span>3. Mulig lønnsøkning</span><strong>${perYear > 0 ? money(perYear) : 'Ingen'}</strong>`
     + `<small>${perYear > 0 ? `per år før skatt · ${esc(intake.percent)} % stilling` : 'etter avtalen'}</small></div></div>`;
   const conf = d.confidence || { level: 'low', reasons: [] };
-  const credited = cv
-    ? `<div class="paper-row"><span>Arbeidsgiveren regner med (fra ${cv.basis === 'lonnstrinn' ? 'lønnstrinn' : 'ansiennitetsdato'})</span>`
-      + `<b>${fmtYears(cv.creditedYears)}</b></div>` : '';
   const assumed = d.agreementSuggestion?.assumed
     ? `<div class="notice">Avtalen er antatt ut fra arbeidsgivernavnet. Kontroller at den stemmer.</div>` : '';
-  const allYears = upTo ? ` (${upTo})` : '';
+  // Deliberately brief: the page names the assumptions but does not show how the figures were reached.
+  const assumptions = `<div class="card"><h2>Dette bygger anslaget på</h2><ul class="small">`
+    + `<li>Tariffavtale: ${esc(d.agreementApplied)} (satser fra ${esc(d.rulesValidFrom)})</li>`
+    + `<li>Stilling: ${esc(d.jobCategory)}</li>`
+    + `<li>Beløpet er regnet for din stillingsprosent (${esc(intake.percent)} %) og er før skatt.</li>`
+    + `<li>Dette er minstelønn etter tariffavtalen. Arbeidsgiveren din kan allerede betale mer.</li>`
+    + `<li>Anslaget bygger på opplysningene du ga. Arbeidsgiveren din avgjør hva som godkjennes, og alle perioder må dokumenteres.</li>`
+    + `</ul><p class="small">Les mer: <a href="#faq">spørsmål og svar</a> · <a href="#om">om ansiennitet</a> · `
+    + `<a href="#avtaler">avtaler og regler</a></p></div>`;
   const monthly = perYear / 12;
   return statusIcon(monthly) + head + summary + assumed
     + `<p class="small">Hvor sikkert er anslaget? <b>${esc(LEVELS[conf.level] || conf.level)}</b></p>`
-    + (r.kind === 'potential' ? `<button class="btn" onclick="go(4)">Se hvordan vi kan hjelpe</button>` : '')
-    + `<div class="card"><h2>Forbehold</h2><ul class="small">${(d.caveats || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`
-    + `<details class="more"><summary>Se hvordan vi regnet</summary>`
-    + `<div class="card"><h2>Slik kom vi frem til anslaget</h2>`
-    + `<div class="paper-row"><span>Tariffavtale</span><b>${esc(d.agreementApplied)} (satser fra ${esc(d.rulesValidFrom)})</b></div>`
-    + `<div class="paper-row"><span>Stilling</span><b>${esc(d.jobCategory)}</b></div>`
-    + `<div class="paper-row"><span>Ansiennitet som teller</span><b>${fmtYears(d.countedYears)}${allYears}</b></div>`
-    + credited
-    + `<div class="paper-row"><span>Minstelønn ved denne ansienniteten (100 % stilling)</span><b>${fmtRange(d.estimatedMinimumSalary)}</b></div>`
-    + `<div class="paper-row"><span>Lønnen din omregnet til 100 % stilling</span><b>${money(d.currentFullTimeSalary)}</b></div>`
-    + `<div class="paper-row"><span>Forskjell per år (100 % stilling)</span><b>${fmtRange(d.differenceFromCurrent)}</b></div>`
-    + `<ul class="small">${(conf.reasons || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`
-    + `<div class="card"><h2>Forklaring</h2><p class="small">Skrevet av en KI-modell, på norsk, ut fra tallene over. `
-    + `Tallene er regnet ut av programkode, ikke av KI.</p>${paragraphs(d.explanation)}</div>`
-    + `</details>`
+    + (r.kind === 'potential' ? `<div style="margin:0 0 20px"><button class="btn" onclick="go(4)">Se hvordan vi kan hjelpe</button></div>` : '')
+    + assumptions
     + `<p class="small">${esc(d.disclaimer)}</p>`;
 }
 
