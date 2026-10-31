@@ -3,11 +3,9 @@ package com.tariffhelper.config;
 import com.tariffhelper.llm.AgreementSuggester;
 import com.tariffhelper.llm.ChatAgreementSuggester;
 import com.tariffhelper.llm.ChatApi;
-import com.tariffhelper.llm.ChatLlmClient;
 import com.tariffhelper.llm.ClaudeMessagesApi;
 import com.tariffhelper.llm.ClaudeProperties;
 import com.tariffhelper.llm.LlamaProperties;
-import com.tariffhelper.llm.LlmClient;
 import com.tariffhelper.llm.LlmProperties;
 import com.tariffhelper.llm.OpenAiChatApi;
 import com.tariffhelper.llm.OpenAiProperties;
@@ -16,7 +14,6 @@ import com.tariffhelper.llm.ChatPayslipFieldExtractor;
 import com.tariffhelper.llm.PayslipFieldExtractor;
 import com.tariffhelper.llm.PromptBuilder;
 import com.tariffhelper.llm.StubAgreementSuggester;
-import com.tariffhelper.llm.StubLlmClient;
 import com.tariffhelper.llm.StubPayslipFieldExtractor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
@@ -30,8 +27,8 @@ import java.time.Duration;
 import java.util.Map;
 
 /**
- * Picks the model behind both LLM calls (explanation and agreement suggestion) from
- * {@code app.llm.provider}: OPENROUTER (default, Llama model), LLAMA, OPENAI, ANTHROPIC, or STUB for no external calls.
+ * Picks the model behind the LLM calls (agreement suggestion and payslip reading) from
+ * {@code app.llm.provider}: OPENROUTER (default), LLAMA, OPENAI, ANTHROPIC, or STUB for no external calls.
  */
 @Configuration
 @EnableConfigurationProperties({LlmProperties.class, ClaudeProperties.class, OpenAiProperties.class,
@@ -50,12 +47,6 @@ public class LlmConfig {
             case OPENROUTER -> openRouterApi(openRouter);
             case STUB -> throw new IllegalStateException("No ChatApi for the stub provider");
         };
-    }
-
-    @Bean
-    public LlmClient llmClient(ObjectProvider<ChatApi> api, PromptBuilder promptBuilder) {
-        ChatApi chatApi = api.getIfAvailable();
-        return chatApi == null ? new StubLlmClient() : new ChatLlmClient(chatApi, promptBuilder);
     }
 
     @Bean

@@ -3,12 +3,10 @@ package com.tariffhelper.config;
 import com.tariffhelper.llm.AgreementSuggester;
 import com.tariffhelper.llm.ChatAgreementSuggester;
 import com.tariffhelper.llm.ChatApi;
-import com.tariffhelper.llm.ChatLlmClient;
 import com.tariffhelper.llm.ChatPayslipFieldExtractor;
 import com.tariffhelper.llm.ClaudeMessagesApi;
 import com.tariffhelper.llm.ClaudeProperties;
 import com.tariffhelper.llm.LlamaProperties;
-import com.tariffhelper.llm.LlmClient;
 import com.tariffhelper.llm.LlmProperties;
 import com.tariffhelper.llm.LlmProvider;
 import com.tariffhelper.llm.OpenAiChatApi;
@@ -16,7 +14,6 @@ import com.tariffhelper.llm.OpenAiProperties;
 import com.tariffhelper.llm.PayslipFieldExtractor;
 import com.tariffhelper.llm.PromptBuilder;
 import com.tariffhelper.llm.StubAgreementSuggester;
-import com.tariffhelper.llm.StubLlmClient;
 import com.tariffhelper.llm.StubPayslipFieldExtractor;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -64,7 +61,6 @@ class LlmConfigTest {
             assertThat(context).hasNotFailed();
             assertThat(context.getBean(ChatApi.class)).isInstanceOf(OpenAiChatApi.class);
             assertThat(context.getBean(ChatApi.class).model()).isEqualTo("llama3.1");
-            assertThat(context.getBean(LlmClient.class)).isInstanceOf(ChatLlmClient.class);
             assertThat(context.getBean(AgreementSuggester.class)).isInstanceOf(ChatAgreementSuggester.class);
         });
     }
@@ -94,8 +90,7 @@ class LlmConfigTest {
                 .run(context -> {
                     assertThat(context.getBean(ChatApi.class)).isInstanceOf(OpenAiChatApi.class);
                     assertThat(context.getBean(ChatApi.class).model()).isEqualTo("gpt-x");
-                    assertThat(context.getBean(LlmClient.class)).isInstanceOf(ChatLlmClient.class);
-                });
+                        });
     }
 
     @Test
@@ -117,7 +112,6 @@ class LlmConfigTest {
     void stubProviderMakesNoChatApiAndUsesStubs() {
         runner.withPropertyValues("app.llm.provider=stub").run(context -> {
             assertThat(context).doesNotHaveBean(ChatApi.class);
-            assertThat(context.getBean(LlmClient.class)).isInstanceOf(StubLlmClient.class);
             assertThat(context.getBean(AgreementSuggester.class)).isInstanceOf(StubAgreementSuggester.class);
         });
     }

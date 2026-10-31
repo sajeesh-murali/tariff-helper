@@ -27,8 +27,8 @@ is worked out from the payslip.
 1. **The code does the numbers.** It counts seniority month by month using the agreement rules, looks up
    the minimum pay step, converts the person's current pay to a full-time figure, compares with the seniority
    the payslip shows (if given), and sets the confidence level.
-2. **Claude only explains.** The prompt contains the rules summary and the calculated results. Claude writes
-   an explanation in simple Norwegian (bokmål). It is told not to change any number.
+2. **No model is involved in the estimate.** Nothing is sent to an LLM in this step. A model is only used
+   before it, to suggest the agreement from the employer name (Step 1) and to read a payslip.
 
 The result is a range: *what counts* up to *what counts if the employer accepts the uncertain periods*.
 
@@ -211,7 +211,7 @@ curl -X POST http://localhost:8080/api/estimates \
 
 All salary figures are annual, full time. Main fields: `countedYears`, `countedYearsIfAllAccepted`,
 `estimatedMinimumSalary` (min/max), `differenceFromCurrent` (negative = already above the minimum),
-`perExperience` (months counted and why), `explanation`, `caveats`, `disclaimer`, and:
+`perExperience` (months counted and why), `caveats`, `disclaimer`, and:
 
 - `agreementSuggestion` (only when `agreementId` was not given): `agreementId`, `confidence`, `source`, `assumed: true`.
 - `confidence`: `level` (`high`, `medium`, `low`) and `reasons`.
@@ -240,14 +240,14 @@ mvn spring-boot:run
 | Variable | Default | Meaning |
 |---|---|---|
 | `PORT` | 8080 | HTTP port |
-| `LLM_PROVIDER` | openrouter | `openrouter` (OpenRouter, Claude Haiku 5.5 by default), `llama` (Ollama or a hosted Llama API), `openai`, `anthropic`, or `stub` (no external calls, canned explanation) |
+| `LLM_PROVIDER` | openrouter | `openrouter` (OpenRouter, Claude Haiku 5.5 by default), `llama` (Ollama or a hosted Llama API), `openai`, `anthropic`, or `stub` (no external calls) |
 | `OPENROUTER_API_KEY` | none | OpenRouter key, required for the default provider. Never commit it. |
 | `OPENROUTER_MODEL` | anthropic/claude-haiku-5.5 | Any model id from openrouter.ai/models |
 | `LLAMA_BASE_URL` | http://localhost:11434 | Llama server. For a hosted provider use its OpenAI-compatible base URL without `/v1`, for example `https://api.groq.com/openai` |
 | `LLAMA_API_KEY` | none | Key from the hosted Llama provider. Not needed for local Ollama. Never commit it. |
 | `LLAMA_MODEL` | llama3.1 | Model name as the provider spells it, for example `llama-3.3-70b-versatile` on Groq |
 | `ANTHROPIC_API_KEY` | none | Required when `LLM_PROVIDER=anthropic`. The app refuses to start without it. Never commit it. |
-| `CLAUDE_MODEL` | claude-sonnet-5-5 | Claude model for the explanation and the agreement suggestion. A smaller model may be enough; compare on test cases. |
+| `CLAUDE_MODEL` | claude-sonnet-5-5 | Claude model for the agreement suggestion and the payslip reading. A smaller model may be enough; compare on test cases. |
 | `RATE_LIMIT_PER_MINUTE` | 5 | Max requests to `POST /api/estimates` and `POST /api/payslips/parse` together, per client address per minute (`429` with `Retry-After` above this) |
 | `RATE_LIMIT_PER_DAY` | 500 | Max of those requests for the whole service per UTC day. This caps Claude spend. |
 | `RATE_LIMIT_ENABLED` | true | Turn the limiter off (local testing only) |
@@ -264,8 +264,8 @@ export LLAMA_MODEL=llama-3.3-70b-versatile
 mvn spring-boot:run
 ```
 
-Local Ollama needs only `ollama pull llama3.1` and `mvn spring-boot:run`. With the stub, the numbers are real but the
-explanation is a placeholder. Hosted calls may cost API tokens depending on the provider.
+Local Ollama needs only `ollama pull llama3.1` and `mvn spring-boot:run`. The estimate never calls a model, so the numbers
+are the same with the stub. Hosted calls may cost API tokens depending on the provider.
 
 ## Docker
 
@@ -285,7 +285,7 @@ The image has no key in it. The limiter is in memory and per instance, so with s
 - `workType`, `country`, `employerName` and `jobTitle` accept only safe characters, because they may be placed in an
   LLM prompt. The employer name is never logged.
 - With a hosted provider (`LLM_PROVIDER=llama` with a hosted `LLAMA_BASE_URL`, `openai` or `anthropic`), the work
-  history and current pay from the form are sent to that provider's API when the explanation is written (Step 2).
+  history and current pay from the form are never sent to that provider: the estimate (Step 2) makes no model call.
   When the rules cannot match the employer, the employer name and job title (and nothing else) are sent for the agreement suggestion (Step 1).
   Payslip values typed into the estimate (stillingskode, lønnstrinn, ansiennitetsdato) are never sent; only the code's
   conclusion is. If a payslip PDF is uploaded to `POST /api/payslips/parse`, the PDF is read in memory and never stored.
@@ -302,7 +302,7 @@ com.tariffhelper
 ├── domain      Agreement, JobCategory, Rules, SalaryStep, results, enums
 ├── service     SeniorityCalculator, SalaryEstimator, EstimateService, AgreementMatcher, JobCategoryResolver,
 │               AgreementSuggestionService, CreditedSeniorityCalculator, ConfidenceAssessor
-├── llm         LlmClient, StubLlmClient, ClaudeLlmClient (explanation, Step 2), AgreementSuggester, StubAgreementSuggester,
+├── llm         AgreementSuggester, StubAgreementSuggester,
 │               ClaudeAgreementSuggester (agreement suggestion, Step 1), ClaudeMessagesApi (shared HTTP call), PromptBuilder
 ├── config      LlmConfig (Llama, OpenAI, Claude or stub), WebConfig (rate limiting, CORS)
 ├── ratelimit   RateLimiter, RateLimitFilter (429 on POST /api/estimates and /api/payslips/parse)
@@ -333,4 +333,4 @@ com.tariffhelper
 
 1. Finish Spekter and the missing Oslo job groups (helsefagarbeider, barnehage, assistants): needs the PDFs that could not be read here (see above).
 2. Deploy (free option) and test from Postman.
-3. Check Claude explanations on known cases; try smaller models.
+3. Check the agreement suggestion and the payslip reading on known cases; try smaller models.

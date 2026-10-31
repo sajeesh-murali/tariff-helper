@@ -10,7 +10,7 @@ import java.util.Optional;
  *
  * @param effectiveFrom     date the pay tables are valid from (yyyy-MM-dd)
  * @param salaryLadders     minimum-pay ladders keyed by salary group
- * @param rulesSummary      plain-English summary of the rules, given to the LLM for the explanation
+ * @param rulesSummary      plain-English summary of the rules, kept as a reference; no longer sent to the LLM
  * @param unavailableReason why no estimate can be given (placeholder agreements only)
  */
 public record Agreement(

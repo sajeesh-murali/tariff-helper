@@ -2,7 +2,7 @@
 
 Spring Boot 3.5 / Java 21 / Maven, single module. Pilot app that helps people in Norwegian public-sector jobs
 (mostly migrants) check whether previous work experience should give higher seniority and pay under their
-collective agreement. Output is in English. Read README.md for the current behaviour.
+collective agreement. Output is in Norwegian (bokmål). Read README.md for the current behaviour.
 
 ## Commands
 - Build and test everything: `mvn clean verify` (must pass before you finish any task)
@@ -26,7 +26,7 @@ collective agreement. Output is in English. Read README.md for the current behav
 
 ## Layout
 `api` (controllers, DTOs, exception handler), `domain`, `service` (SeniorityCalculator, SalaryEstimator, EstimateService),
-`llm` (LlmClient, ChatLlmClient, StubLlmClient, AgreementSuggester, PromptBuilder; `ChatApi` implementations
+`llm` (AgreementSuggester, PayslipFieldExtractor, their stubs, PromptBuilder; `ChatApi` implementations
 `OpenAiChatApi` for Llama and OpenAI, and `ClaudeMessagesApi` for Anthropic; provider chosen by `LlmProvider`),
 `config` (LlmConfig wires the provider), `ratelimit`, `agreement` (YAML loader).
 

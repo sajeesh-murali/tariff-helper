@@ -88,7 +88,7 @@ class EstimateApiIntegrationTest {
                 .andExpect(jsonPath("$.differenceFromCurrent.min").value(45400))
                 .andExpect(jsonPath("$.perExperience.length()").value(1))
                 .andExpect(jsonPath("$.perExperience[0].countedMonths").value(28))
-                .andExpect(jsonPath("$.explanation").isNotEmpty())
+                .andExpect(jsonPath("$.explanation").doesNotExist())
                 .andExpect(jsonPath("$.caveats").isNotEmpty())
                 .andExpect(jsonPath("$.disclaimer").exists());
     }

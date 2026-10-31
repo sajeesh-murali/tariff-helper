@@ -15,7 +15,6 @@ import com.tariffhelper.api.dto.request.ScreeningDto;
 import com.tariffhelper.api.dto.response.SuggestResponse;
 import com.tariffhelper.domain.Agreement;
 import com.tariffhelper.domain.CreditedSeniority;
-import com.tariffhelper.domain.EstimateFacts;
 import com.tariffhelper.domain.ExperienceKind;
 import com.tariffhelper.domain.JobCategory;
 import com.tariffhelper.domain.PrivateServiceRule;
@@ -23,8 +22,6 @@ import com.tariffhelper.domain.Rules;
 import com.tariffhelper.domain.SalaryRange;
 import com.tariffhelper.domain.SalaryStep;
 import com.tariffhelper.domain.SeniorityResult;
-import com.tariffhelper.llm.LlmAssessment;
-import com.tariffhelper.llm.LlmClient;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -36,7 +33,7 @@ import java.util.Optional;
 
 /**
  * The numbers (seniority, pay step, difference, credited years, confidence) are calculated here, in code.
- * The LLM is only asked to explain them.
+ * The LLM takes no part in them; it only helps to find the agreement and to read a payslip.
  */
 @Service
 public class EstimateService {
@@ -55,21 +52,20 @@ public class EstimateService {
     private final SeniorityCalculator calculator;
     private final ScreeningSeniorityCalculator screeningCalculator;
     private final SalaryEstimator salaryEstimator;
-    private final LlmClient llm;
     private final AgreementSuggestionService suggestions;
     private final JobCategoryResolver jobCategories;
     private final CreditedSeniorityCalculator creditedCalculator;
     private final ConfidenceAssessor confidenceAssessor;
 
     public EstimateService(AgreementRepository agreements, SeniorityCalculator calculator,
-                           ScreeningSeniorityCalculator screeningCalculator, SalaryEstimator salaryEstimator, LlmClient llm, AgreementSuggestionService suggestions,
+                           ScreeningSeniorityCalculator screeningCalculator, SalaryEstimator salaryEstimator,
+                           AgreementSuggestionService suggestions,
                            JobCategoryResolver jobCategories, CreditedSeniorityCalculator creditedCalculator,
                            ConfidenceAssessor confidenceAssessor) {
         this.agreements = agreements;
         this.calculator = calculator;
         this.screeningCalculator = screeningCalculator;
         this.salaryEstimator = salaryEstimator;
-        this.llm = llm;
         this.suggestions = suggestions;
         this.jobCategories = jobCategories;
         this.creditedCalculator = creditedCalculator;
@@ -123,10 +119,6 @@ public class EstimateService {
                         seniority.countedYears().subtract(credited.creditedYears()).max(BigDecimal.ZERO))
                 : null;
 
-        EstimateFacts facts = new EstimateFacts(agreement, job, seniority, currentFullTime, minimum, difference,
-                payslipConclusion(credited, seniority));
-        LlmAssessment assessment = llm.assess(request, facts);
-
         List<String> caveats = new ArrayList<>();
         if (job.note() != null && !job.note().isBlank()) {
             caveats.add(job.note().trim());
@@ -147,7 +139,6 @@ public class EstimateService {
                 minimum,
                 difference,
                 seniority.perExperience(),
-                assessment.explanation(),
                 caveats,
                 DISCLAIMER,
                 choice.suggestion(),
@@ -194,24 +185,6 @@ public class EstimateService {
         }
         throw new InvalidRequestException("jobCategory is required and could not be derived from stillingskode "
                 + "or jobTitle. Options for this agreement: " + categoryIds(agreement));
-    }
-
-    /** In words for the LLM prompt: the conclusion only, never the lønnstrinn or date themselves. */
-    private static String payslipConclusion(CreditedSeniority credited, SeniorityResult seniority) {
-        if (credited.stepNotOnLadder()) {
-            return "The pay step on the payslip is not on the pay ladder for this position, so it could not be "
-                    + "compared with the counted years.";
-        }
-        if (!credited.compared()) {
-            return null;
-        }
-        return "The employer currently credits about " + aboutYears(credited.creditedYears())
-                + "; the rules count about " + aboutYears(seniority.countedYears()) + ".";
-    }
-
-    private static String aboutYears(BigDecimal years) {
-        int whole = years.setScale(0, RoundingMode.HALF_UP).intValue();
-        return whole + (whole == 1 ? " year" : " years");
     }
 
     private List<String> availableAgreementIds() {
