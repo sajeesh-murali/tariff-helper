@@ -27,6 +27,7 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
+import java.util.Map;
 
 /**
  * Picks the model behind both LLM calls (explanation and agreement suggestion) from
@@ -87,8 +88,11 @@ public class LlmConfig {
 
     ChatApi openRouterApi(OpenRouterProperties props) {
         requireKey(props.apiKey(), "openrouter", "OPENROUTER_API_KEY");
+        // Some models (for example Claude Haiku 5.5) think before answering by default and can use the whole
+        // token limit on that, which leaves an empty answer. The explanation needs no thinking.
         return new OpenAiChatApi(restClient(props.baseUrl(), props.timeoutSeconds()), "OpenRouter",
-                props.model(), props.apiKey(), props.maxTokens(), "max_tokens");
+                props.model(), props.apiKey(), props.maxTokens(), "max_tokens",
+                Map.of("reasoning", Map.of("enabled", false)));
     }
 
     private static void requireKey(String apiKey, String provider, String envVar) {

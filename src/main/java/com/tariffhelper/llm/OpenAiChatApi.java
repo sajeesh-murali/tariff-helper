@@ -28,6 +28,7 @@ public class OpenAiChatApi implements ChatApi {
     private final String apiKey;
     private final int maxTokens;
     private final String maxTokensField;
+    private final Map<String, Object> extraFields;
 
     /**
      * @param provider       name used in log lines and error messages
@@ -37,12 +38,19 @@ public class OpenAiChatApi implements ChatApi {
      */
     public OpenAiChatApi(RestClient restClient, String provider, String model, String apiKey,
                          int maxTokens, String maxTokensField) {
+        this(restClient, provider, model, apiKey, maxTokens, maxTokensField, Map.of());
+    }
+
+    /** @param extraFields fixed fields added to every request body, for provider-specific options */
+    public OpenAiChatApi(RestClient restClient, String provider, String model, String apiKey,
+                         int maxTokens, String maxTokensField, Map<String, Object> extraFields) {
         this.restClient = restClient;
         this.provider = provider;
         this.model = model;
         this.apiKey = apiKey;
         this.maxTokens = maxTokens;
         this.maxTokensField = maxTokensField;
+        this.extraFields = Map.copyOf(extraFields);
     }
 
     @Override
@@ -63,6 +71,7 @@ public class OpenAiChatApi implements ChatApi {
         payload.put("messages", List.of(
                 Map.of("role", "system", "content", system),
                 Map.of("role", "user", "content", user)));
+        payload.putAll(extraFields);
 
         JsonNode response;
         try {
