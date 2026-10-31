@@ -550,6 +550,7 @@ function resultCard(r) {
   return statusIcon(monthly) + head + summary + assumed
     + `<p class="small">Hvor sikkert er anslaget? <b>${esc(LEVELS[conf.level] || conf.level)}</b></p>`
     + (r.kind === 'potential' ? `<button class="btn" onclick="go(4)">Se hvordan vi kan hjelpe</button>` : '')
+    + `<div class="card"><h2>Forbehold</h2><ul class="small">${(d.caveats || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`
     + `<details class="more"><summary>Se hvordan vi regnet</summary>`
     + `<div class="card"><h2>Slik kom vi frem til anslaget</h2>`
     + `<div class="paper-row"><span>Tariffavtale</span><b>${esc(d.agreementApplied)} (satser fra ${esc(d.rulesValidFrom)})</b></div>`
@@ -562,7 +563,6 @@ function resultCard(r) {
     + `<ul class="small">${(conf.reasons || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`
     + `<div class="card"><h2>Forklaring</h2><p class="small">Skrevet av en KI-modell, på norsk, ut fra tallene over. `
     + `Tallene er regnet ut av programkode, ikke av KI.</p>${paragraphs(d.explanation)}</div>`
-    + `<div class="card"><h2>Forbehold</h2><ul class="small">${(d.caveats || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`
     + `</details>`
     + `<p class="small">${esc(d.disclaimer)}</p>`;
 }
