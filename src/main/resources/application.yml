@@ -6,6 +6,13 @@ spring:
       # Payslip PDFs only. Kept in step with PayslipController.MAX_BYTES.
       max-file-size: 2MB
       max-request-size: 2MB
+  web:
+    resources:
+      cache:
+        cachecontrol:
+          # Browsers re-check the page and its scripts on every load (cheap 304 if unchanged), so a new
+          # deploy is never hidden behind an old copy of the JavaScript.
+          no-cache: true
   jackson:
     mapper:
       accept-case-insensitive-enums: true

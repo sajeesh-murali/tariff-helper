@@ -484,17 +484,22 @@ function paragraphs(text) {
 }
 
 // Decorative: the text next to it carries the meaning, so colour is never the only signal.
+// The colour follows the monthly increase shown on the page (before tax, at the person's position percentage).
 const STATUS_ICONS = {
-  potential: ['green', '<path class="mark" d="M22 42q14 14 28 0"/>'],
-  possible: ['yellow', '<path class="mark" d="M24 43q12 6 24 0"/>'],
-  none: ['yellow', '<path class="mark" d="M24 44h24"/>']
+  green: '<path class="mark" d="M22 42q14 14 28 0"/>',
+  lightgreen: '<path class="mark" d="M24 43q12 7 24 0"/>',
+  yellow: '<path class="mark" d="M24 44h24"/>'
 };
 
-function statusIcon(kind) {
-  const [color, mouth] = STATUS_ICONS[kind] || STATUS_ICONS.none;
-  return `<svg class="status-icon ${color}" viewBox="0 0 72 72" aria-hidden="true" focusable="false">`
+function statusTier(monthly) {
+  return monthly > 2000 ? 'green' : monthly >= 1000 ? 'lightgreen' : 'yellow';
+}
+
+function statusIcon(monthly) {
+  const tier = statusTier(monthly);
+  return `<svg class="status-icon ${tier}" viewBox="0 0 72 72" aria-hidden="true" focusable="false">`
     + `<circle class="face" cx="36" cy="36" r="31"/><circle class="dot" cx="26" cy="29" r="3.5"/>`
-    + `<circle class="dot" cx="46" cy="29" r="3.5"/>${mouth}</svg>`;
+    + `<circle class="dot" cx="46" cy="29" r="3.5"/>${STATUS_ICONS[tier]}</svg>`;
 }
 
 function resultCard(r) {
@@ -526,7 +531,8 @@ function resultCard(r) {
     ? `<div class="notice">Avtalen er antatt ut fra arbeidsgivernavnet. Kontroller at den stemmer.</div>` : '';
   const allYears = Number(d.countedYearsIfAllAccepted) > Number(d.countedYears)
     ? ` (opptil ${fmtYears(d.countedYearsIfAllAccepted)} hvis alt usikkert godtas)` : '';
-  return statusIcon(r.kind) + head + assumed
+  const monthly = r.kind === 'potential' ? diffMin * pct / 12 : r.kind === 'possible' ? diffMax * pct / 12 : 0;
+  return statusIcon(monthly) + head + assumed
     + `<div class="card"><h2>Slik kom vi frem til anslaget</h2>`
     + `<div class="paper-row"><span>Tariffavtale</span><b>${esc(d.agreementApplied)} (satser fra ${esc(d.rulesValidFrom)})</b></div>`
     + `<div class="paper-row"><span>Stilling</span><b>${esc(d.jobCategory)}</b></div>`
