@@ -37,7 +37,7 @@ app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:}
   llm:
-    # openrouter = OpenRouter with a Llama model (default); needs the OPENROUTER_API_KEY environment variable
+    # openrouter = OpenRouter, Claude Haiku 5.5 by default (default); needs the OPENROUTER_API_KEY environment variable
     # llama     = open-source Llama via Ollama or a hosted OpenAI-compatible server (default)
     # openai    = OpenAI; needs the OPENAI_API_KEY environment variable
     # anthropic = Claude; needs the ANTHROPIC_API_KEY environment variable
@@ -46,7 +46,7 @@ app:
     openrouter:
       # Never put the key in this file. It is read from the environment.
       api-key: ${OPENROUTER_API_KEY:}
-      model: ${OPENROUTER_MODEL:meta-llama/llama-3.3-70b-instruct}
+      model: ${OPENROUTER_MODEL:anthropic/claude-haiku-5.5}
       base-url: https://openrouter.ai/api
       max-tokens: 1500
       timeout-seconds: 60
