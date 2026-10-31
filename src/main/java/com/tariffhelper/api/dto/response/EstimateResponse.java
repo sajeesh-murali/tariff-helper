@@ -42,7 +42,11 @@ public record EstimateResponse(
     public record Confidence(ConfidenceLevel level, List<String> reasons) {
     }
 
-    /** @param basis "lonnstrinn" or "ansiennitetsdato": which payslip value the credited years come from */
-    public record CreditedVsCounted(BigDecimal creditedYears, BigDecimal countedYears, String basis) {
+    /**
+     * @param basis           "lonnstrinn" or "ansiennitetsdato": which payslip value the credited years come from
+     * @param additionalYears counted years minus credited years, never below zero (calculated in code)
+     */
+    public record CreditedVsCounted(BigDecimal creditedYears, BigDecimal countedYears, String basis,
+                                    BigDecimal additionalYears) {
     }
 }

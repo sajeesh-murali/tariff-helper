@@ -255,6 +255,7 @@ class EstimateApiIntegrationTest {
                 .andExpect(jsonPath("$.salaryGroup").value("2601"))
                 .andExpect(jsonPath("$.creditedVsCounted.creditedYears").value(3.0))
                 .andExpect(jsonPath("$.creditedVsCounted.countedYears").value(12.0))
+                .andExpect(jsonPath("$.creditedVsCounted.additionalYears").value(9.0))
                 .andExpect(jsonPath("$.creditedVsCounted.basis").value("lonnstrinn"))
                 .andExpect(jsonPath("$.confidence.level").value("medium"))
                 .andExpect(jsonPath("$.confidence.reasons",
