@@ -202,7 +202,7 @@ class EstimateApiIntegrationTest {
                 .andExpect(jsonPath("$.agreementSuggestion").doesNotExist())
                 .andExpect(jsonPath("$.creditedVsCounted").doesNotExist())
                 .andExpect(jsonPath("$.confidence.level").value("high"))
-                .andExpect(jsonPath("$.confidence.reasons", hasItem("You chose the agreement")));
+                .andExpect(jsonPath("$.confidence.reasons", hasItem("Du valgte avtalen selv")));
     }
 
     @Test
@@ -214,7 +214,7 @@ class EstimateApiIntegrationTest {
                 .andExpect(jsonPath("$.agreementApplied").value("PBL private kindergartens (PBL hovedtariffavtale)"))
                 .andExpect(jsonPath("$.countedYears").value(12.00))
                 .andExpect(jsonPath("$.estimatedMinimumSalary.min").value(634_600))
-                .andExpect(jsonPath("$.caveats[?(@ =~ /.*member vote.*/)]").exists());
+                .andExpect(jsonPath("$.caveats[?(@ =~ /.*avstemning.*/)]").exists());
     }
 
     @Test
@@ -245,7 +245,7 @@ class EstimateApiIntegrationTest {
                 .andExpect(jsonPath("$.agreementSuggestion.agreementId").value("ks-hta"))
                 .andExpect(jsonPath("$.salaryGroup").value("102"))
                 .andExpect(jsonPath("$.confidence.level").value("medium"))
-                .andExpect(jsonPath("$.confidence.reasons", hasItem(containsString("job title"))));
+                .andExpect(jsonPath("$.confidence.reasons", hasItem(containsString("stillingstittelen"))));
     }
 
     @Test
@@ -258,7 +258,7 @@ class EstimateApiIntegrationTest {
                 .andExpect(jsonPath("$.creditedVsCounted.basis").value("lonnstrinn"))
                 .andExpect(jsonPath("$.confidence.level").value("medium"))
                 .andExpect(jsonPath("$.confidence.reasons",
-                        hasItem("Your payslip suggests fewer years than the rules count")))
+                        hasItem("Lønnsslippen din tyder på færre år enn reglene teller")))
                 .andExpect(jsonPath("$.confidence.reasons", hasItem(containsString("stillingskode"))));
     }
 
@@ -268,7 +268,7 @@ class EstimateApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.creditedVsCounted").doesNotExist())
                 .andExpect(jsonPath("$.confidence.level").value("low"))
-                .andExpect(jsonPath("$.confidence.reasons", hasItem(containsString("not on the pay ladder"))));
+                .andExpect(jsonPath("$.confidence.reasons", hasItem(containsString("finnes ikke i lønnsstigen"))));
     }
 
     @Test
@@ -467,9 +467,9 @@ class EstimateApiIntegrationTest {
                 .andExpect(jsonPath("$.perExperience[0].index").value(0))
                 .andExpect(jsonPath("$.perExperience[0].note", containsString("Work in Norway (summary answer")))
                 .andExpect(jsonPath("$.perExperience[1].note", containsString("Care for your own children")))
-                .andExpect(jsonPath("$.caveats", hasItem(containsString("preliminary estimate"))))
+                .andExpect(jsonPath("$.caveats", hasItem(containsString("foreløpig anslag"))))
                 .andExpect(jsonPath("$.confidence.level").value("medium"))
-                .andExpect(jsonPath("$.confidence.reasons", hasItem(containsString("total time without dates"))));
+                .andExpect(jsonPath("$.confidence.reasons", hasItem(containsString("samlet tid uten datoer"))));
     }
 
     @Test
@@ -482,7 +482,7 @@ class EstimateApiIntegrationTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.countedYears").value(3.0))
                     .andExpect(jsonPath("$.countedYearsIfAllAccepted").value(5.0))
-                    .andExpect(jsonPath("$.confidence.reasons", hasItem(containsString("same time"))));
+                    .andExpect(jsonPath("$.confidence.reasons", hasItem(containsString("samtidig"))));
         }
     }
 
@@ -493,7 +493,7 @@ class EstimateApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.countedYears").value(0.0))
                 .andExpect(jsonPath("$.countedYearsIfAllAccepted").value(3.5))
-                .andExpect(jsonPath("$.confidence.reasons", hasItem("You marked some answers as approximate")));
+                .andExpect(jsonPath("$.confidence.reasons", hasItem("Du markerte noen svar som omtrentlige")));
     }
 
     @Test
@@ -535,7 +535,7 @@ class EstimateApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.countedYears").value(1.0))
                 .andExpect(jsonPath("$.perExperience.length()").value(1))
-                .andExpect(jsonPath("$.caveats", not(hasItem(containsString("preliminary estimate")))));
+                .andExpect(jsonPath("$.caveats", not(hasItem(containsString("foreløpig anslag")))));
     }
 
     @Test

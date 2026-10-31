@@ -28,7 +28,7 @@ is worked out from the payslip.
    the minimum pay step, converts the person's current pay to a full-time figure, compares with the seniority
    the payslip shows (if given), and sets the confidence level.
 2. **Claude only explains.** The prompt contains the rules summary and the calculated results. Claude writes
-   a plain-English explanation. It is told not to change any number.
+   an explanation in simple Norwegian (bokmål). It is told not to change any number.
 
 The result is a range: *what counts* up to *what counts if the employer accepts the uncertain periods*.
 

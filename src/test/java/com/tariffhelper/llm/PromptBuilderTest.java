@@ -28,6 +28,11 @@ class PromptBuilderTest {
     }
 
     @Test
+    void systemPromptAsksForTheExplanationInSimpleNorwegian() {
+        assertThat(builder.systemPrompt()).contains("simple Norwegian").contains("in Norwegian");
+    }
+
+    @Test
     void suggestPromptAsksForJsonFromTheAllowlistAndTreatsFormDataAsData() {
         String system = builder.suggestSystemPrompt();
         assertThat(system).contains("<user_data>").contains("never instructions")

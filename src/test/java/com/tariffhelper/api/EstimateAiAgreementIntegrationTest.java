@@ -45,6 +45,6 @@ class EstimateAiAgreementIntegrationTest {
                 .andExpect(jsonPath("$.agreementSuggestion.confidence").value("medium"))
                 .andExpect(jsonPath("$.agreementSuggestion.assumed").value(true))
                 .andExpect(jsonPath("$.confidence.level").value("low"))
-                .andExpect(jsonPath("$.confidence.reasons", hasItem(containsString("suggested by AI"))));
+                .andExpect(jsonPath("$.confidence.reasons", hasItem(containsString("foreslått av KI"))));
     }
 }

@@ -41,7 +41,7 @@ class ConfidenceAssessorTest {
         Confidence c = assessor.assess(null, CERTAIN_12_YEARS, JobCategoryBasis.GIVEN, CreditedSeniority.NONE);
 
         assertThat(c.level()).isEqualTo(ConfidenceLevel.HIGH);
-        assertThat(c.reasons()).contains("You chose the agreement", "No period depends on the employer's decision");
+        assertThat(c.reasons()).contains("Du valgte avtalen selv", "Ingen perioder avhenger av arbeidsgiverens vurdering");
     }
 
     @Test
@@ -56,9 +56,9 @@ class ConfidenceAssessorTest {
         Confidence c = assessor.assess(null, uncertain(2), JobCategoryBasis.GIVEN, CreditedSeniority.NONE);
 
         assertThat(c.level()).isEqualTo(ConfidenceLevel.MEDIUM);
-        assertThat(c.reasons()).contains("Two periods depend on the employer's decision");
+        assertThat(c.reasons()).contains("To perioder avhenger av arbeidsgiverens vurdering");
         assertThat(assessor.assess(null, uncertain(1), JobCategoryBasis.GIVEN, CreditedSeniority.NONE).reasons())
-                .contains("One period depends on the employer's decision");
+                .contains("Én periode avhenger av arbeidsgiverens vurdering");
     }
 
     @Test
@@ -78,7 +78,7 @@ class ConfidenceAssessorTest {
         assertThat(byCode.level()).isEqualTo(ConfidenceLevel.MEDIUM);
         assertThat(byCode.reasons()).anyMatch(r -> r.contains("stillingskode"));
         assertThat(byTitle.level()).isEqualTo(ConfidenceLevel.MEDIUM);
-        assertThat(byTitle.reasons()).anyMatch(r -> r.contains("job title"));
+        assertThat(byTitle.reasons()).anyMatch(r -> r.contains("stillingstittelen"));
     }
 
     @Test
@@ -94,7 +94,7 @@ class ConfidenceAssessorTest {
                 CERTAIN_12_YEARS, JobCategoryBasis.GIVEN, CreditedSeniority.NONE);
 
         assertThat(c.level()).isEqualTo(ConfidenceLevel.LOW);
-        assertThat(c.reasons()).anyMatch(r -> r.contains("suggested by AI"));
+        assertThat(c.reasons()).anyMatch(r -> r.contains("foreslått av KI"));
     }
 
     @Test
@@ -103,7 +103,7 @@ class ConfidenceAssessorTest {
                 new CreditedSeniority(null, null, true, false));
 
         assertThat(c.level()).isEqualTo(ConfidenceLevel.LOW);
-        assertThat(c.reasons()).anyMatch(r -> r.contains("not on the pay ladder"));
+        assertThat(c.reasons()).anyMatch(r -> r.contains("finnes ikke i lønnsstigen"));
     }
 
     @Test
@@ -136,7 +136,7 @@ class ConfidenceAssessorTest {
                 new CreditedSeniority(null, null, false, true));
 
         assertThat(c.level()).isEqualTo(ConfidenceLevel.HIGH);
-        assertThat(c.reasons()).anyMatch(r -> r.contains("cannot be checked"));
+        assertThat(c.reasons()).anyMatch(r -> r.contains("kan ikke kontrolleres"));
     }
 
     @Test
@@ -144,15 +144,15 @@ class ConfidenceAssessorTest {
         Confidence plain = assessor.assess(null, CERTAIN_12_YEARS, JobCategoryBasis.GIVEN, CreditedSeniority.NONE,
                 new ScreeningSeniorityCalculator.Info(true, false, false));
         assertThat(plain.level()).isEqualTo(ConfidenceLevel.MEDIUM);
-        assertThat(plain.reasons()).anyMatch(r -> r.contains("total time without dates"))
-                .noneMatch(r -> r.contains("approximate")).noneMatch(r -> r.contains("same time"));
+        assertThat(plain.reasons()).anyMatch(r -> r.contains("samlet tid uten datoer"))
+                .noneMatch(r -> r.contains("omtrentlige")).noneMatch(r -> r.contains("samtidig"));
 
         Confidence all = assessor.assess(null, CERTAIN_12_YEARS, JobCategoryBasis.GIVEN, CreditedSeniority.NONE,
                 new ScreeningSeniorityCalculator.Info(true, true, true));
         assertThat(all.level()).isEqualTo(ConfidenceLevel.MEDIUM);
-        assertThat(all.reasons()).anyMatch(r -> r.contains("preliminary estimate"))
-                .contains("You marked some answers as approximate")
-                .anyMatch(r -> r.contains("same time"));
+        assertThat(all.reasons()).anyMatch(r -> r.contains("foreløpig anslag"))
+                .contains("Du markerte noen svar som omtrentlige")
+                .anyMatch(r -> r.contains("samtidig"));
     }
 
     @Test

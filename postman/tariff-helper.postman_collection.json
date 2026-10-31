@@ -973,7 +973,7 @@
                   "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
                   "const j = pm.response.json();",
                   "pm.test(\"Credited 3, counted 12\", function () { pm.expect(j.creditedVsCounted.creditedYears === 3 && j.creditedVsCounted.countedYears === 12 && j.creditedVsCounted.basis === 'lonnstrinn').to.be.true; });",
-                  "pm.test(\"Fewer-years reason\", function () { pm.expect(j.confidence.reasons.includes('Your payslip suggests fewer years than the rules count')).to.be.true; });",
+                  "pm.test(\"Fewer-years reason\", function () { pm.expect(j.confidence.reasons.includes('Lønnsslippen din tyder på færre år enn reglene teller')).to.be.true; });",
                   "pm.test(\"confidence medium (job group from stillingskode)\", function () { pm.expect(j.confidence.level === 'medium').to.be.true; });"
                 ]
               }
@@ -1158,7 +1158,7 @@
                   "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
                   "const j = pm.response.json();",
                   "pm.test('counted 5 years', function () { pm.expect(Number(j.countedYears) === 5).to.be.true; });",
-                  "pm.test('preliminary caveat', function () { pm.expect(j.caveats.some(c => c.indexOf('preliminary estimate') >= 0)).to.be.true; });"
+                  "pm.test('preliminary caveat', function () { pm.expect(j.caveats.some(c => c.indexOf('foreløpig anslag') >= 0)).to.be.true; });"
                 ]
               }
             }
@@ -1203,7 +1203,7 @@
                   "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
                   "const j = pm.response.json();",
                   "pm.test('counted 3, up to 5 if accepted', function () { pm.expect(Number(j.countedYears) === 3 && Number(j.countedYearsIfAllAccepted) === 5).to.be.true; });",
-                  "pm.test('overlap reason', function () { pm.expect(j.confidence.reasons.some(r => r.indexOf('same time') >= 0)).to.be.true; });"
+                  "pm.test('overlap reason', function () { pm.expect(j.confidence.reasons.some(r => r.indexOf('samtidig') >= 0)).to.be.true; });"
                 ]
               }
             }

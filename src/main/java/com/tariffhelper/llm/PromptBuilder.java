@@ -22,8 +22,9 @@ public class PromptBuilder {
 
     private static final String SYSTEM_PROMPT = """
             You write the explanation part of a salary estimate for people who work in Norway's public \
-            sector. The readers are mostly migrants, so write in clear, simple English and explain Norwegian \
-            terms in brackets.
+            sector. The readers are mostly migrants, so write in clear, simple Norwegian (bokmål, klarspråk) with \
+            short sentences and common words. Explain difficult terms in a few simple words. Write the whole \
+            answer in Norwegian even though these instructions and the facts are in English.
 
             The application has already done all the calculations from the agreement rules. Your job is only \
             to explain the result.
