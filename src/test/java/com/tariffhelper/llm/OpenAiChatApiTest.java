@@ -8,6 +8,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
+import java.util.Map;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
@@ -65,6 +67,18 @@ class OpenAiChatApiTest {
                 .andRespond(withSuccess(ANSWER, MediaType.APPLICATION_JSON));
 
         api("secret", "max_completion_tokens").send("s", "u", 50);
+        server.verify();
+    }
+
+    @Test
+    void addsTheExtraFieldsToTheRequestBody() {
+        server.expect(requestTo(URL))
+                .andExpect(jsonPath("$.reasoning.enabled").value(false))
+                .andExpect(jsonPath("$.max_tokens").value(50))
+                .andRespond(withSuccess(ANSWER, MediaType.APPLICATION_JSON));
+
+        new OpenAiChatApi(builder.build(), "Test", "test-model", "", 1000, "max_tokens",
+                Map.of("reasoning", Map.of("enabled", false))).send("s", "u", 50);
         server.verify();
     }
 
