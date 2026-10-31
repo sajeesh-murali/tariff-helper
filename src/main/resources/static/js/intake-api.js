@@ -508,32 +508,49 @@ function resultCard(r) {
   const pct = Number(intake.percent) / 100;
   const diffMin = Number(d.differenceFromCurrent.min);
   const diffMax = Number(d.differenceFromCurrent.max);
+  const cv = d.creditedVsCounted;
+  const perYear = r.kind === 'potential' ? diffMin * pct : r.kind === 'possible' ? diffMax * pct : 0;
+  const counted = fmtYears(d.countedYears);
+  const upTo = Number(d.countedYearsIfAllAccepted) > Number(d.countedYears)
+    ? `opptil ${fmtYears(d.countedYearsIfAllAccepted)} hvis alt usikkert godtas` : '';
+  const basisText = cv ? (cv.basis === 'lonnstrinn' ? 'ut fra lønnstrinnet på lønnsslippen' : 'ut fra ansiennitetsdatoen på lønnsslippen') : '';
   let head;
-  if (r.kind === 'potential') {
-    head = `<span class="badge">Mulighet for høyere lønn</span><h1>Minstelønnen etter reglene<br>er høyere enn lønnen din.</h1>`
-      + `<p class="lead">Ut fra opplysningene dine kan du ha rett til høyere lønn. Du velger selv om du vil ha hjelp til å få saken vurdert.</p>`
-      + `<div class="result-amount"><strong>${money(diffMin * pct)}</strong><span>mulig økning per år før skatt (minst)</span>`
-      + `<small>${money(diffMin * pct / 12)} per måned · ${esc(intake.percent)} % stilling`
-      + (diffMax > diffMin ? ` · opptil ${money(diffMax * pct)} per år hvis alt usikkert godtas` : '') + `</small></div>`;
-  } else if (r.kind === 'possible') {
-    head = `<span class="badge amber">Kan være mulig</span><h1>Det kan være mulig<br>å få høyere lønn.</h1>`
-      + `<p class="lead">Det avhenger av om arbeidsgiveren godtar perioder som er usikre.</p>`
-      + `<div class="result-amount"><strong>${money(diffMax * pct)}</strong><span>mulig økning per år før skatt, hvis alt usikkert godtas</span>`
-      + `<small>${money(diffMax * pct / 12)} per måned · ${esc(intake.percent)} % stilling</small></div>`;
-  } else {
+  if (r.kind === 'none') {
     head = `<span class="badge">Ingen økning i minstelønn</span><h1>Lønnen din ligger på eller<br>over minstelønnen.</h1>`
-      + `<p class="lead">Ut fra opplysningene dine gir avtalen ikke høyere minstelønn enn du har. Arbeidsgiveren kan likevel ha regnet ansienniteten annerledes.</p>`;
+      + `<p class="lead">Vi mener du har ${counted} ansiennitet`
+      + (cv ? `, og du er registrert med ${fmtYears(cv.creditedYears)}` : '')
+      + `. Etter avtalen gir det ikke høyere minstelønn enn du har. Arbeidsgiveren kan likevel ha regnet ansienniteten annerledes.</p>`;
+  } else {
+    const more = cv
+      ? (Number(cv.additionalYears) > 0
+        ? ` Det er <b>${fmtYears(cv.additionalYears)}</b> mer enn du er registrert med.`
+        : ' Det er ikke mer enn du allerede er registrert med.')
+      : '';
+    head = (r.kind === 'potential'
+        ? `<span class="badge">Mulighet for høyere lønn</span><h1>Du kan ha rett til<br>høyere lønn.</h1>`
+        : `<span class="badge amber">Kan være mulig</span><h1>Det kan være mulig<br>å få høyere lønn.</h1>`)
+      + `<p class="lead">Vi mener du bør ha <b>${counted}</b> ansiennitet.${more} `
+      + `${counted} godkjent ansiennitet kan gi en lønnsøkning på <b>${money(perYear)}</b> per år.`
+      + (r.kind === 'possible' ? ' Det avhenger av at arbeidsgiveren godtar perioder som er usikre.' : '') + `</p>`;
   }
+  const summary = `<div class="stat3">`
+    + `<div><span>1. Registrert ansiennitet</span><strong>${cv ? fmtYears(cv.creditedYears) : 'Ikke funnet'}</strong>`
+    + `<small>${cv ? basisText : 'Last opp lønnsslippen for å se dette'}</small></div>`
+    + `<div><span>2. Vi mener du har</span><strong>${counted}</strong><small>${upTo || 'ansiennitet som teller'}</small></div>`
+    + `<div><span>3. Mulig lønnsøkning</span><strong>${perYear > 0 ? money(perYear) : 'Ingen'}</strong>`
+    + `<small>${perYear > 0 ? `per år før skatt · ${esc(intake.percent)} % stilling` : 'etter avtalen'}</small></div></div>`;
   const conf = d.confidence || { level: 'low', reasons: [] };
-  const credited = d.creditedVsCounted
-    ? `<div class="paper-row"><span>Arbeidsgiveren regner med (fra ${d.creditedVsCounted.basis === 'lonnstrinn' ? 'lønnstrinn' : 'ansiennitetsdato'})</span>`
-      + `<b>${fmtYears(d.creditedVsCounted.creditedYears)}</b></div>` : '';
+  const credited = cv
+    ? `<div class="paper-row"><span>Arbeidsgiveren regner med (fra ${cv.basis === 'lonnstrinn' ? 'lønnstrinn' : 'ansiennitetsdato'})</span>`
+      + `<b>${fmtYears(cv.creditedYears)}</b></div>` : '';
   const assumed = d.agreementSuggestion?.assumed
     ? `<div class="notice">Avtalen er antatt ut fra arbeidsgivernavnet. Kontroller at den stemmer.</div>` : '';
-  const allYears = Number(d.countedYearsIfAllAccepted) > Number(d.countedYears)
-    ? ` (opptil ${fmtYears(d.countedYearsIfAllAccepted)} hvis alt usikkert godtas)` : '';
-  const monthly = r.kind === 'potential' ? diffMin * pct / 12 : r.kind === 'possible' ? diffMax * pct / 12 : 0;
-  return statusIcon(monthly) + head + assumed
+  const allYears = upTo ? ` (${upTo})` : '';
+  const monthly = perYear / 12;
+  return statusIcon(monthly) + head + summary + assumed
+    + `<p class="small">Hvor sikkert er anslaget? <b>${esc(LEVELS[conf.level] || conf.level)}</b></p>`
+    + (r.kind === 'potential' ? `<button class="btn" onclick="go(4)">Se hvordan vi kan hjelpe</button>` : '')
+    + `<details class="more"><summary>Se hvordan vi regnet</summary>`
     + `<div class="card"><h2>Slik kom vi frem til anslaget</h2>`
     + `<div class="paper-row"><span>Tariffavtale</span><b>${esc(d.agreementApplied)} (satser fra ${esc(d.rulesValidFrom)})</b></div>`
     + `<div class="paper-row"><span>Stilling</span><b>${esc(d.jobCategory)}</b></div>`
@@ -542,13 +559,12 @@ function resultCard(r) {
     + `<div class="paper-row"><span>Minstelønn ved denne ansienniteten (100 % stilling)</span><b>${fmtRange(d.estimatedMinimumSalary)}</b></div>`
     + `<div class="paper-row"><span>Lønnen din omregnet til 100 % stilling</span><b>${money(d.currentFullTimeSalary)}</b></div>`
     + `<div class="paper-row"><span>Forskjell per år (100 % stilling)</span><b>${fmtRange(d.differenceFromCurrent)}</b></div>`
-    + `<div class="paper-row"><span>Hvor sikkert er anslaget?</span><b>${esc(LEVELS[conf.level] || conf.level)}</b></div>`
     + `<ul class="small">${(conf.reasons || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`
     + `<div class="card"><h2>Forklaring</h2><p class="small">Skrevet av en KI-modell, på norsk, ut fra tallene over. `
     + `Tallene er regnet ut av programkode, ikke av KI.</p>${paragraphs(d.explanation)}</div>`
-    + `<div class="card"><h2>Forbehold</h2><ul class="small">${(d.caveats || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul>`
-    + `<p class="small">${esc(d.disclaimer)}</p></div>`
-    + (r.kind === 'potential' ? `<button class="btn" onclick="go(4)">Se hvordan vi kan hjelpe</button>` : '');
+    + `<div class="card"><h2>Forbehold</h2><ul class="small">${(d.caveats || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`
+    + `</details>`
+    + `<p class="small">${esc(d.disclaimer)}</p>`;
 }
 
 function intakeResult() {

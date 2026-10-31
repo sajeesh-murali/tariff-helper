@@ -119,7 +119,8 @@ public class EstimateService {
         Confidence confidence = confidenceAssessor.assess(choice.suggestion(), seniority, jobChoice.basis(), credited,
                 screening);
         CreditedVsCounted creditedVsCounted = credited.compared()
-                ? new CreditedVsCounted(credited.creditedYears(), seniority.countedYears(), credited.basis())
+                ? new CreditedVsCounted(credited.creditedYears(), seniority.countedYears(), credited.basis(),
+                        seniority.countedYears().subtract(credited.creditedYears()).max(BigDecimal.ZERO))
                 : null;
 
         EstimateFacts facts = new EstimateFacts(agreement, job, seniority, currentFullTime, minimum, difference,

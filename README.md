@@ -216,7 +216,7 @@ All salary figures are annual, full time. Main fields: `countedYears`, `countedY
 - `agreementSuggestion` (only when `agreementId` was not given): `agreementId`, `confidence`, `source`, `assumed: true`.
 - `confidence`: `level` (`high`, `medium`, `low`) and `reasons`.
 - `creditedVsCounted` (only when payslip values allow it, otherwise null): `creditedYears`, `countedYears`,
-  `basis` (`lonnstrinn` or `ansiennitetsdato`).
+  `additionalYears` (counted minus credited, never below zero), `basis` (`lonnstrinn` or `ansiennitetsdato`).
 
 Errors: `400` invalid input, `404` unknown agreement, `422` agreement without rules yet, `429` too many requests, `502` the AI service failed.
 
