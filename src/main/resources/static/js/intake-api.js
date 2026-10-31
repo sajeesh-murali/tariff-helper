@@ -484,7 +484,8 @@ function paragraphs(text) {
 }
 
 // Decorative: the text next to it carries the meaning, so colour is never the only signal.
-// The colour follows the monthly increase shown on the page (before tax, at the person's position percentage).
+// The colour follows the monthly increase (before tax, at the person's position percentage), even though the
+// page headline is now yearly: above 2000 kr/month is above 24 000 kr/year.
 const STATUS_ICONS = {
   green: '<path class="mark" d="M22 42q14 14 28 0"/>',
   lightgreen: '<path class="mark" d="M24 43q12 7 24 0"/>',
@@ -511,14 +512,14 @@ function resultCard(r) {
   if (r.kind === 'potential') {
     head = `<span class="badge">Mulighet for høyere lønn</span><h1>Minstelønnen etter reglene<br>er høyere enn lønnen din.</h1>`
       + `<p class="lead">Ut fra opplysningene dine kan du ha rett til høyere lønn. Du velger selv om du vil ha hjelp til å få saken vurdert.</p>`
-      + `<div class="result-amount"><strong>${money(diffMin * pct / 12)}</strong><span>mulig økning per måned før skatt (minst)</span>`
-      + `<small>${money(diffMin * pct)} per år · ${esc(intake.percent)} % stilling`
-      + (diffMax > diffMin ? ` · opptil ${money(diffMax * pct / 12)} per måned hvis alt usikkert godtas` : '') + `</small></div>`;
+      + `<div class="result-amount"><strong>${money(diffMin * pct)}</strong><span>mulig økning per år før skatt (minst)</span>`
+      + `<small>${money(diffMin * pct / 12)} per måned · ${esc(intake.percent)} % stilling`
+      + (diffMax > diffMin ? ` · opptil ${money(diffMax * pct)} per år hvis alt usikkert godtas` : '') + `</small></div>`;
   } else if (r.kind === 'possible') {
     head = `<span class="badge amber">Kan være mulig</span><h1>Det kan være mulig<br>å få høyere lønn.</h1>`
       + `<p class="lead">Det avhenger av om arbeidsgiveren godtar perioder som er usikre.</p>`
-      + `<div class="result-amount"><strong>${money(diffMax * pct / 12)}</strong><span>mulig økning per måned før skatt, hvis alt usikkert godtas</span>`
-      + `<small>${money(diffMax * pct)} per år · ${esc(intake.percent)} % stilling</small></div>`;
+      + `<div class="result-amount"><strong>${money(diffMax * pct)}</strong><span>mulig økning per år før skatt, hvis alt usikkert godtas</span>`
+      + `<small>${money(diffMax * pct / 12)} per måned · ${esc(intake.percent)} % stilling</small></div>`;
   } else {
     head = `<span class="badge">Ingen økning i minstelønn</span><h1>Lønnen din ligger på eller<br>over minstelønnen.</h1>`
       + `<p class="lead">Ut fra opplysningene dine gir avtalen ikke høyere minstelønn enn du har. Arbeidsgiveren kan likevel ha regnet ansienniteten annerledes.</p>`;
