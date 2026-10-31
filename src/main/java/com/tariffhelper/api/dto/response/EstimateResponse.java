@@ -27,7 +27,6 @@ public record EstimateResponse(
         SalaryRange estimatedMinimumSalary,
         SalaryRange differenceFromCurrent,
         List<PerExperience> perExperience,
-        String explanation,
         List<String> caveats,
         String disclaimer,
         AgreementSuggestionInfo agreementSuggestion,

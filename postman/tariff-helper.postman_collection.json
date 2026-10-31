@@ -124,7 +124,7 @@
                   "pm.test(\"minimum is 545 400\", function () { pm.expect(j.estimatedMinimumSalary.min === 545400).to.be.true; });",
                   "pm.test(\"difference is 45 400\", function () { pm.expect(j.differenceFromCurrent.min === 45400).to.be.true; });",
                   "pm.test(\"28 months counted\", function () { pm.expect(j.perExperience[0].countedMonths === 28).to.be.true; });",
-                  "pm.test(\"has explanation\", function () { pm.expect(j.explanation.length > 0).to.be.true; });"
+                  "pm.test(\"no explanation field\", function () { pm.expect(j.explanation === undefined).to.be.true; });"
                 ]
               }
             }

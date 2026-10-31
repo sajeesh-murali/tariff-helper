@@ -3,16 +3,11 @@ package com.tariffhelper;
 import com.tariffhelper.api.dto.request.EstimateRequest;
 import com.tariffhelper.api.dto.request.ExperienceDto;
 import com.tariffhelper.domain.Agreement;
-import com.tariffhelper.domain.EstimateFacts;
 import com.tariffhelper.domain.ExperienceKind;
 import com.tariffhelper.domain.JobCategory;
 import com.tariffhelper.domain.Relevance;
 import com.tariffhelper.domain.Rules;
-import com.tariffhelper.domain.SalaryRange;
 import com.tariffhelper.domain.SalaryStep;
-import com.tariffhelper.domain.SeniorityResult;
-import com.tariffhelper.service.SalaryEstimator;
-import com.tariffhelper.service.SeniorityCalculator;
 
 import java.math.BigDecimal;
 import java.time.YearMonth;
@@ -53,14 +48,5 @@ public final class TestData {
 
     public static EstimateRequest request(int currentAnnualSalary, List<ExperienceDto> experiences) {
         return new EstimateRequest("ks-hta", "nurse", 100, BigDecimal.valueOf(currentAnnualSalary), experiences);
-    }
-
-    /** Facts for a nurse at 100% earning the given full-time salary, computed with the real logic. */
-    public static EstimateFacts nurseFacts(int currentFullTimeSalary, List<ExperienceDto> experiences) {
-        SeniorityResult seniority = new SeniorityCalculator().calculate(experiences, NURSE, RULES);
-        SalaryRange minimum = new SalaryEstimator().rangeFor(LADDER_201, seniority);
-        BigDecimal current = BigDecimal.valueOf(currentFullTimeSalary);
-        SalaryRange difference = new SalaryRange(minimum.min().subtract(current), minimum.max().subtract(current));
-        return new EstimateFacts(agreement(), NURSE, seniority, current, minimum, difference);
     }
 }

@@ -21,6 +21,7 @@ import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -45,8 +46,6 @@ class PayslipToEstimateIntegrationTest {
             + "\"positionPercent\":100,\"annualSalaryFullTime\":576000,\"stillingskode\":\"58\","
             + "\"lonnstrinn\":26,\"ansiennitetsdato\":\"2023-08\"}";
 
-    private static final String EXPLANATION = "Your experience counts as 12 years in the Oslo kommune agreement.";
-
     @Autowired
     MockMvc mvc;
 
@@ -68,8 +67,7 @@ class PayslipToEstimateIntegrationTest {
 
     @Test
     void thePayslipIsReadAndItsValuesFeedTheEstimate() throws Exception {
-        when(chat.maxTokens()).thenReturn(1000);
-        when(chat.send(anyString(), anyString(), anyInt())).thenReturn(EXTRACTION_ANSWER, EXPLANATION);
+        when(chat.send(anyString(), anyString(), anyInt())).thenReturn(EXTRACTION_ANSWER);
 
         // Step 1: upload the payslip
         String parsed = parseSamplePayslip();
@@ -119,10 +117,10 @@ class PayslipToEstimateIntegrationTest {
                 .andExpect(jsonPath("$.creditedVsCounted.creditedYears").value(3))
                 .andExpect(jsonPath("$.creditedVsCounted.countedYears").value(12))
                 .andExpect(jsonPath("$.confidence.level").value("medium"))
-                .andExpect(jsonPath("$.explanation").value(EXPLANATION));
+                .andExpect(jsonPath("$.explanation").doesNotExist());
 
-        // One call read the payslip, one wrote the explanation; the second never saw the payslip values.
-        verify(chat, times(2)).send(anyString(), anyString(), anyInt());
+        // Only one call was made: it read the payslip. The estimate itself makes no model call.
+        verify(chat, times(1)).send(anyString(), anyString(), anyInt());
         verify(chat, times(1)).send(anyString(), contains("Sykepleier"), anyInt());
     }
 
@@ -156,9 +154,6 @@ class PayslipToEstimateIntegrationTest {
 
     @Test
     void theEstimateWorksFromTypedValuesWithoutAnyPayslip() throws Exception {
-        when(chat.maxTokens()).thenReturn(1000);
-        when(chat.send(anyString(), anyString(), anyInt())).thenReturn(EXPLANATION);
-
         mvc.perform(post("/api/estimates").contentType(MediaType.APPLICATION_JSON).content(
                         "{\"employerName\":\"Bydel Grünerløkka\",\"jobTitle\":\"sykepleier\",\"positionPercent\":100,"
                                 + "\"currentAnnualSalary\":576000,\"experiences\":[]}"))
@@ -167,7 +162,7 @@ class PayslipToEstimateIntegrationTest {
                 .andExpect(jsonPath("$.agreementSuggestion.assumed").value(true))
                 .andExpect(jsonPath("$.confidence.level").value("medium"));
 
-        // Only the explanation was asked for; the rules decided the agreement, so no suggestion call.
-        verify(chat, times(1)).send(anyString(), anyString(), anyInt());
+        // The rules decided the agreement and the estimate needs no explanation, so no model call at all.
+        verify(chat, never()).send(anyString(), anyString(), anyInt());
     }
 }

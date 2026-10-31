@@ -5,7 +5,7 @@ public interface ChatApi {
 
     String model();
 
-    /** Token limit for the written explanation (Call 2). */
+    /** Token limit configured for this provider. Each call may pass its own limit to {@link #send}. */
     int maxTokens();
 
     /** Sends one user message and returns the text of the answer (may be empty). Throws LlmException on failure. */
