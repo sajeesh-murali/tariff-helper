@@ -28,6 +28,7 @@ collective agreement. Output is in Norwegian (bokmål). Read README.md for the c
 `api` (controllers, DTOs, exception handler), `domain`, `service` (SeniorityCalculator, SalaryEstimator, EstimateService),
 `llm` (AgreementSuggester, PayslipFieldExtractor, their stubs, PromptBuilder; `ChatApi` implementations
 `OpenAiChatApi` for Llama and OpenAI, and `ClaudeMessagesApi` for Anthropic; provider chosen by `LlmProvider`),
+`ocr` (OcrEngine, TesseractOcrEngine: reads picture payslips on the server, never via the LLM),
 `config` (LlmConfig wires the provider), `ratelimit`, `agreement` (YAML loader).
 
 ## Status of agreements

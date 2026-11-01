@@ -10,7 +10,7 @@ Request and response bodies are JSON (`Content-Type: application/json`), except 
 |---|---|---|---|---|
 | GET | `/api/agreements` | List agreements and job categories. Kept, but not used by the web page | No | No |
 | POST | `/api/estimates` | Calculate seniority and minimum pay from a work history | Yes, to write the explanation (and to suggest the agreement if needed) | Yes |
-| POST | `/api/payslips/parse` | Read the form values from a payslip PDF and suggest the agreement from the employer, for the person to check | Yes: a small redacted excerpt, then (only if the fixed rules cannot decide the agreement) the employer name and job title | Yes |
+| POST | `/api/payslips/parse` | Read the form values from a payslip (PDF, JPG or PNG) and suggest the agreement from the employer, for the person to check | Yes: a small redacted excerpt, then (only if the fixed rules cannot decide the agreement) the employer name and job title | Yes |
 
 Principle behind all of them: **the code calculates, the LLM only explains or suggests.** Seniority, pay steps,
 differences, credited years and confidence levels are computed in Java from `src/main/resources/agreements/*.yaml`.
@@ -302,12 +302,12 @@ All salary figures are annual and for a full-time (100%) position, in NOK.
 ## 3. `POST /api/payslips/parse`
 
 ### Purpose
-Fills in the form of `POST /api/estimates` from an uploaded payslip PDF, so the person does not have to type
+Fills in the form of `POST /api/estimates` from an uploaded payslip (PDF, JPG or PNG), so the person does not have to type
 the values. The result is only a suggestion: the person checks it in the UI and submits the values to the estimate
 endpoint, which validates them again. Nothing in this endpoint calculates seniority or pay.
 
 ### Request
-`multipart/form-data` with one part named `file`: a PDF with a text layer, at most 2 MB and 5 pages.
+`multipart/form-data` with one part named `file`: a PDF (at most 2 MB and 5 pages) or a JPG/PNG picture (at most 8 MB). An optional text part named `password` opens a password-protected PDF; it is used only to open the file, never stored, logged or echoed, and is at most 128 characters. The kind is decided from the first bytes of the file, not its name or declared type.
 
 ```
 curl -F "file=@payslip.pdf;type=application/pdf" http://localhost:8080/api/payslips/parse
@@ -347,8 +347,10 @@ Any value is `null` when it was not found or did not pass the checks; `currentAn
 `annualSalaryFullTime` and `positionPercent` were read. With `LLM_PROVIDER=stub` everything is always `null`.
 
 ### How it works
-1. **Read.** PDFBox reads the text layer in memory. The PDF is never stored. Scanned payslips (no text layer) are
-   rejected with `400`; they are not supported yet.
+1. **Read.** A PDF with a text layer is read by PDFBox in memory. A picture, or a PDF without a text layer, is
+   turned upright (EXIF), scaled to at most 2000 px and read by Tesseract OCR on this server (languages `nor+eng`).
+   The file is never stored and the picture is never sent to the LLM. If Tesseract is not installed or `OCR_ENABLED`
+   is false, pictures get a `400`; PDFs with a text layer still work.
 2. **Cut down and mask.** Only lines that mention arbeidsgiver, stilling, prosent, årslønn, lønnstrinn, ansiennitet or
    kode, and the two rows below them, are kept (at most 30 lines of 160 characters). Lines with a personal label
    (name, address, account, birth, phone, email) are dropped. National ID numbers, account numbers, IBAN, phone numbers and email addresses are masked.
@@ -397,8 +399,8 @@ exists in the chosen agreement, it is returned as `jobCategory`. Otherwise `null
 ### Errors
 | Status | When |
 |---|---|
-| `400` | No `file` part, not a PDF (checked by content, not by name), corrupt, more than 5 pages, or no text layer |
-| `413` | File larger than 2 MB |
+| `400` | The PDF is password protected (send `password`), or the password is wrong or too long. Also: no `file` part, not a PDF, JPG or PNG (checked by content, not by name), corrupt, more than 5 pages, a picture with too many pixels, no text found, or picture reading not available |
+| `413` | A PDF larger than 2 MB, or a picture larger than 8 MB |
 | `429` | Rate limit exceeded (shares the budget of the other POST endpoints) |
 
 If the LLM call that reads the payslip fails the endpoint still answers `200` with all values `null`, and if the
@@ -430,6 +432,6 @@ Only the two POST endpoints that can call the LLM are limited. They share one bu
 
 Nothing is stored. Request and response bodies, prompts and model answers are never logged. Free text (`employerName`,
 `jobTitle`, `workType`) is restricted by a character whitelist and placed in `<user_data>` tags that the system prompt
-treats as data. The payslip values typed into `POST /api/estimates` are never sent to the LLM. An uploaded payslip PDF
+treats as data. The payslip values typed into `POST /api/estimates` are never sent to the LLM. An uploaded payslip (PDF or picture)
 is never stored or sent as a file; only the small masked excerpt described in section 3 can reach the LLM. The
 employer name and job title read from it are sent to the LLM only when the fixed rules cannot decide the agreement.

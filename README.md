@@ -15,7 +15,9 @@ is worked out from the payslip.
 
 **Step 1. Upload the payslip** (`POST /api/payslips/parse`)
 
-- The PDF is read in memory and never stored. Only a few masked lines go to the AI, which copies out the employer,
+- The file (PDF, JPG or PNG) is read in memory and never stored. A PDF with a text layer is read directly; a
+  picture or a scanned PDF is read with OCR (Tesseract) on this server, so the picture never goes to a third party.
+  The file type is decided from its first bytes, not its name. Only a few masked lines go to the AI, which copies out the employer,
   job title, position percentage, full-time salary, stillingskode, lønnstrinn and seniority date. Each value must
   appear in those lines and be in range, or it is dropped.
 - The code calculates the person's current salary at their own percentage. The AI does not.
@@ -152,7 +154,7 @@ mvn spring-boot:run   # http://localhost:8080 (override with PORT)
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/agreements` | Agreements, their status (`available` or `placeholder`) and job categories. Kept, but not used by the UI |
-| POST | `/api/payslips/parse` | **Step 1.** Upload a payslip PDF: read the form values and suggest the agreement, for the person to check |
+| POST | `/api/payslips/parse` | **Step 1.** Upload a payslip (PDF, JPG or PNG): read the form values and suggest the agreement, for the person to check |
 | POST | `/api/estimates` | **Step 2.** Submit the checked values and work history, get an estimate |
 | GET | `/actuator/health` | Health check |
 
@@ -165,7 +167,13 @@ field, errors): [docs/API.md](docs/API.md).
 curl -F "file=@payslip.pdf;type=application/pdf" http://localhost:8080/api/payslips/parse
 ```
 
-- A PDF with a text layer, at most 2 MB and 5 pages. Scanned payslips are not supported yet.
+- A PDF (at most 2 MB and 5 pages) or a JPG/PNG picture (at most 8 MB). Pictures and scanned PDFs need Tesseract
+  with the `nor` and `eng` language packs on the server (the Dockerfile installs them). Without it a picture gets a
+  `400` that says picture reading is not available, and the person can upload a PDF or type the values in. A PDF scan
+  is read on its first two pages. Phone photos are turned upright from their EXIF tag and scaled to at most 2000 px.
+  OCR can misread digits; the person checks every value before the estimate.
+- A password-protected PDF gets a `400` that says so; the page then asks for the password and sends it again in an
+  optional `password` field. It only opens the file: it is never stored, logged or echoed in an error.
 - Answer: `employerName`, `jobTitle`, `positionPercent`, `annualSalaryFullTime` (as printed),
   `currentAnnualSalary` (calculated by the application), `stillingskode`, `lonnstrinn`, `ansiennitetsdato`, and
   `agreement`: the agreement suggested from the employer (`agreementId`, `name`, `status`, `confidence`, `reason`,
@@ -251,6 +259,9 @@ mvn spring-boot:run
 | `RATE_LIMIT_PER_MINUTE` | 5 | Max requests to `POST /api/estimates` and `POST /api/payslips/parse` together, per client address per minute (`429` with `Retry-After` above this) |
 | `RATE_LIMIT_PER_DAY` | 500 | Max of those requests for the whole service per UTC day. This caps Claude spend. |
 | `RATE_LIMIT_ENABLED` | true | Turn the limiter off (local testing only) |
+| `OCR_ENABLED` | true | Turn picture reading off. Pictures then get a clear "not available" message |
+| `OCR_COMMAND` | tesseract | The Tesseract program. Install it locally to try pictures (`nor` and `eng` language packs) |
+| `OCR_LANGUAGES` | nor+eng | Tesseract language packs |
 | `FORWARD_HEADERS` | none | Set to `native` only behind a trusted proxy/load balancer, so limits use the real client address |
 | `CORS_ALLOWED_ORIGINS` | empty (closed) | Comma-separated browser origins allowed to call `/api/**`, for example the front end URL |
 
@@ -275,7 +286,8 @@ docker run -p 8080:8080 -e LLM_PROVIDER=llama -e LLAMA_BASE_URL=https://api.groq
   -e LLAMA_API_KEY=your-key-here -e LLAMA_MODEL=llama-3.3-70b-versatile tariff-helper
 ```
 
-The image has no key in it. The limiter is in memory and per instance, so with several instances each has its own limits.
+The image has no key in it. It installs Tesseract (with Norwegian and English) for picture payslips; reading a
+picture can use a few hundred MB of memory, so a very small instance may need more RAM. The limiter is in memory and per instance, so with several instances each has its own limits.
 
 ## Privacy
 
@@ -288,7 +300,8 @@ The image has no key in it. The limiter is in memory and per instance, so with s
   history and current pay from the form are never sent to that provider: the estimate (Step 2) makes no model call.
   When the rules cannot match the employer, the employer name and job title (and nothing else) are sent for the agreement suggestion (Step 1).
   Payslip values typed into the estimate (stillingskode, lønnstrinn, ansiennitetsdato) are never sent; only the code's
-  conclusion is. If a payslip PDF is uploaded to `POST /api/payslips/parse`, the PDF is read in memory and never stored.
+  conclusion is. If a payslip (PDF or picture) is uploaded to `POST /api/payslips/parse`, it is read in memory and never stored.
+  Pictures and scans are turned into text by Tesseract on this server; the picture itself is never sent to the AI.
   Only a few lines around the payslip labels are sent, with ID, account, phone and email numbers masked and lines
   with a name or address label dropped. See `docs/API.md` section 4 for the limits.
   Check the provider's data retention and training terms and tell users before a real pilot. With local Ollama,
@@ -304,6 +317,7 @@ com.tariffhelper
 │               AgreementSuggestionService, CreditedSeniorityCalculator, ConfidenceAssessor
 ├── llm         AgreementSuggester, StubAgreementSuggester,
 │               ClaudeAgreementSuggester (agreement suggestion, Step 1), ClaudeMessagesApi (shared HTTP call), PromptBuilder
+├── ocr         OcrEngine, TesseractOcrEngine (reads picture payslips on the server)
 ├── config      LlmConfig (Llama, OpenAI, Claude or stub), WebConfig (rate limiting, CORS)
 ├── ratelimit   RateLimiter, RateLimitFilter (429 on POST /api/estimates and /api/payslips/parse)
 └── agreement   loads and validates src/main/resources/agreements/*.yaml

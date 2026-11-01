@@ -6,8 +6,10 @@ COPY src ./src
 RUN mvn -q package -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine
+# Tesseract reads payslip pictures and scanned PDFs on the server (Norwegian and English).
+RUN apk add --no-cache tesseract-ocr tesseract-ocr-data-nor tesseract-ocr-data-eng
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
-ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+UseSerialGC -Xss512k -XX:TieredStopAtLevel=1"
+ENV JAVA_OPTS="-Djava.awt.headless=true -XX:MaxRAMPercentage=75 -XX:+UseSerialGC -Xss512k -XX:TieredStopAtLevel=1"
 EXPOSE 8080
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

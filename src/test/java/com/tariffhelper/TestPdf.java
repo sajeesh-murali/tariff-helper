@@ -1,6 +1,9 @@
 package com.tariffhelper;
 
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.encryption.AccessPermission;
+import org.apache.pdfbox.pdmodel.encryption.StandardProtectionPolicy;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
@@ -50,9 +53,28 @@ public final class TestPdf {
         }
     }
 
+    /** The same PDF, but it needs the given password to open (invented password, never a real one). */
+    public static byte[] withPassword(byte[] pdf, String password) {
+        try (PDDocument document = Loader.loadPDF(pdf)) {
+            StandardProtectionPolicy policy =
+                    new StandardProtectionPolicy("owner-" + password, password, new AccessPermission());
+            policy.setEncryptionKeyLength(128);
+            document.protect(policy);
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            document.save(out);
+            return out.toByteArray();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
     /** A payslip-like page with invented personal data, so tests can prove it is not passed on. */
     public static byte[] samplePayslip() {
-        return withLines(List.of(
+        return withLines(SAMPLE_PAYSLIP_LINES);
+    }
+
+    /** The lines of {@link #samplePayslip()}, for tests that stand in for OCR. */
+    public static final List<String> SAMPLE_PAYSLIP_LINES = List.of(
                 "Lønnsslipp august 2026",
                 "Navn: Kari Testesen",
                 "Fødselsnummer: 01019012345",
@@ -64,6 +86,5 @@ public final class TestPdf {
                 "Registrert ansiennitet: 01.08.2015",
                 "Stillingskode Stilling Lonnstrinn Ansiennitet fra",
                 "7936 Sykepleier 45 01.08.2015",
-                "Skattetrekk 12 345,00"));
-    }
+                "Skattetrekk 12 345,00");
 }

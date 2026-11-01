@@ -1,6 +1,9 @@
 package com.tariffhelper.api;
 
+import com.tariffhelper.TestImages;
 import com.tariffhelper.TestPdf;
+import com.tariffhelper.api.ApiExceptions.InvalidRequestException;
+import com.tariffhelper.ocr.OcrEngine;
 import com.tariffhelper.domain.PayslipFields;
 import com.tariffhelper.domain.ConfidenceLevel;
 import com.tariffhelper.llm.AgreementSuggester;
@@ -49,9 +52,20 @@ class PayslipApiIntegrationTest {
     @MockitoBean
     AgreementSuggester suggester;
 
+    @MockitoBean
+    OcrEngine ocr;
+
     private ResultActions upload(byte[] bytes) throws Exception {
+        return upload(bytes, "payslip.pdf", "application/pdf");
+    }
+
+    private ResultActions upload(byte[] bytes, String name, String contentType) throws Exception {
         return mvc.perform(multipart("/api/payslips/parse")
-                .file(new MockMultipartFile("file", "payslip.pdf", "application/pdf", bytes)));
+                .file(new MockMultipartFile("file", name, contentType, bytes)));
+    }
+
+    private static String sampleText() {
+        return String.join(System.lineSeparator(), TestPdf.SAMPLE_PAYSLIP_LINES);
     }
 
     @Test
@@ -157,27 +171,129 @@ class PayslipApiIntegrationTest {
     }
 
     @Test
-    void aFileThatIsNotAPdfIsRejectedWithoutEchoingIt() throws Exception {
+    void aPictureIsReadWithOcrAndNeverPassesPersonalDataOn() throws Exception {
+        when(ocr.recognize(any())).thenReturn(sampleText());
+        when(extractor.extract(anyString())).thenReturn(new PayslipFields("7936", 45, YearMonth.of(2015, 8),
+                "Oslo kommune", "Sykepleier", 80, BigDecimal.valueOf(612300)));
+
+        upload(TestImages.jpeg(1600, 1200), "photo.jpg", "image/jpeg")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.employerName").value("Oslo kommune"))
+                .andExpect(jsonPath("$.lonnstrinn").value(45))
+                .andExpect(jsonPath("$.agreement.agreementId").value("oslo-kommune"));
+
+        ArgumentCaptor<String> sent = ArgumentCaptor.forClass(String.class);
+        verify(extractor).extract(sent.capture());
+        assertThat(sent.getValue())
+                .contains("Arbeidsgiver: Oslo kommune")
+                .contains("7936 Sykepleier 45 01.08.2015")
+                .doesNotContain("Kari").doesNotContain("Testesen")
+                .doesNotContain("01019012345").doesNotContain("4202");
+    }
+
+    @Test
+    void thePictureTypeIsDecidedFromTheFileNotFromItsNameOrDeclaredType() throws Exception {
+        when(ocr.recognize(any())).thenReturn(sampleText());
+        when(extractor.extract(anyString())).thenReturn(PayslipFields.empty());
+
+        upload(TestImages.png(1200, 800), "payslip.pdf", "application/pdf").andExpect(status().isOk());
+
+        verify(ocr).recognize(any());
+    }
+
+    @Test
+    void aScannedPdfWithoutTextIsReadWithOcr() throws Exception {
+        when(ocr.recognize(any())).thenReturn(sampleText());
+        when(extractor.extract(anyString())).thenReturn(PayslipFields.empty());
+
+        upload(TestPdf.pages(1, List.of())).andExpect(status().isOk());
+
+        verify(ocr).recognize(any());
+    }
+
+    @Test
+    void aPictureThatCannotBeReadIsRejectedWithoutEchoingIt() throws Exception {
+        when(ocr.recognize(any())).thenThrow(new InvalidRequestException("The picture could not be read."));
+
+        upload(TestImages.png(1200, 800), "photo.png", "image/png")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("The picture could not be read."));
+
+        verify(extractor, never()).extract(anyString());
+    }
+
+    @Test
+    void aFileThatIsNeitherAPdfNorAPictureIsRejectedWithoutEchoingIt() throws Exception {
         upload("Kari Testesen 01019012345".getBytes(StandardCharsets.UTF_8))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.detail").value("The file is not a PDF."))
+                .andExpect(jsonPath("$.detail").value("The file must be a PDF, JPG or PNG."))
                 .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Kari"))));
 
         verify(extractor, never()).extract(anyString());
+        verify(ocr, never()).recognize(any());
     }
 
     @Test
-    void aScannedPdfWithoutTextIsRejected() throws Exception {
-        upload(TestPdf.pages(1, List.of()))
+    void aProtectedPdfAsksForThePasswordAndNothingReachesTheModel() throws Exception {
+        byte[] protectedPdf = TestPdf.withPassword(TestPdf.samplePayslip(), "hemmelig");
+
+        upload(protectedPdf)
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("Scanned")));
-    }
-
-    @Test
-    void aTooLargeFileIsRejected() throws Exception {
-        upload(new byte[(int) PayslipController.MAX_BYTES + 1]).andExpect(status().isPayloadTooLarge());
+                .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("password protected")));
 
         verify(extractor, never()).extract(anyString());
+    }
+
+    @Test
+    void aProtectedPdfIsReadWhenThePasswordIsSent() throws Exception {
+        when(extractor.extract(anyString())).thenReturn(new PayslipFields("7936", 45, YearMonth.of(2015, 8),
+                "Oslo kommune", "Sykepleier", 80, BigDecimal.valueOf(612300)));
+        byte[] protectedPdf = TestPdf.withPassword(TestPdf.samplePayslip(), "hemmelig");
+
+        mvc.perform(multipart("/api/payslips/parse")
+                        .file(new MockMultipartFile("file", "payslip.pdf", "application/pdf", protectedPdf))
+                        .param("password", "hemmelig"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.employerName").value("Oslo kommune"));
+    }
+
+    @Test
+    void aWrongPasswordIsRejectedAndNeverEchoed() throws Exception {
+        byte[] protectedPdf = TestPdf.withPassword(TestPdf.samplePayslip(), "hemmelig");
+
+        mvc.perform(multipart("/api/payslips/parse")
+                        .file(new MockMultipartFile("file", "payslip.pdf", "application/pdf", protectedPdf))
+                        .param("password", "feil-passord"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("The password is wrong."))
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("feil-passord"))));
+    }
+
+    @Test
+    void aTooLongPasswordIsRejected() throws Exception {
+        mvc.perform(multipart("/api/payslips/parse")
+                        .file(new MockMultipartFile("file", "payslip.pdf", "application/pdf", TestPdf.samplePayslip()))
+                        .param("password", "x".repeat(PayslipController.MAX_PASSWORD_CHARS + 1)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void aPdfOverTwoMegabytesIsRejected() throws Exception {
+        byte[] bigPdf = new byte[(int) PayslipController.MAX_PDF_BYTES + 1];
+        System.arraycopy("%PDF-1.7".getBytes(StandardCharsets.US_ASCII), 0, bigPdf, 0, 8);
+
+        upload(bigPdf).andExpect(status().isPayloadTooLarge());
+
+        verify(extractor, never()).extract(anyString());
+    }
+
+    @Test
+    void aPictureOverEightMegabytesIsRejected() throws Exception {
+        upload(new byte[(int) PayslipController.MAX_IMAGE_BYTES + 1], "photo.jpg", "image/jpeg")
+                .andExpect(status().isPayloadTooLarge());
+
+        verify(ocr, never()).recognize(any());
     }
 
     @Test
