@@ -43,7 +43,37 @@ class PayslipTextReaderTest {
     void rejectsAPdfWithoutATextLayerAsScanned() {
         assertThatThrownBy(() -> reader.read(TestPdf.pages(1, List.of())))
                 .isInstanceOf(InvalidRequestException.class)
-                .hasMessageContaining("Scanned payslips are not supported yet");
+                .hasMessageContaining("Scanned payslips need picture reading");
+    }
+
+    @Test
+    void aProtectedPdfAsksForThePassword() {
+        byte[] protectedPdf = TestPdf.withPassword(TestPdf.samplePayslip(), "hemmelig");
+
+        assertThatThrownBy(() -> reader.textLayer(protectedPdf, null))
+                .isInstanceOf(InvalidRequestException.class)
+                .hasMessage(PayslipTextReader.PASSWORD_REQUIRED);
+        assertThatThrownBy(() -> reader.textLayer(protectedPdf, ""))
+                .isInstanceOf(InvalidRequestException.class)
+                .hasMessage(PayslipTextReader.PASSWORD_REQUIRED);
+    }
+
+    @Test
+    void aWrongPasswordIsRejectedWithoutEchoingIt() {
+        byte[] protectedPdf = TestPdf.withPassword(TestPdf.samplePayslip(), "hemmelig");
+
+        assertThatThrownBy(() -> reader.textLayer(protectedPdf, "feil-passord"))
+                .isInstanceOf(InvalidRequestException.class)
+                .hasMessage(PayslipTextReader.PASSWORD_WRONG)
+                .hasMessageNotContaining("feil-passord");
+    }
+
+    @Test
+    void theRightPasswordOpensTheFile() {
+        byte[] protectedPdf = TestPdf.withPassword(TestPdf.samplePayslip(), "hemmelig");
+
+        assertThat(reader.textLayer(protectedPdf, "hemmelig")).hasValueSatisfying(
+                text -> assertThat(text).contains("7936 Sykepleier 45 01.08.2015"));
     }
 
     @Test

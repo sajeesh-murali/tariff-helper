@@ -10,10 +10,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
- * Payslip PDF to form values and a suggested agreement: read the text with PDFBox, cut it down and mask personal
- * numbers, let the model copy out the values, then pick the agreement from the employer name (the rules in code
- * first, the model only if the rules cannot decide). The PDF is never stored. Only the small redacted excerpt, and
- * later the employer name and job title, can reach the model.
+ * Payslip (PDF or picture) to form values and a suggested agreement: read the text (the PDF text layer, or OCR on
+ * this server for pictures and scans), cut it down and mask personal numbers, let the model copy out the values, then
+ * pick the agreement from the employer name (the rules in code first, the model only if the rules cannot decide).
+ * The file is never stored. Only the small redacted excerpt, and later the employer name and job title, can reach
+ * the model; the picture itself never leaves this server.
  */
 @Service
 public class PayslipService {
@@ -24,13 +25,13 @@ public class PayslipService {
     public record Result(PayslipFields fields, SuggestResponse suggestion, Agreement agreement) {
     }
 
-    private final PayslipTextReader reader;
+    private final PayslipFileReader reader;
     private final PayslipRedactor redactor;
     private final PayslipFieldExtractor extractor;
     private final AgreementSuggestionService suggestions;
     private final AgreementRepository agreements;
 
-    public PayslipService(PayslipTextReader reader, PayslipRedactor redactor, PayslipFieldExtractor extractor,
+    public PayslipService(PayslipFileReader reader, PayslipRedactor redactor, PayslipFieldExtractor extractor,
                           AgreementSuggestionService suggestions, AgreementRepository agreements) {
         this.reader = reader;
         this.redactor = redactor;
@@ -39,8 +40,13 @@ public class PayslipService {
         this.agreements = agreements;
     }
 
-    public Result parse(byte[] pdf) {
-        String excerpt = redactor.excerpt(reader.read(pdf));
+    public Result parse(byte[] file) {
+        return parse(file, null);
+    }
+
+    /** @param password for a password-protected PDF, or null; used only to open the file, never stored or logged */
+    public Result parse(byte[] file, String password) {
+        String excerpt = redactor.excerpt(reader.read(file, password));
         if (excerpt.isBlank()) {
             log.info("Payslip has no line with the expected labels, nothing sent to the model");
             return new Result(PayslipFields.empty(), SuggestResponse.none(), null);

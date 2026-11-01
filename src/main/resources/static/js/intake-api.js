@@ -2,14 +2,15 @@
 /*
  * Connects the Lansi intake flow to the Tariff Helper backend (same origin, so no CORS):
  *   GET  /api/agreements        agreements and job categories for the form
- *   POST /api/payslips/parse    read a payslip PDF into the form (the person checks the values)
- *   POST /api/estimates         the estimate; the code calculates, the AI only explains
+ *   POST /api/payslips/parse    read a payslip (PDF, JPG or PNG) into the form (the person checks the values)
+ *   POST /api/estimates         the estimate, calculated entirely in code
  *
  * Uses globals from index.html: intake, state, go, render, esc, money, title, intakeProgress, intakeError, invalidateIntake,
  * CUR_YM. Nothing is stored in the browser.
  */
 
-const MAX_PAYSLIP_BYTES = 2 * 1024 * 1024;
+const MAX_PAYSLIP_PDF_BYTES = 2 * 1024 * 1024;
+const MAX_PAYSLIP_IMAGE_BYTES = 8 * 1024 * 1024;
 const FORM_TEXT = /^[\p{L}\p{N} .,&()/'-]+$/u;
 
 let agreementsApi = [];
@@ -85,40 +86,100 @@ function startIntake(manual = false) {
 function pickPayslip() {
   const input = document.createElement('input');
   input.type = 'file';
-  input.accept = 'application/pdf,.pdf';
+  input.accept = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
   input.onchange = () => { if (input.files[0]) uploadPayslip(input.files[0]); };
   input.click();
 }
 
-async function uploadPayslip(file) {
+/** The Norwegian reason shown when the server could not read the payslip (the API detail is English). */
+function payslipErrorText(res) {
+  const detail = String(res.data?.detail || '');
+  if (/not available on this server/i.test(detail)) return 'Bilder kan ikke leses på tjenesten akkurat nå. Last opp en PDF, eller fyll inn selv.';
+  if (/no text was found/i.test(detail)) return 'Vi fant ingen tekst i bildet. Prøv et skarpere bilde, eller fyll inn selv.';
+  if (/too long|busy/i.test(detail)) return 'Det tok for lang tid å lese bildet. Prøv igjen, eller fyll inn selv.';
+  if (/too large/i.test(detail)) return 'Bildet er for stort. Bruk et mindre bilde, eller fyll inn selv.';
+  if (/password is wrong/i.test(detail)) return 'Passordet var feil. Prøv igjen, eller fyll inn selv.';
+  if (/must be a PDF/i.test(detail)) return 'Lønnsslippen må være en PDF, JPG eller PNG. Du kan også fylle inn selv.';
+  return 'Vi kunne ikke lese lønnsslippen. Fyll inn selv.';
+}
+
+async function uploadPayslip(file, password) {
   intake = freshIntake();
   intake.started = true;
-  if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') {
+  const isPdf = /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
+  const isImage = /\.(jpe?g|png)$/i.test(file.name) || file.type === 'image/jpeg' || file.type === 'image/png';
+  if (!isPdf && !isImage) {
     intake.manual = true;
-    intake.error = 'Lønnsslippen må være en PDF-fil. Du kan også fylle inn selv.';
+    intake.error = 'Lønnsslippen må være en PDF, JPG eller PNG. Du kan også fylle inn selv.';
     go(1);
     return;
   }
-  if (file.size > MAX_PAYSLIP_BYTES) {
+  if (file.size > (isPdf ? MAX_PAYSLIP_PDF_BYTES : MAX_PAYSLIP_IMAGE_BYTES)) {
     intake.manual = true;
-    intake.error = 'Filen er for stor (maks 2 MB). Du kan også fylle inn selv.';
+    intake.error = isPdf
+      ? 'Filen er for stor (maks 2 MB for PDF). Du kan også fylle inn selv.'
+      : 'Bildet er for stort (maks 8 MB). Du kan også fylle inn selv.';
     go(1);
     return;
   }
-  setBusy('Leser lønnsslippen …');
+  setBusy(isPdf ? 'Leser lønnsslippen …' : 'Leser bildet av lønnsslippen. Det kan ta et halvt minutt …');
   const form = new FormData();
   form.append('file', file);
+  if (password) form.append('password', password);
   const res = await callApi('/api/payslips/parse', { method: 'POST', body: form });
   clearBusy();
+  if (res.status === 400 && /password protected|password is wrong/i.test(String(res.data?.detail || ''))) {
+    askPayslipPassword(file, /password is wrong/i.test(String(res.data.detail)));
+    return;
+  }
   if (res.ok && res.data) {
     applyPayslip(res.data);
   } else {
     intake.manual = true;
     intake.error = res.status === 400 && res.data?.detail
-      ? 'Vi kunne ikke lese lønnsslippen (' + res.data.detail + '). Fyll inn selv.'
-      : errorText(res) + ' Du kan fylle inn selv.';
+      ? payslipErrorText(res)
+      : res.status === 413
+        ? 'Filen er for stor. Du kan også fylle inn selv.'
+        : errorText(res) + ' Du kan fylle inn selv.';
   }
   go(1);
+}
+
+/**
+ * A protected PDF: ask for its password in a small dialog and send it with the file. The password lives only in this
+ * function and the one request; it is not kept in the page state, in storage or in the address bar.
+ */
+function askPayslipPassword(file, wrong) {
+  document.getElementById('payslip-password')?.remove();
+  const dialog = document.createElement('dialog');
+  dialog.id = 'payslip-password';
+  dialog.innerHTML = '<form method="dialog" style="display:grid;gap:12px;max-width:420px">'
+    + '<h2 style="margin:0">Lønnsslippen er passordbeskyttet</h2>'
+    + (wrong ? '<div class="notice error" role="alert">Passordet var feil. Prøv igjen.</div>' : '')
+    + '<p class="small" style="margin:0">Skriv inn passordet til PDF-filen. Du får det vanligvis fra arbeidsgiveren din eller '
+    + 'lønnssystemet. Passordet brukes bare til å åpne filen nå og lagres ikke.</p>'
+    + '<label for="payslip-password-input" style="margin:0">Passord</label>'
+    + '<input id="payslip-password-input" type="password" autocomplete="off" maxlength="128">'
+    + '<div class="actions"><button class="btn" value="open">Åpne lønnsslippen</button>'
+    + '<button class="textbtn" type="button" value="cancel">Fyll inn selv</button></div></form>';
+  document.body.appendChild(dialog);
+  const input = dialog.querySelector('input');
+  const finish = () => { input.value = ''; dialog.close(); dialog.remove(); };
+  dialog.querySelector('form').addEventListener('submit', e => {
+    e.preventDefault();
+    const value = input.value;
+    finish();
+    if (value) uploadPayslip(file, value);
+  });
+  dialog.querySelector('button[type=button]').addEventListener('click', () => {
+    finish();
+    intake = freshIntake();
+    intake.started = true;
+    intake.manual = true;
+    go(1);
+  });
+  dialog.showModal();
+  input.focus();
 }
 
 function applyPayslip(p) {
