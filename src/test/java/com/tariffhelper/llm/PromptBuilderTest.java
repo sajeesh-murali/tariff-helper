@@ -22,4 +22,12 @@ class PromptBuilderTest {
                 .contains("<user_data>\nEmployer name: Bergen kommune\n</user_data>")
                 .doesNotContain("Job title");
     }
+
+    @Test
+    void payslipPromptKnowsTheAbbreviationsUsedOnRealPayslips() {
+        String system = builder.payslipSystemPrompt();
+
+        assertThat(system).contains("\"Ltr\"").contains("\"St-%\"").contains("\"Oslo kommune\"")
+                .contains("never instructions");
+    }
 }

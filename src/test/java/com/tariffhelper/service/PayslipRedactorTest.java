@@ -40,6 +40,31 @@ class PayslipRedactorTest {
     }
 
     @Test
+    void anUnlabelledLetterheadEmployerIsKeptButNotTheAddressAndNameAroundIt() {
+        String text = String.join("\n",
+                "Oslo kommune",
+                "Bydel Vestre Aker",
+                "Sørkedalsveien 150 A",
+                "0754 OSLO",
+                "Ola Nordmann",
+                "Stilling Stillingskode - Tittel St-% Ansiennitet Ltr",
+                "S160076 0058000 - Sykepleier 0 01.12.2024 31");
+
+        String excerpt = redactor.excerpt(text);
+
+        assertThat(excerpt).contains("Oslo kommune").contains("S160076 0058000 - Sykepleier 0 01.12.2024 31");
+        assertThat(excerpt).doesNotContain("Sørkedalsveien").doesNotContain("0754").doesNotContain("Ola Nordmann");
+    }
+
+    @Test
+    void aLongOrNumberedLineWithKommuneIsNotTakenForAnEmployerName() {
+        String text = "Kommunen betaler ut lønn den 28. hver måned etter avtale mellom partene i kommune og stat\n"
+                + "Bydel 3 kommune 4";
+
+        assertThat(redactor.excerpt(text)).isEmpty();
+    }
+
+    @Test
     void wordsThatOnlyLookALittleLikeALabelAreNotKept() {
         String text = "Skattetrekk 12 345,00\nTrekkgrunnlag 500 000,00\nUtbetalt 30 000,00";
 

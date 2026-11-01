@@ -32,6 +32,12 @@ public class PayslipRedactor {
     private static final int FLAGS = Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE;
     private static final Pattern KEYWORD = Pattern.compile(
             "stilling|l[øo]nn?strinn|trinn|ansienn|kode|arbeidsgiver|[åa]rsl[øo]nn|prosent", FLAGS);
+    // A letterhead can name the employer without any label ("Oslo kommune"). Only a short line without digits is kept,
+    // and never the lines around it, because those hold the person's name and address.
+    private static final Pattern EMPLOYER_NAME = Pattern.compile(
+            "\\b(?:kommune|fylkeskommune|helseforetak|sykehus|hf)\\b", FLAGS);
+    private static final int MAX_EMPLOYER_NAME_CHARS = 40;
+
     // The employer line may say "navn" (Arbeidsgivernavn), so a name label only drops lines that are not about the employer.
     private static final Pattern EMPLOYER = Pattern.compile("arbeidsgiver", FLAGS);
     private static final Pattern NAME_LABEL = Pattern.compile("navn|name", FLAGS);
@@ -55,6 +61,8 @@ public class PayslipRedactor {
                 for (int j = i; j <= i + 2 && j < lines.length; j++) {
                     keep.add(j);
                 }
+            } else if (looksLikeAnEmployerName(lines[i])) {
+                keep.add(i);
             }
         }
         List<String> out = new ArrayList<>();
@@ -77,6 +85,12 @@ public class PayslipRedactor {
      * label still marks its line, so the excerpt does not come out empty for a scan. Only the label is guessed; the
      * values are still copied exactly as written, and the same masking and personal-label rules apply.
      */
+    static boolean looksLikeAnEmployerName(String line) {
+        String text = line.strip();
+        return !text.isEmpty() && text.length() <= MAX_EMPLOYER_NAME_CHARS
+                && text.chars().noneMatch(Character::isDigit) && EMPLOYER_NAME.matcher(text).find();
+    }
+
     static boolean looksLikeALabel(String line) {
         for (String word : line.split("[^\\p{L}\\p{N}]+")) {
             String plain = plain(word);

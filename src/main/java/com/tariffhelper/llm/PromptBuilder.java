@@ -40,13 +40,16 @@ public class PromptBuilder {
             convert salaries or percentages, or guess.
 
             The values:
-            - employerName: the employer (arbeidsgiver), as written. Text only.
+            - employerName: the employer (arbeidsgiver), as written. Text only. If no line is labelled arbeidsgiver, \
+            use a line that is only an organisation name, such as "Oslo kommune".
             - jobTitle: the job title (stilling), as written. Text only.
-            - positionPercent: the position percentage (stillingsprosent), a whole number from 1 to 100.
+            - positionPercent: the position percentage (stillingsprosent, often written "St-%"), a whole number from 1 \
+            to 100. A value of 0 means it is not given: use null.
             - annualSalaryFullTime: the annual salary in a 100 % position before tax (årslønn i 100 % stilling \
             før skatt), in whole NOK, digits only. Copy the printed figure, do not adjust it for the percentage.
             - stillingskode: the position code, up to 6 digits.
-            - lonnstrinn: the pay step (lønnstrinn), a whole number from 1 to 100.
+            - lonnstrinn: the pay step (lønnstrinn, often written "Ltr" or "L-trinn"), a whole number from 1 to 100. \
+            Do not use the pay frame ("L-ramme") or its alternative ("Alt").
             - ansiennitetsdato: the registered seniority date (registrert ansiennitet, ansiennitetsdato or \
             ansiennitet fra), written as yyyy-MM. Payslips usually write dd.MM.yyyy, so keep only the year and month.
 
