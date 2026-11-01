@@ -49,7 +49,7 @@ app:
     command: ${OCR_COMMAND:tesseract}
     heic-command: ${OCR_HEIC_COMMAND:magick}
     languages: ${OCR_LANGUAGES:nor+eng}
-    timeout-seconds: ${OCR_TIMEOUT_SECONDS:60}
+    timeout-seconds: ${OCR_TIMEOUT_SECONDS:90}
     max-side: ${OCR_MAX_SIDE:3000}
   llm:
     # openrouter = OpenRouter, Claude Haiku 5.5 by default (default); needs the OPENROUTER_API_KEY environment variable

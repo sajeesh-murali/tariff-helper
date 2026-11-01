@@ -69,9 +69,7 @@ public class TesseractOcrEngine implements OcrEngine {
         try {
             // The pictures are prepared at about 300 DPI, which is also what Tesseract is told. Keeping the spaces
             // between words keeps the columns of a payslip table apart.
-            process = new ProcessBuilder(props.command(), "stdin", "stdout", "-l", props.languages(), "--psm", "6",
-                    "--dpi", "300", "-c", "preserve_interword_spaces=1")
-                    .start();
+            process = command().start();
         } catch (IOException e) {
             log.warn("OCR program could not be started: {}", e.getClass().getSimpleName());
             throw unavailable();
@@ -111,6 +109,17 @@ public class TesseractOcrEngine implements OcrEngine {
         } finally {
             process.destroyForcibly();
         }
+    }
+
+    /**
+     * The fixed command. Tesseract starts one thread per core it sees; on a small shared server (a fraction of a core)
+     * those threads fight over the CPU and one picture takes several times longer, so it is told to use one.
+     */
+    ProcessBuilder command() {
+        ProcessBuilder builder = new ProcessBuilder(props.command(), "stdin", "stdout", "-l", props.languages(),
+                "--psm", "6", "--dpi", "300", "-c", "preserve_interword_spaces=1");
+        builder.environment().put("OMP_THREAD_LIMIT", "1");
+        return builder;
     }
 
     private static String programMessage(Future<byte[]> messages) {
