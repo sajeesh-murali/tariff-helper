@@ -2,6 +2,7 @@
 /*
  * Connects the Lansi intake flow to the Tariff Helper backend (same origin, so no CORS):
  *   GET  /api/agreements        agreements and job categories for the form
+ *   GET  /api/config            settings for the page (the booking link)
  *   POST /api/payslips/parse    read a payslip (PDF, JPG, PNG, WebP, TIFF, HEIC or HEIF) into the form (the person checks the values)
  *   POST /api/estimates         the estimate, calculated entirely in code
  *
@@ -621,7 +622,8 @@ function resultCard(r) {
     + `</ul><p class="small">Les mer: <a href="#faq">spørsmål og svar</a> · <a href="#om">om ansiennitet</a> · `
     + `<a href="#avtaler">avtaler og regler</a></p></div>`;
   const monthly = perYear / 12;
-  const cta = r.kind === 'none'
+  const cta = !bookingReady() ? ''
+    : r.kind === 'none'
     ? `<p class="small">Tror du likevel at ansienniteten din er feil? `
       + `<button class="textbtn" onclick="openBooking()">Snakk med oss</button></p>`
     : `<div class="cta"><h2>Vil du ha hjelp til å sikre at ansienniteten din er riktig registrert?</h2>`
@@ -634,11 +636,22 @@ function resultCard(r) {
     + `<p class="small">${esc(d.disclaimer)}</p>`;
 }
 
-// Where the booking opens. PLACEHOLDER: replace with the real Calendly link from the business.
-const BOOKING_URL = 'https://calendly.com/DIN-LENKE-HER';
+// Where the booking opens. It comes from the server (BOOKING_URL); null hides the booking button.
+let bookingUrl = null;
+
+function loadConfig() {
+  fetch('/api/config')
+    .then(r => (r.ok ? r.json() : {}))
+    .then(config => {
+      bookingUrl = typeof config.bookingUrl === 'string' && config.bookingUrl.startsWith('https://')
+        ? config.bookingUrl : null;
+      if (intake.started) render();
+    })
+    .catch(() => { bookingUrl = null; });
+}
 
 function bookingReady() {
-  return !BOOKING_URL.includes('DIN-LENKE-HER');
+  return bookingUrl !== null;
 }
 
 function openBooking() {
@@ -646,7 +659,7 @@ function openBooking() {
     showInfo('Booking', 'Bookinglenken er ikke satt opp ennå.');
     return;
   }
-  window.open(BOOKING_URL, '_blank', 'noopener');
+  window.open(bookingUrl, '_blank', 'noopener');
 }
 
 /* ---------- step 4: book a call ---------- */
@@ -688,4 +701,7 @@ function intakeResult() {
     + `<button class="textbtn" onclick="go(0)">Til forsiden</button></div></section>`;
 }
 
-document.addEventListener('DOMContentLoaded', loadAgreements);
+document.addEventListener('DOMContentLoaded', () => {
+  loadAgreements();
+  loadConfig();
+});
