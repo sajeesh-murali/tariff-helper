@@ -39,6 +39,8 @@ public final class PayslipImages {
     static final int MAX_SIDE = 3000;
     /** Smaller pictures are enlarged, because small text reads badly. */
     static final int MIN_SIDE = 1500;
+    /** The short side of a page is its width; below this the small print of a payslip gets hard to read. */
+    static final int MIN_SHORT_SIDE = 1600;
     static final int PDF_DPI = 300;
     static final int MAX_PDF_PAGES_TO_READ = 2;
 
@@ -113,11 +115,15 @@ public final class PayslipImages {
 
     static BufferedImage fit(BufferedImage source, int maxSide) {
         int longest = Math.max(source.getWidth(), source.getHeight());
+        int shortest = Math.min(source.getWidth(), source.getHeight());
         double factor = 1.0;
         if (longest > maxSide) {
             factor = (double) maxSide / longest;
-        } else if (longest < Math.min(MIN_SIDE, maxSide)) {
-            factor = Math.min(2.0, (double) Math.min(MIN_SIDE, maxSide) / longest);
+        } else {
+            // Small text reads badly: enlarge pictures that are small, or narrow like a phone screenshot of a page,
+            // as far as the limit allows.
+            double wanted = Math.max((double) Math.min(MIN_SIDE, maxSide) / longest, (double) MIN_SHORT_SIDE / shortest);
+            factor = Math.max(1.0, Math.min(Math.min(2.0, wanted), (double) maxSide / longest));
         }
         int width = Math.max(1, (int) Math.round(source.getWidth() * factor));
         int height = Math.max(1, (int) Math.round(source.getHeight() * factor));

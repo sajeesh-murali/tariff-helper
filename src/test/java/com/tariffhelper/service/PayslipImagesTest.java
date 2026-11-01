@@ -60,6 +60,15 @@ class PayslipImagesTest {
     }
 
     @Test
+    void aNarrowTallScreenshotIsEnlargedAsFarAsTheLimitAllows() throws IOException {
+        // like a phone screenshot of a page: 1206 x 2622, so only a little room to grow under 3000 px
+        BufferedImage image = decode(PayslipImages.prepare(TestImages.png(1206, 2622), PayslipFileType.PNG));
+
+        assertThat(image.getHeight()).isEqualTo(PayslipImages.MAX_SIDE);
+        assertThat(image.getWidth()).isBetween(1375, 1385);
+    }
+
+    @Test
     void aSmallerLimitScalesDownMore() throws IOException {
         BufferedImage image = decode(PayslipImages.prepare(TestImages.png(4000, 2000), PayslipFileType.PNG, 1800));
 
