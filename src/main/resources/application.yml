@@ -47,6 +47,7 @@ app:
   ocr:
     enabled: ${OCR_ENABLED:true}
     command: ${OCR_COMMAND:tesseract}
+    heic-command: ${OCR_HEIC_COMMAND:magick}
     languages: ${OCR_LANGUAGES:nor+eng}
     timeout-seconds: ${OCR_TIMEOUT_SECONDS:60}
     max-side: ${OCR_MAX_SIDE:3000}

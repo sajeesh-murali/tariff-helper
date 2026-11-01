@@ -15,7 +15,7 @@ is worked out from the payslip.
 
 **Step 1. Upload the payslip** (`POST /api/payslips/parse`)
 
-- The file (PDF, JPG or PNG) is read in memory and never stored. A PDF with a text layer is read directly; a
+- The file (PDF, JPG, PNG, WebP, TIFF, HEIC or HEIF) is read in memory and never stored. A PDF with a text layer is read directly; a
   picture or a scanned PDF is read with OCR (Tesseract) on this server, so the picture never goes to a third party.
   The file type is decided from its first bytes, not its name. Only a few masked lines go to the AI, which copies out the employer,
   job title, position percentage, full-time salary, stillingskode, lønnstrinn and seniority date. Each value must
@@ -154,7 +154,7 @@ mvn spring-boot:run   # http://localhost:8080 (override with PORT)
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/agreements` | Agreements, their status (`available` or `placeholder`) and job categories. Kept, but not used by the UI |
-| POST | `/api/payslips/parse` | **Step 1.** Upload a payslip (PDF, JPG or PNG): read the form values and suggest the agreement, for the person to check |
+| POST | `/api/payslips/parse` | **Step 1.** Upload a payslip (PDF, JPG, PNG, WebP, TIFF, HEIC or HEIF): read the form values and suggest the agreement, for the person to check |
 | POST | `/api/estimates` | **Step 2.** Submit the checked values and work history, get an estimate |
 | GET | `/actuator/health` | Health check |
 
@@ -167,8 +167,10 @@ field, errors): [docs/API.md](docs/API.md).
 curl -F "file=@payslip.pdf;type=application/pdf" http://localhost:8080/api/payslips/parse
 ```
 
-- A PDF (at most 2 MB and 5 pages) or a JPG/PNG picture (at most 8 MB). Pictures and scanned PDFs need Tesseract
-  with the `nor` and `eng` language packs on the server (the Dockerfile installs them). Without it a picture gets a
+- A PDF (at most 2 MB and 5 pages) or a picture in JPG, PNG, WebP, TIFF, HEIC or HEIF (at most 8 MB; only the first page of a TIFF is read). Pictures and scanned PDFs need Tesseract
+  with the `nor` and `eng` language packs on the server (the Dockerfile installs them). HEIC/HEIF (iPhone) pictures
+  are first converted to PNG by ImageMagick with HEIF support (`OCR_HEIC_COMMAND`, default `magick`; the Dockerfile
+  installs it); without it those pictures get the same "not available" `400`. Without it a picture gets a
   `400` that says picture reading is not available, and the person can upload a PDF or type the values in. A PDF scan
   is read on its first two pages. Phone photos are turned upright from their EXIF tag and scaled to at most 3000 px (about 300 DPI on A4), with the contrast stretched for grey photocopies.
   OCR can misread digits; the person checks every value before the estimate.

@@ -10,7 +10,7 @@ Request and response bodies are JSON (`Content-Type: application/json`), except 
 |---|---|---|---|---|
 | GET | `/api/agreements` | List agreements and job categories. Kept, but not used by the web page | No | No |
 | POST | `/api/estimates` | Calculate seniority and minimum pay from a work history | Yes, to write the explanation (and to suggest the agreement if needed) | Yes |
-| POST | `/api/payslips/parse` | Read the form values from a payslip (PDF, JPG or PNG) and suggest the agreement from the employer, for the person to check | Yes: a small redacted excerpt, then (only if the fixed rules cannot decide the agreement) the employer name and job title | Yes |
+| POST | `/api/payslips/parse` | Read the form values from a payslip (PDF, JPG, PNG, WebP, TIFF, HEIC or HEIF) and suggest the agreement from the employer, for the person to check | Yes: a small redacted excerpt, then (only if the fixed rules cannot decide the agreement) the employer name and job title | Yes |
 
 Principle behind all of them: **the code calculates, the LLM only explains or suggests.** Seniority, pay steps,
 differences, credited years and confidence levels are computed in Java from `src/main/resources/agreements/*.yaml`.
@@ -302,7 +302,7 @@ All salary figures are annual and for a full-time (100%) position, in NOK.
 ## 3. `POST /api/payslips/parse`
 
 ### Purpose
-Fills in the form of `POST /api/estimates` from an uploaded payslip (PDF, JPG or PNG), so the person does not have to type
+Fills in the form of `POST /api/estimates` from an uploaded payslip (PDF, JPG, PNG, WebP, TIFF, HEIC or HEIF), so the person does not have to type
 the values. The result is only a suggestion: the person checks it in the UI and submits the values to the estimate
 endpoint, which validates them again. Nothing in this endpoint calculates seniority or pay.
 
@@ -399,7 +399,7 @@ exists in the chosen agreement, it is returned as `jobCategory`. Otherwise `null
 ### Errors
 | Status | When |
 |---|---|
-| `400` | The PDF is password protected (send `password`), or the password is wrong or too long. Also: no `file` part, not a PDF, JPG or PNG (checked by content, not by name), corrupt, more than 5 pages, a picture with too many pixels, no text found, or picture reading not available |
+| `400` | The PDF is password protected (send `password`), or the password is wrong or too long. Also: no `file` part, not a PDF, JPG, PNG, WebP, TIFF, HEIC or HEIF (checked by content, not by name), corrupt, more than 5 pages, a picture with too many pixels, no text found, or picture reading not available |
 | `413` | A PDF larger than 2 MB, or a picture larger than 8 MB |
 | `429` | Rate limit exceeded (shares the budget of the other POST endpoints) |
 

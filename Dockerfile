@@ -8,6 +8,8 @@ RUN mvn -q package -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 # Tesseract reads payslip pictures and scanned PDFs on the server (Norwegian and English).
 RUN apk add --no-cache tesseract-ocr tesseract-ocr-data-nor tesseract-ocr-data-eng
+# ImageMagick with HEIF support turns iPhone pictures (HEIC/HEIF) into PNG before reading.
+RUN apk add --no-cache imagemagick imagemagick-heic
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 ENV JAVA_OPTS="-Djava.awt.headless=true -XX:MaxRAMPercentage=75 -XX:+UseSerialGC -Xss512k -XX:TieredStopAtLevel=1"

@@ -17,7 +17,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 
 /**
- * Reads the form values from an uploaded payslip (PDF, JPG or PNG) so the person can check them. Nothing is stored.
+ * Reads the form values from an uploaded payslip (PDF, JPG, PNG, WebP, TIFF, HEIC or HEIF) so the person can check them. Nothing is stored.
  * A password for a protected PDF is used only to open the file; it is never logged, stored or echoed.
  */
 @RestController
