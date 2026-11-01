@@ -2,6 +2,7 @@ package com.tariffhelper.service;
 
 import com.tariffhelper.api.ApiExceptions.InvalidRequestException;
 import com.tariffhelper.ocr.OcrEngine;
+import com.tariffhelper.ocr.OcrProperties;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -18,10 +19,12 @@ public class PayslipFileReader {
 
     private final PayslipTextReader pdfReader;
     private final OcrEngine ocr;
+    private final int maxSide;
 
-    public PayslipFileReader(PayslipTextReader pdfReader, OcrEngine ocr) {
+    public PayslipFileReader(PayslipTextReader pdfReader, OcrEngine ocr, OcrProperties ocrProperties) {
         this.pdfReader = pdfReader;
         this.ocr = ocr;
+        this.maxSide = ocrProperties.maxSide();
     }
 
     public String read(byte[] file) {
@@ -33,8 +36,8 @@ public class PayslipFileReader {
         PayslipFileType type = PayslipFileType.detect(file);
         return switch (type) {
             case PDF -> pdfReader.textLayer(file, password)
-                    .orElseGet(() -> recognise(PayslipImages.renderPdfPages(file, password)));
-            case PNG, JPEG -> recognise(List.of(PayslipImages.prepare(file, type)));
+                    .orElseGet(() -> recognise(PayslipImages.renderPdfPages(file, password, maxSide)));
+            case PNG, JPEG -> recognise(List.of(PayslipImages.prepare(file, type, maxSide)));
             case UNKNOWN -> throw new InvalidRequestException("The file must be a PDF, JPG or PNG.");
         };
     }
@@ -44,7 +47,7 @@ public class PayslipFileReader {
         for (byte[] picture : pictures) {
             text.append(ocr.recognize(picture)).append('\n');
         }
-        String all = text.toString();
+        String all = OcrTextCleaner.clean(text.toString());
         return all.length() <= MAX_CHARS ? all : all.substring(0, MAX_CHARS);
     }
 }

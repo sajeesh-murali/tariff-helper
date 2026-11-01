@@ -4,6 +4,7 @@ import com.tariffhelper.TestImages;
 import com.tariffhelper.TestPdf;
 import com.tariffhelper.api.ApiExceptions.InvalidRequestException;
 import com.tariffhelper.ocr.OcrEngine;
+import com.tariffhelper.ocr.OcrProperties;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -19,7 +20,7 @@ class PayslipFileReaderTest {
     private final List<byte[]> seenByOcr = new ArrayList<>();
 
     private PayslipFileReader readerWith(OcrEngine ocr) {
-        return new PayslipFileReader(new PayslipTextReader(), ocr);
+        return new PayslipFileReader(new PayslipTextReader(), ocr, new OcrProperties(true, "tesseract", "nor+eng", 60, 3000));
     }
 
     private OcrEngine recording(String text) {
@@ -35,6 +36,14 @@ class PayslipFileReaderTest {
 
         assertThat(text).contains("7936 Sykepleier 45 01.08.2015");
         assertThat(seenByOcr).isEmpty();
+    }
+
+    @Test
+    void lettersMistakenForDigitsInNumbersAreFixed() {
+        String text = readerWith(recording("Registrert ansiennitet: 01.08.2O15\nÅrslønn 612 3OO,OO\nStilling: Oslo"))
+                .read(TestImages.png(1200, 800));
+
+        assertThat(text).contains("01.08.2015").contains("612 300,00").contains("Stilling: Oslo");
     }
 
     @Test

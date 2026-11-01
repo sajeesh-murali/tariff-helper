@@ -11,6 +11,8 @@
 
 const MAX_PAYSLIP_PDF_BYTES = 2 * 1024 * 1024;
 const MAX_PAYSLIP_IMAGE_BYTES = 8 * 1024 * 1024;
+const PAYSLIP_FIELDS = ['employerName', 'jobTitle', 'positionPercent', 'annualSalaryFullTime', 'stillingskode',
+  'lonnstrinn', 'ansiennitetsdato'];
 const FORM_TEXT = /^[\p{L}\p{N} .,&()/'-]+$/u;
 
 let agreementsApi = [];
@@ -47,9 +49,9 @@ function clearBusy() {
   document.getElementById('busy')?.remove();
 }
 
-async function callApi(url, options) {
+async function callApi(url, options, timeoutMs = 90000) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 90000);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(url, { ...options, signal: controller.signal });
     let data = null;
@@ -126,13 +128,18 @@ async function uploadPayslip(file, password) {
   const form = new FormData();
   form.append('file', file);
   if (password) form.append('password', password);
-  const res = await callApi('/api/payslips/parse', { method: 'POST', body: form });
+  const res = await callApi('/api/payslips/parse', { method: 'POST', body: form }, 150000);
   clearBusy();
   if (res.status === 400 && /password protected|password is wrong/i.test(String(res.data?.detail || ''))) {
     askPayslipPassword(file, /password is wrong/i.test(String(res.data.detail)));
     return;
   }
-  if (res.ok && res.data) {
+  if (res.ok && res.data && !PAYSLIP_FIELDS.some(k => res.data[k] != null)) {
+    intake.manual = true;
+    intake.error = isPdf
+      ? 'Vi fant ingen opplysninger i lønnsslippen. Fyll inn selv.'
+      : 'Vi fant ingen opplysninger i bildet. Ta bildet rett ovenfra med godt lys og hele siden med, eller fyll inn selv.';
+  } else if (res.ok && res.data) {
     applyPayslip(res.data);
   } else {
     intake.manual = true;

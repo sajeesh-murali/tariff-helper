@@ -170,7 +170,7 @@ curl -F "file=@payslip.pdf;type=application/pdf" http://localhost:8080/api/paysl
 - A PDF (at most 2 MB and 5 pages) or a JPG/PNG picture (at most 8 MB). Pictures and scanned PDFs need Tesseract
   with the `nor` and `eng` language packs on the server (the Dockerfile installs them). Without it a picture gets a
   `400` that says picture reading is not available, and the person can upload a PDF or type the values in. A PDF scan
-  is read on its first two pages. Phone photos are turned upright from their EXIF tag and scaled to at most 2000 px.
+  is read on its first two pages. Phone photos are turned upright from their EXIF tag and scaled to at most 3000 px (about 300 DPI on A4), with the contrast stretched for grey photocopies.
   OCR can misread digits; the person checks every value before the estimate.
 - A password-protected PDF gets a `400` that says so; the page then asks for the password and sends it again in an
   optional `password` field. It only opens the file: it is never stored, logged or echoed in an error.
@@ -262,6 +262,8 @@ mvn spring-boot:run
 | `OCR_ENABLED` | true | Turn picture reading off. Pictures then get a clear "not available" message |
 | `OCR_COMMAND` | tesseract | The Tesseract program. Install it locally to try pictures (`nor` and `eng` language packs) |
 | `OCR_LANGUAGES` | nor+eng | Tesseract language packs |
+| `OCR_TIMEOUT_SECONDS` | 60 | How long one picture may take to read |
+| `OCR_MAX_SIDE` | 3000 | Longest side in pixels a picture is scaled to. Lower it (for example 2000) on a small instance to save memory, at some cost in accuracy |
 | `FORWARD_HEADERS` | none | Set to `native` only behind a trusted proxy/load balancer, so limits use the real client address |
 | `CORS_ALLOWED_ORIGINS` | empty (closed) | Comma-separated browser origins allowed to call `/api/**`, for example the front end URL |
 

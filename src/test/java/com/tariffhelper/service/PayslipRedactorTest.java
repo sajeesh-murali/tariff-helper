@@ -28,6 +28,25 @@ class PayslipRedactorTest {
     }
 
     @Test
+    void aLabelThatTextRecognitionGotSlightlyWrongStillMarksItsLine() {
+        String text = String.join("\n",
+                "Arbeidsg1ver: Oslo kommune",
+                "Ansiennltet fra 01.08.2015",
+                "Utbetalt 30 000,00");
+
+        assertThat(redactor.excerpt(text))
+                .contains("Arbeidsg1ver: Oslo kommune")
+                .contains("Ansiennltet fra 01.08.2015");
+    }
+
+    @Test
+    void wordsThatOnlyLookALittleLikeALabelAreNotKept() {
+        String text = "Skattetrekk 12 345,00\nTrekkgrunnlag 500 000,00\nUtbetalt 30 000,00";
+
+        assertThat(redactor.excerpt(text)).isEmpty();
+    }
+
+    @Test
     void dropsLinesCarryingAPersonalLabelEvenWhenTheyMatchAKeyword() {
         String text = "Stillingskode 7936\nKontonummer 4202.15.12345\nAnsiennitet 2015\nNavn Kari Testesen\n";
 

@@ -52,11 +52,37 @@ class PayslipImagesTest {
 
     @Test
     void largePicturesAreScaledDownAndSmallOnesUp() throws IOException {
-        BufferedImage large = decode(PayslipImages.prepare(TestImages.png(3000, 1500), PayslipFileType.PNG));
+        BufferedImage large = decode(PayslipImages.prepare(TestImages.png(4000, 2000), PayslipFileType.PNG));
         BufferedImage small = decode(PayslipImages.prepare(TestImages.png(300, 200), PayslipFileType.PNG));
 
         assertThat(Math.max(large.getWidth(), large.getHeight())).isEqualTo(PayslipImages.MAX_SIDE);
         assertThat(Math.max(small.getWidth(), small.getHeight())).isEqualTo(600);
+    }
+
+    @Test
+    void aSmallerLimitScalesDownMore() throws IOException {
+        BufferedImage image = decode(PayslipImages.prepare(TestImages.png(4000, 2000), PayslipFileType.PNG, 1800));
+
+        assertThat(Math.max(image.getWidth(), image.getHeight())).isEqualTo(1800);
+    }
+
+    @Test
+    void aFlatGreyPhotocopyGetsItsContrastStretched() throws IOException {
+        BufferedImage flat = new BufferedImage(1600, 1200, BufferedImage.TYPE_INT_RGB);
+        java.awt.Graphics2D g = flat.createGraphics();
+        g.setColor(new java.awt.Color(170, 170, 170));   // grey paper
+        g.fillRect(0, 0, 1600, 1200);
+        g.setColor(new java.awt.Color(100, 100, 100));   // faint ink
+        g.fillRect(100, 100, 600, 300);
+        g.dispose();
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        ImageIO.write(flat, "png", out);
+
+        BufferedImage prepared = decode(PayslipImages.prepare(out.toByteArray(), PayslipFileType.PNG));
+
+        assertThat(prepared.getRaster().getSample(5, 5, 0)).isGreaterThan(245);      // paper is now white
+        assertThat(prepared.getRaster().getSample(prepared.getWidth() / 5, prepared.getHeight() / 5, 0))
+                .isLessThan(15);                                                     // ink is now black
     }
 
     @Test

@@ -48,7 +48,8 @@ app:
     enabled: ${OCR_ENABLED:true}
     command: ${OCR_COMMAND:tesseract}
     languages: ${OCR_LANGUAGES:nor+eng}
-    timeout-seconds: 40
+    timeout-seconds: ${OCR_TIMEOUT_SECONDS:60}
+    max-side: ${OCR_MAX_SIDE:3000}
   llm:
     # openrouter = OpenRouter, Claude Haiku 5.5 by default (default); needs the OPENROUTER_API_KEY environment variable
     # llama     = open-source Llama via Ollama or a hosted OpenAI-compatible server (default)

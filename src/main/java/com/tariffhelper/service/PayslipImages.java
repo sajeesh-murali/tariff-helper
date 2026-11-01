@@ -14,6 +14,7 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferByte;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -31,11 +32,14 @@ public final class PayslipImages {
 
     /** Refuses pictures that would need too much memory to decode. */
     static final long MAX_PIXELS = 25_000_000L;
-    /** Larger pictures are scaled down to this on the longest side; it keeps memory and time in check. */
-    static final int MAX_SIDE = 2000;
+    /**
+     * Larger pictures are scaled down to this on the longest side; it keeps memory and time in check. 3000 px is about
+     * 300 DPI on an A4 page, which is what Tesseract reads best. {@code app.ocr.max-side} can lower it.
+     */
+    static final int MAX_SIDE = 3000;
     /** Smaller pictures are enlarged, because small text reads badly. */
-    static final int MIN_SIDE = 1000;
-    static final int PDF_DPI = 200;
+    static final int MIN_SIDE = 1500;
+    static final int PDF_DPI = 300;
     static final int MAX_PDF_PAGES_TO_READ = 2;
 
     private PayslipImages() {
@@ -43,11 +47,15 @@ public final class PayslipImages {
 
     /** A PNG ready for the OCR engine. */
     public static byte[] prepare(byte[] file, PayslipFileType type) {
+        return prepare(file, type, MAX_SIDE);
+    }
+
+    public static byte[] prepare(byte[] file, PayslipFileType type, int maxSide) {
         BufferedImage image = decode(file);
         if (type == PayslipFileType.JPEG) {
             image = rotateUpright(image, exifOrientation(file));
         }
-        return toPng(fit(image));
+        return toPng(fit(image, maxSide));
     }
 
     /** The first pages of a scanned PDF as PNGs ready for the OCR engine. */
@@ -56,12 +64,16 @@ public final class PayslipImages {
     }
 
     public static List<byte[]> renderPdfPages(byte[] pdf, String password) {
+        return renderPdfPages(pdf, password, MAX_SIDE);
+    }
+
+    public static List<byte[]> renderPdfPages(byte[] pdf, String password, int maxSide) {
         try (PDDocument document = Loader.loadPDF(pdf, password == null ? "" : password)) {
             PDFRenderer renderer = new PDFRenderer(document);
             int pages = Math.min(document.getNumberOfPages(), MAX_PDF_PAGES_TO_READ);
             List<byte[]> result = new ArrayList<>();
             for (int i = 0; i < pages; i++) {
-                result.add(toPng(fit(renderer.renderImageWithDPI(i, PDF_DPI, ImageType.GRAY))));
+                result.add(toPng(fit(renderer.renderImageWithDPI(i, PDF_DPI, ImageType.GRAY), maxSide)));
             }
             return result;
         } catch (IOException | RuntimeException e) {
@@ -96,12 +108,16 @@ public final class PayslipImages {
 
     /** Scales to a sensible size and converts to grey on a white background (so transparency does not go black). */
     static BufferedImage fit(BufferedImage source) {
+        return fit(source, MAX_SIDE);
+    }
+
+    static BufferedImage fit(BufferedImage source, int maxSide) {
         int longest = Math.max(source.getWidth(), source.getHeight());
         double factor = 1.0;
-        if (longest > MAX_SIDE) {
-            factor = (double) MAX_SIDE / longest;
-        } else if (longest < MIN_SIDE) {
-            factor = Math.min(2.0, (double) MIN_SIDE / longest);
+        if (longest > maxSide) {
+            factor = (double) maxSide / longest;
+        } else if (longest < Math.min(MIN_SIDE, maxSide)) {
+            factor = Math.min(2.0, (double) Math.min(MIN_SIDE, maxSide) / longest);
         }
         int width = Math.max(1, (int) Math.round(source.getWidth() * factor));
         int height = Math.max(1, (int) Math.round(source.getHeight() * factor));
@@ -116,7 +132,39 @@ public final class PayslipImages {
         } finally {
             g.dispose();
         }
+        stretchContrast(grey);
         return grey;
+    }
+
+    /**
+     * Photocopies and photos are often grey and flat (grey paper, faint ink). Stretching the range so the darkest 1 %
+     * becomes black and the lightest 1 % white makes the text stand out, which helps the text recognition.
+     */
+    static void stretchContrast(BufferedImage grey) {
+        byte[] pixels = ((DataBufferByte) grey.getRaster().getDataBuffer()).getData();
+        int[] histogram = new int[256];
+        for (byte pixel : pixels) {
+            histogram[pixel & 0xFF]++;
+        }
+        long cut = Math.max(1, pixels.length / 100);
+        int low = 0;
+        for (long seen = 0; low < 255 && seen + histogram[low] < cut; low++) {
+            seen += histogram[low];
+        }
+        int high = 255;
+        for (long seen = 0; high > 0 && seen + histogram[high] < cut; high--) {
+            seen += histogram[high];
+        }
+        if (high - low < 30 || (low <= 5 && high >= 250)) {
+            return; // nothing to gain, or already full range
+        }
+        int[] lookup = new int[256];
+        for (int v = 0; v < 256; v++) {
+            lookup[v] = Math.max(0, Math.min(255, (v - low) * 255 / (high - low)));
+        }
+        for (int i = 0; i < pixels.length; i++) {
+            pixels[i] = (byte) lookup[pixels[i] & 0xFF];
+        }
     }
 
     private static byte[] toPng(BufferedImage image) {
