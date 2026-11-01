@@ -1,6 +1,7 @@
 package com.tariffhelper.service;
 
 import com.tariffhelper.api.ApiExceptions.InvalidRequestException;
+import com.tariffhelper.ocr.HeicConverter;
 import com.tariffhelper.ocr.OcrEngine;
 import com.tariffhelper.ocr.OcrProperties;
 import org.springframework.stereotype.Component;
@@ -19,11 +20,14 @@ public class PayslipFileReader {
 
     private final PayslipTextReader pdfReader;
     private final OcrEngine ocr;
+    private final HeicConverter heic;
     private final int maxSide;
 
-    public PayslipFileReader(PayslipTextReader pdfReader, OcrEngine ocr, OcrProperties ocrProperties) {
+    public PayslipFileReader(PayslipTextReader pdfReader, OcrEngine ocr, HeicConverter heic,
+                             OcrProperties ocrProperties) {
         this.pdfReader = pdfReader;
         this.ocr = ocr;
+        this.heic = heic;
         this.maxSide = ocrProperties.maxSide();
     }
 
@@ -37,8 +41,10 @@ public class PayslipFileReader {
         return switch (type) {
             case PDF -> pdfReader.textLayer(file, password)
                     .orElseGet(() -> recognise(PayslipImages.renderPdfPages(file, password, maxSide)));
-            case PNG, JPEG -> recognise(List.of(PayslipImages.prepare(file, type, maxSide)));
-            case UNKNOWN -> throw new InvalidRequestException("The file must be a PDF, JPG or PNG.");
+            case PNG, JPEG, WEBP, TIFF -> recognise(List.of(PayslipImages.prepare(file, type, maxSide)));
+            case HEIC -> recognise(List.of(PayslipImages.prepare(heic.toPng(file), PayslipFileType.PNG, maxSide)));
+            case UNKNOWN -> throw new InvalidRequestException(
+                    "The file must be a PDF, JPG, PNG, WebP, TIFF, HEIC or HEIF.");
         };
     }
 

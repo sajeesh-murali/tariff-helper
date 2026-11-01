@@ -3,6 +3,7 @@ package com.tariffhelper.service;
 import com.tariffhelper.TestImages;
 import com.tariffhelper.TestPdf;
 import com.tariffhelper.api.ApiExceptions.InvalidRequestException;
+import com.tariffhelper.ocr.HeicConverter;
 import com.tariffhelper.ocr.OcrEngine;
 import com.tariffhelper.ocr.OcrProperties;
 import org.junit.jupiter.api.Test;
@@ -20,7 +21,12 @@ class PayslipFileReaderTest {
     private final List<byte[]> seenByOcr = new ArrayList<>();
 
     private PayslipFileReader readerWith(OcrEngine ocr) {
-        return new PayslipFileReader(new PayslipTextReader(), ocr, new OcrProperties(true, "tesseract", "nor+eng", 60, 3000));
+        return readerWith(ocr, heic -> TestImages.png(1200, 800));
+    }
+
+    private PayslipFileReader readerWith(OcrEngine ocr, HeicConverter heic) {
+        return new PayslipFileReader(new PayslipTextReader(), ocr, heic,
+                new OcrProperties(true, "tesseract", "magick", "nor+eng", 60, 3000));
     }
 
     private OcrEngine recording(String text) {
@@ -64,6 +70,45 @@ class PayslipFileReaderTest {
     }
 
     @Test
+    void tiffAndWebpPicturesGoThroughOcr() {
+        String tiff = readerWith(recording("Stilling: Sykepleier")).read(TestImages.tiff(1200, 800));
+        String webp = readerWith(recording("Arbeidsgiver: Oslo kommune")).read(TestImages.webp());
+
+        assertThat(tiff).contains("Stilling: Sykepleier");
+        assertThat(webp).contains("Arbeidsgiver: Oslo kommune");
+        assertThat(seenByOcr).hasSize(2);
+        assertThat(PayslipFileType.detect(seenByOcr.get(1))).isEqualTo(PayslipFileType.PNG);
+    }
+
+    @Test
+    void aHeicPictureIsConvertedThenGoesThroughOcr() {
+        List<byte[]> converted = new ArrayList<>();
+        HeicConverter converter = heic -> {
+            converted.add(heic);
+            return TestImages.png(1200, 800);
+        };
+        byte[] heic = TestImages.heicHeader("heic");
+
+        String text = readerWith(recording("Arbeidsgiver: Oslo kommune"), converter).read(heic);
+
+        assertThat(text).contains("Arbeidsgiver: Oslo kommune");
+        assertThat(converted).containsExactly(heic);
+        assertThat(seenByOcr).hasSize(1);
+    }
+
+    @Test
+    void aHeicConversionFailureIsPassedOnWithoutReachingOcr() {
+        HeicConverter failing = heic -> {
+            throw new InvalidRequestException("Reading pictures is not available on this server.");
+        };
+
+        assertThatThrownBy(() -> readerWith(recording("x"), failing).read(TestImages.heicHeader("mif1")))
+                .isInstanceOf(InvalidRequestException.class)
+                .hasMessageContaining("not available on this server");
+        assertThat(seenByOcr).isEmpty();
+    }
+
+    @Test
     void aScannedPdfFallsBackToOcrOnItsPages() {
         String text = readerWith(recording("Arbeidsgiver: Bergen kommune")).read(TestPdf.pages(3, List.of()));
 
@@ -97,7 +142,7 @@ class PayslipFileReaderTest {
 
         assertThatThrownBy(() -> readerWith(recording("x")).read(other))
                 .isInstanceOf(InvalidRequestException.class)
-                .hasMessage("The file must be a PDF, JPG or PNG.");
+                .hasMessage("The file must be a PDF, JPG, PNG, WebP, TIFF, HEIC or HEIF.");
         assertThat(seenByOcr).isEmpty();
     }
 

@@ -226,7 +226,7 @@ class PayslipApiIntegrationTest {
     void aFileThatIsNeitherAPdfNorAPictureIsRejectedWithoutEchoingIt() throws Exception {
         upload("Kari Testesen 01019012345".getBytes(StandardCharsets.UTF_8))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.detail").value("The file must be a PDF, JPG or PNG."))
+                .andExpect(jsonPath("$.detail").value("The file must be a PDF, JPG, PNG, WebP, TIFF, HEIC or HEIF."))
                 .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Kari"))));
 
         verify(extractor, never()).extract(anyString());

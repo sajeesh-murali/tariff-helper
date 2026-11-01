@@ -2,7 +2,7 @@
 /*
  * Connects the Lansi intake flow to the Tariff Helper backend (same origin, so no CORS):
  *   GET  /api/agreements        agreements and job categories for the form
- *   POST /api/payslips/parse    read a payslip (PDF, JPG or PNG) into the form (the person checks the values)
+ *   POST /api/payslips/parse    read a payslip (PDF, JPG, PNG, WebP, TIFF, HEIC or HEIF) into the form (the person checks the values)
  *   POST /api/estimates         the estimate, calculated entirely in code
  *
  * Uses globals from index.html: intake, state, go, render, esc, money, title, intakeProgress, intakeError, invalidateIntake,
@@ -88,7 +88,7 @@ function startIntake(manual = false) {
 function pickPayslip() {
   const input = document.createElement('input');
   input.type = 'file';
-  input.accept = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
+  input.accept = 'application/pdf,.pdf,image/jpeg,image/png,image/webp,image/tiff,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.tif,.tiff,.heic,.heif';
   input.onchange = () => { if (input.files[0]) uploadPayslip(input.files[0]); };
   input.click();
 }
@@ -101,7 +101,7 @@ function payslipErrorText(res) {
   if (/too long|busy/i.test(detail)) return 'Det tok for lang tid å lese bildet. Prøv igjen, eller fyll inn selv.';
   if (/too large/i.test(detail)) return 'Bildet er for stort. Bruk et mindre bilde, eller fyll inn selv.';
   if (/password is wrong/i.test(detail)) return 'Passordet var feil. Prøv igjen, eller fyll inn selv.';
-  if (/must be a PDF/i.test(detail)) return 'Lønnsslippen må være en PDF, JPG eller PNG. Du kan også fylle inn selv.';
+  if (/must be a PDF/i.test(detail)) return 'Lønnsslippen må være en PDF, JPG, PNG, WebP, TIFF, HEIC eller HEIF. Du kan også fylle inn selv.';
   return 'Vi kunne ikke lese lønnsslippen. Fyll inn selv.';
 }
 
@@ -109,10 +109,11 @@ async function uploadPayslip(file, password) {
   intake = freshIntake();
   intake.started = true;
   const isPdf = /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
-  const isImage = /\.(jpe?g|png)$/i.test(file.name) || file.type === 'image/jpeg' || file.type === 'image/png';
+  const isImage = /\.(jpe?g|png|webp|tiff?|heic|heif)$/i.test(file.name)
+    || /^image\/(jpeg|png|webp|tiff|heic|heif)$/.test(file.type);
   if (!isPdf && !isImage) {
     intake.manual = true;
-    intake.error = 'Lønnsslippen må være en PDF, JPG eller PNG. Du kan også fylle inn selv.';
+    intake.error = 'Lønnsslippen må være en PDF, JPG, PNG, WebP, TIFF, HEIC eller HEIF. Du kan også fylle inn selv.';
     go(1);
     return;
   }

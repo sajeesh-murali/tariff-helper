@@ -33,6 +33,24 @@ public final class TestImages {
         return encode(blank(width, height, BufferedImage.TYPE_INT_RGB), "jpg");
     }
 
+    public static byte[] tiff(int width, int height) {
+        return encode(blank(width, height, BufferedImage.TYPE_INT_RGB), "tiff");
+    }
+
+    /** A real 1x1 WebP picture (ImageIO cannot write WebP). */
+    public static byte[] webp() {
+        return java.util.Base64.getDecoder().decode("UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==");
+    }
+
+    /** The start of an HEIC file: the "ftyp" box with the given brand. Not a decodable picture. */
+    public static byte[] heicHeader(String brand) {
+        byte[] header = new byte[32];
+        header[3] = 24;
+        System.arraycopy("ftyp".getBytes(java.nio.charset.StandardCharsets.ISO_8859_1), 0, header, 4, 4);
+        System.arraycopy(brand.getBytes(java.nio.charset.StandardCharsets.ISO_8859_1), 0, header, 8, 4);
+        return header;
+    }
+
     /** A JPEG that carries an EXIF orientation tag, like a phone photo taken with the phone turned. */
     public static byte[] jpegWithOrientation(int width, int height, int orientation) {
         byte[] plain = jpeg(width, height);

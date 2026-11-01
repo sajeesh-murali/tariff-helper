@@ -12,7 +12,7 @@ class TesseractOcrEngineTest {
 
     @Test
     void saysSoWhenPictureReadingIsTurnedOff() {
-        TesseractOcrEngine engine = new TesseractOcrEngine(new OcrProperties(false, "tesseract", "nor+eng", 5, 3000));
+        TesseractOcrEngine engine = new TesseractOcrEngine(new OcrProperties(false, "tesseract", "magick", "nor+eng", 5, 3000));
 
         assertThatThrownBy(() -> engine.recognize(PICTURE))
                 .isInstanceOf(InvalidRequestException.class)
@@ -22,7 +22,7 @@ class TesseractOcrEngineTest {
     @Test
     void saysSoWhenTheProgramIsNotInstalled() {
         TesseractOcrEngine engine =
-                new TesseractOcrEngine(new OcrProperties(true, "no-such-ocr-program-xyz", "nor+eng", 5, 3000));
+                new TesseractOcrEngine(new OcrProperties(true, "no-such-ocr-program-xyz", "magick", "nor+eng", 5, 3000));
 
         assertThatThrownBy(() -> engine.recognize(PICTURE))
                 .isInstanceOf(InvalidRequestException.class)
