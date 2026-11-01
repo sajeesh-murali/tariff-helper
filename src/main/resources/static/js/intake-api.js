@@ -636,18 +636,21 @@ function resultCard(r) {
     + `<p class="small">${esc(d.disclaimer)}</p>`;
 }
 
-// Where the booking opens. It comes from the server (BOOKING_URL); null hides the booking button.
-let bookingUrl = null;
+// Where the booking opens. The button always works with this link; the server (BOOKING_URL) can replace it, and
+// only an explicit empty setting on the server hides the button.
+const DEFAULT_BOOKING_URL = 'https://calendly.com/larshaakon/gjennomgang-premium-profil-timebestilling-f-clone';
+let bookingUrl = DEFAULT_BOOKING_URL;
 
 function loadConfig() {
   fetch('/api/config')
-    .then(r => (r.ok ? r.json() : {}))
+    .then(r => (r.ok ? r.json() : null))
     .then(config => {
+      if (!config || !('bookingUrl' in config)) return; // keep the default
       bookingUrl = typeof config.bookingUrl === 'string' && config.bookingUrl.startsWith('https://')
         ? config.bookingUrl : null;
       if (intake.started) render();
     })
-    .catch(() => { bookingUrl = null; });
+    .catch(() => { /* keep the default */ });
 }
 
 function bookingReady() {
