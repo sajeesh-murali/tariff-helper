@@ -3,12 +3,24 @@ package com.tariffhelper.ocr;
 import com.tariffhelper.api.ApiExceptions.InvalidRequestException;
 import org.junit.jupiter.api.Test;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /** Only the failure paths: they need no Tesseract installed. Real recognition is checked where it is installed. */
 class TesseractOcrEngineTest {
 
     private static final byte[] PICTURE = {1, 2, 3};
+
+    @Test
+    void tesseractIsToldToUseOneThreadSoASmallServerIsNotSlowedDown() {
+        TesseractOcrEngine engine = new TesseractOcrEngine(new OcrProperties(true, "tesseract", "magick", "nor+eng", 5, 3000));
+
+        ProcessBuilder command = engine.command();
+
+        assertThat(command.environment()).containsEntry("OMP_THREAD_LIMIT", "1");
+        assertThat(command.command()).containsExactly("tesseract", "stdin", "stdout", "-l", "nor+eng", "--psm", "6",
+                "--dpi", "300", "-c", "preserve_interword_spaces=1");
+    }
 
     @Test
     void saysSoWhenPictureReadingIsTurnedOff() {

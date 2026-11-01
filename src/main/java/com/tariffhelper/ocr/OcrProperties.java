@@ -20,6 +20,6 @@ public record OcrProperties(
         @DefaultValue("tesseract") String command,
         @DefaultValue("magick") String heicCommand,
         @DefaultValue("nor+eng") String languages,
-        @DefaultValue("60") int timeoutSeconds,
+        @DefaultValue("90") int timeoutSeconds,
         @DefaultValue("3000") int maxSide) {
 }

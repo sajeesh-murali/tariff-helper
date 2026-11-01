@@ -264,7 +264,7 @@ mvn spring-boot:run
 | `OCR_ENABLED` | true | Turn picture reading off. Pictures then get a clear "not available" message |
 | `OCR_COMMAND` | tesseract | The Tesseract program. Install it locally to try pictures (`nor` and `eng` language packs) |
 | `OCR_LANGUAGES` | nor+eng | Tesseract language packs |
-| `OCR_TIMEOUT_SECONDS` | 60 | How long one picture may take to read |
+| `OCR_TIMEOUT_SECONDS` | 90 | How long one picture may take to read |
 | `OCR_MAX_SIDE` | 3000 | Longest side in pixels a picture is scaled to. Lower it (for example 2000) on a small instance to save memory, at some cost in accuracy |
 | `FORWARD_HEADERS` | none | Set to `native` only behind a trusted proxy/load balancer, so limits use the real client address |
 | `CORS_ALLOWED_ORIGINS` | empty (closed) | Comma-separated browser origins allowed to call `/api/**`, for example the front end URL |
