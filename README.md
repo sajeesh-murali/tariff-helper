@@ -261,6 +261,7 @@ mvn spring-boot:run
 | `RATE_LIMIT_PER_MINUTE` | 5 | Max requests to `POST /api/estimates` and `POST /api/payslips/parse` together, per client address per minute (`429` with `Retry-After` above this) |
 | `RATE_LIMIT_PER_DAY` | 500 | Max of those requests for the whole service per UTC day. This caps Claude spend. |
 | `RATE_LIMIT_ENABLED` | true | Turn the limiter off (local testing only) |
+| `BOOKING_URL` | the Calendly link | Where "book en samtale" opens (must start with `https://`). Empty hides the booking button. Served to the page by `GET /api/config` |
 | `OCR_ENABLED` | true | Turn picture reading off. Pictures then get a clear "not available" message |
 | `OCR_COMMAND` | tesseract | The Tesseract program. Install it locally to try pictures (`nor` and `eng` language packs) |
 | `OCR_LANGUAGES` | nor+eng | Tesseract language packs |
