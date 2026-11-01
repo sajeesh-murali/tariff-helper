@@ -552,11 +552,54 @@ function resultCard(r) {
     + `</ul><p class="small">Les mer: <a href="#faq">spørsmål og svar</a> · <a href="#om">om ansiennitet</a> · `
     + `<a href="#avtaler">avtaler og regler</a></p></div>`;
   const monthly = perYear / 12;
+  const cta = r.kind === 'none'
+    ? `<p class="small">Tror du likevel at ansienniteten din er feil? `
+      + `<button class="textbtn" onclick="openBooking()">Snakk med oss</button></p>`
+    : `<div class="cta"><h2>Vil du ha hjelp til å sikre at ansienniteten din er riktig registrert?</h2>`
+      + `<p>Gratis og uforpliktende. Du betaler bare hvis lønnen din øker.</p>`
+      + `<button class="btn cta-btn" onclick="go(4)">Ja, book en gratis samtale</button></div>`;
   return statusIcon(monthly) + head + summary + assumed
     + `<p class="small">Hvor sikkert er anslaget? <b>${esc(LEVELS[conf.level] || conf.level)}</b></p>`
-    + (r.kind === 'potential' ? `<div style="margin:0 0 20px"><button class="btn" onclick="go(4)">Se hvordan vi kan hjelpe</button></div>` : '')
+    + cta
     + assumptions
     + `<p class="small">${esc(d.disclaimer)}</p>`;
+}
+
+// Where the booking opens. PLACEHOLDER: replace with the real Calendly link from the business.
+const BOOKING_URL = 'https://calendly.com/DIN-LENKE-HER';
+
+function bookingReady() {
+  return !BOOKING_URL.includes('DIN-LENKE-HER');
+}
+
+function openBooking() {
+  if (!bookingReady()) {
+    showInfo('Booking', 'Bookinglenken er ikke satt opp ennå.');
+    return;
+  }
+  window.open(BOOKING_URL, '_blank', 'noopener');
+}
+
+/* ---------- step 4: book a call ---------- */
+
+function intakeBooking() {
+  const ready = bookingReady();
+  return intakeProgress(4) + `<section class="intake-work">`
+    + `<span class="badge">Hjelp videre</span><h1>Book en gratis samtale</h1>`
+    + `<p class="lead">Vi går gjennom anslaget ditt og hva som trengs for å få ansienniteten riktig registrert. `
+    + `Du bestemmer selv om du vil ha hjelp videre.</p>`
+    + `<div class="card"><h2>Slik fungerer det</h2><ol>`
+    + `<li>Du velger en tid som passer i kalenderen vår.</li>`
+    + `<li>Vi går gjennom anslaget og hvilke dokumenter som trengs.</li>`
+    + `<li>Du bestemmer selv om du vil at vi hjelper deg videre.</li></ol>`
+    + `<p class="small">Gratis og uforpliktende. Du betaler bare hvis lønnen din øker. <a href="#vilkar">Les vilkårene</a></p>`
+    + `<label class="checkline consent"><input type="checkbox" ${intake.bookingConsent ? 'checked' : ''} `
+    + `onchange="intake.bookingConsent=this.checked;render()"><span>Jeg forstår at jeg går videre til Calendly, en ekstern tjeneste, `
+    + `for å booke tid. Navn og e-post jeg skriver der deles med Calendly. Anslaget mitt blir ikke delt. `
+    + `<a href="#personvern">Personvern</a></span></label>`
+    + (ready ? '' : `<div class="notice">Bookinglenken er ikke satt opp ennå.</div>`)
+    + `<button class="btn cta-btn" ${intake.bookingConsent && ready ? '' : 'disabled'} onclick="openBooking()">Åpne kalenderen</button>`
+    + `</div><button class="textbtn" style="margin-top:24px" onclick="go(3)">Tilbake til anslaget</button></section>`;
 }
 
 function intakeResult() {
