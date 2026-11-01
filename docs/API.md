@@ -348,7 +348,7 @@ Any value is `null` when it was not found or did not pass the checks; `currentAn
 
 ### How it works
 1. **Read.** A PDF with a text layer is read by PDFBox in memory. A picture, or a PDF without a text layer, is
-   turned upright (EXIF), scaled to at most 2000 px and read by Tesseract OCR on this server (languages `nor+eng`).
+   turned upright (EXIF), scaled to at most 3000 px (`OCR_MAX_SIDE`), contrast-stretched and read by Tesseract OCR on this server (languages `nor+eng`).
    The file is never stored and the picture is never sent to the LLM. If Tesseract is not installed or `OCR_ENABLED`
    is false, pictures get a `400`; PDFs with a text layer still work.
 2. **Cut down and mask.** Only lines that mention arbeidsgiver, stilling, prosent, årslønn, lønnstrinn, ansiennitet or

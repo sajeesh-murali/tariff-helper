@@ -46,7 +46,10 @@ public class PayslipService {
 
     /** @param password for a password-protected PDF, or null; used only to open the file, never stored or logged */
     public Result parse(byte[] file, String password) {
-        String excerpt = redactor.excerpt(reader.read(file, password));
+        String text = reader.read(file, password);
+        String excerpt = redactor.excerpt(text);
+        log.info("Payslip text read: textChars={}, excerptLines={}", text.length(),
+                excerpt.isBlank() ? 0 : excerpt.lines().count());
         if (excerpt.isBlank()) {
             log.info("Payslip has no line with the expected labels, nothing sent to the model");
             return new Result(PayslipFields.empty(), SuggestResponse.none(), null);

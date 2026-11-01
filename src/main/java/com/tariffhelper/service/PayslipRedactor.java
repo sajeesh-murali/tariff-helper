@@ -20,6 +20,11 @@ import java.util.regex.Pattern;
 @Component
 public class PayslipRedactor {
 
+    /** The labels the excerpt is built around, as plain letters (æ, ø, å written as a, o, a). */
+    private static final List<String> LABELS = List.of(
+            "arbeidsgiver", "stillingsprosent", "stillingskode", "ansiennitet", "lonnstrinn", "arslonn", "stilling",
+            "prosent");
+
     static final int MAX_LINES = 30;
     static final int MAX_LINE_CHARS = 160;
     static final String MASK = "[removed]";
@@ -46,7 +51,7 @@ public class PayslipRedactor {
         String[] lines = payslipText.split("\\R");
         TreeSet<Integer> keep = new TreeSet<>();
         for (int i = 0; i < lines.length; i++) {
-            if (KEYWORD.matcher(lines[i]).find()) {
+            if (KEYWORD.matcher(lines[i]).find() || looksLikeALabel(lines[i])) {
                 for (int j = i; j <= i + 2 && j < lines.length; j++) {
                     keep.add(j);
                 }
@@ -65,6 +70,53 @@ public class PayslipRedactor {
             }
         }
         return String.join("\n", out);
+    }
+
+    /**
+     * Text recognition often gets a letter wrong ("Arbeidsg1ver", "Ansiennltet"). A word within one or two letters of a
+     * label still marks its line, so the excerpt does not come out empty for a scan. Only the label is guessed; the
+     * values are still copied exactly as written, and the same masking and personal-label rules apply.
+     */
+    static boolean looksLikeALabel(String line) {
+        for (String word : line.split("[^\\p{L}\\p{N}]+")) {
+            String plain = plain(word);
+            long digits = plain.chars().filter(Character::isDigit).count();
+            // a recognised label may hold a wrong digit ("Arbeidsg1ver"), but a number is not a label
+            if (plain.length() < 5 || digits > 2 || plain.length() - digits < 4) {
+                continue;
+            }
+            for (String label : LABELS) {
+                int allowed = label.length() >= 8 ? 2 : 1;
+                if (Math.abs(plain.length() - label.length()) <= allowed && distance(plain, label) <= allowed) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static String plain(String word) {
+        return word.toLowerCase(java.util.Locale.ROOT)
+                .replace('ø', 'o').replace('ö', 'o').replace('å', 'a').replace('ä', 'a').replace('æ', 'a');
+    }
+
+    private static int distance(String a, String b) {
+        int[] previous = new int[b.length() + 1];
+        int[] current = new int[b.length() + 1];
+        for (int j = 0; j <= b.length(); j++) {
+            previous[j] = j;
+        }
+        for (int i = 1; i <= a.length(); i++) {
+            current[0] = i;
+            for (int j = 1; j <= b.length(); j++) {
+                int cost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
+                current[j] = Math.min(Math.min(current[j - 1] + 1, previous[j] + 1), previous[j - 1] + cost);
+            }
+            int[] swap = previous;
+            previous = current;
+            current = swap;
+        }
+        return previous[b.length()];
     }
 
     private static String mask(String line) {
