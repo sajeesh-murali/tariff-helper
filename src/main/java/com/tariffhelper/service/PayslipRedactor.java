@@ -44,6 +44,10 @@ public class PayslipRedactor {
     private static final Pattern PERSONAL_LABEL = Pattern.compile(
             "f[øo]dsel|f[øo]dt|birth|adresse|address|konto|account|bank|iban|telefon|phone|e-?post|mail|fnr", FLAGS);
     private static final List<Pattern> MASKED = List.of(
+            // a street address ("Storgata 1 B") and a line that is only a postcode and a place ("0123 OSLO")
+            Pattern.compile("\\p{L}[\\p{L} .'-]*?(?:gate|gata|gaten|vei|veien|veg|vegen|all[ée]|plass|torg|stien)\\s+\\d+\\s?[A-Za-z]?(?![\\p{L}\\d])",
+                    FLAGS),
+            Pattern.compile("^\\d{4} \\p{Lu}[\\p{Lu} -]+$"),
             Pattern.compile("[\\w.+-]+@[\\w-]+(?:\\.[\\w-]+)+"),
             Pattern.compile("\\b[A-Z]{2}\\d{2}(?: ?[A-Z0-9]{4}){2,7}(?: ?[A-Z0-9]{1,3})?\\b"),
             Pattern.compile("(?<!\\d)\\d{6}[ .]?\\d{5}(?!\\d)"),
@@ -51,6 +55,12 @@ public class PayslipRedactor {
             Pattern.compile("(?:\\+|00)\\d{2} ?\\d{8}(?!\\d)"),
             Pattern.compile("(?<!\\d)\\d{3} \\d{2} \\d{3}(?!\\d)"),
             Pattern.compile("(?<!\\d)\\d{8}(?!\\d)"));
+
+    // "Etternavn, Fornavn" (one or two given names) as payslips print a name; it can stand on a line that is kept for another word.
+    private static final Pattern PERSON_NAME = Pattern.compile(
+            "\\p{Lu}[\\p{L}'-]+(?: \\p{Lu}[\\p{L}'-]+)*, \\p{Lu}[\\p{L}'-]+(?: \\p{Lu}[\\p{L}'-]+)?");
+    // Text recognition keeps the wide gaps between columns, so a gap of three or more spaces separates two cells.
+    private static final Pattern CELL_GAP = Pattern.compile("\\s{3,}");
 
     /** The text to send to the LLM; empty when the payslip has no line worth sending. */
     public String excerpt(String payslipText) {
@@ -67,17 +77,58 @@ public class PayslipRedactor {
         }
         List<String> out = new ArrayList<>();
         for (int index : keep) {
-            String line = lines[index].replaceAll("\\s+", " ").strip();
+            String source = lines[index];
+            if (index > 0 && isRowOfLabels(lines[index - 1])) {
+                // A row of labels with the value row below it (name, employer, ID number side by side): only the
+                // values under a wanted label are kept. If the columns do not line up, the row is left out.
+                source = valuesUnderWantedLabels(lines[index - 1], source);
+            }
+            String line = PERSON_NAME.matcher(source.replaceAll("\\s+", " ").strip()).replaceAll(MASK);
             if (line.isEmpty() || PERSONAL_LABEL.matcher(line).find()
                     || (NAME_LABEL.matcher(line).find() && !EMPLOYER.matcher(line).find())) {
                 continue;
             }
-            out.add(mask(line.length() <= MAX_LINE_CHARS ? line : line.substring(0, MAX_LINE_CHARS)));
+            String masked = mask(line.length() <= MAX_LINE_CHARS ? line : line.substring(0, MAX_LINE_CHARS));
+            if (masked.equals(MASK)) {
+                continue;
+            }
+            out.add(masked);
             if (out.size() == MAX_LINES) {
                 break;
             }
         }
         return String.join("\n", out);
+    }
+
+    /** A row of column titles that names a person-related column, for example "Lønnsmottaker ... Fødselsnr.". */
+    static boolean isRowOfLabels(String line) {
+        return cells(line).length >= 2 && PERSONAL_LABEL.matcher(line).find();
+    }
+
+    /**
+     * Pairs each value with the title above it and keeps only those whose title is wanted ("Arbeidsgivers navn"), so a
+     * name or number in the next column cannot slip through. When the cells do not line up one to one, the row is only
+     * kept if it names a wanted label itself.
+     */
+    static String valuesUnderWantedLabels(String labelRow, String valueRow) {
+        String[] labels = cells(labelRow);
+        String[] values = cells(valueRow);
+        if (labels.length != values.length) {
+            return KEYWORD.matcher(valueRow).find() ? valueRow : "";
+        }
+        List<String> kept = new ArrayList<>();
+        for (int i = 0; i < labels.length; i++) {
+            if (!PERSONAL_LABEL.matcher(labels[i]).find()
+                    && (KEYWORD.matcher(labels[i]).find() || looksLikeALabel(labels[i]))) {
+                kept.add(labels[i] + ": " + values[i]);
+            }
+        }
+        return String.join(" ", kept);
+    }
+
+    private static String[] cells(String line) {
+        String text = line.strip();
+        return text.isEmpty() ? new String[0] : CELL_GAP.split(text);
     }
 
     /**

@@ -12,6 +12,52 @@ class PayslipRedactorTest {
     private final PayslipRedactor redactor = new PayslipRedactor();
 
     @Test
+    void aNameBesideTheEmployerUnderARowOfLabelsIsNotKept() {
+        String gap = "      ";
+        String text = String.join("\n",
+                "Lønnsmottaker" + gap + "Arbeidsgivers navn" + gap + "Ansattnr." + gap + "Fødselsnr.",
+                "Kari Testesen" + gap + "Eksempel Barnehage AS" + gap + "123456" + gap + "01019012345",
+                "Testveien 1" + gap + "Organisasjonsnr." + gap + "Lønnskonto");
+
+        String excerpt = redactor.excerpt(text);
+
+        assertThat(excerpt).contains("Arbeidsgivers navn: Eksempel Barnehage AS");
+        assertThat(excerpt).doesNotContain("Kari").doesNotContain("Testesen").doesNotContain("123456")
+                .doesNotContain("01019012345").doesNotContain("Testveien");
+    }
+
+    @Test
+    void aValueRowThatDoesNotLineUpWithItsLabelsIsLeftOut() {
+        String gap = "      ";
+        String text = String.join("\n",
+                "Lønnsmottaker" + gap + "Arbeidsgivers navn" + gap + "Fødselsnr.",
+                "Kari Testesen Eksempel Barnehage AS" + gap + "01019012345");
+
+        assertThat(redactor.excerpt(text)).isEmpty();
+    }
+
+    @Test
+    void aNameWrittenSurnameCommaGivenNameIsRemovedFromAKeptLine() {
+        String text = "Testesen, Kari Anne Arbeidssted hovedstilling";
+
+        assertThat(redactor.excerpt(text)).isEqualTo("[removed] Arbeidssted hovedstilling");
+    }
+
+    @Test
+    void aHomeAddressBesideTheWorkplaceIsMaskedAndAPostcodeLineIsDropped() {
+        String gap = "      ";
+        String text = String.join("\n",
+                "Arbeidssted hovedstilling",
+                "Testgata 7 B" + gap + "BYDEL VESTRE AKER HJEMMETJENESTE",
+                "0123 OSLO");
+
+        String excerpt = redactor.excerpt(text);
+
+        assertThat(excerpt).contains("BYDEL VESTRE AKER HJEMMETJENESTE");
+        assertThat(excerpt).doesNotContain("Testgata").doesNotContain("0123");
+    }
+
+    @Test
     void keepsOnlyTheLabelledLinesAndTheRowsBelowThem() {
         String text = String.join("\n",
                 "Kari Testesen",
