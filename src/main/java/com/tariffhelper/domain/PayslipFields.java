@@ -28,6 +28,49 @@ public record PayslipFields(String stillingskode, Integer lonnstrinn, YearMonth 
                 .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
     }
 
+    /** Every value that is missing here is taken from the other reading; a value found here is never replaced. */
+    public PayslipFields fillGapsFrom(PayslipFields other) {
+        return new PayslipFields(
+                stillingskode != null ? stillingskode : other.stillingskode,
+                lonnstrinn != null ? lonnstrinn : other.lonnstrinn,
+                ansiennitetsdato != null ? ansiennitetsdato : other.ansiennitetsdato,
+                employerName != null ? employerName : other.employerName,
+                jobTitle != null ? jobTitle : other.jobTitle,
+                positionPercent != null ? positionPercent : other.positionPercent,
+                annualSalaryFullTime != null ? annualSalaryFullTime : other.annualSalaryFullTime);
+    }
+
+    /** Whether the value with this form name (employerName, jobTitle, ...) is present. */
+    public boolean has(String field) {
+        return switch (field) {
+            case "employerName" -> employerName != null;
+            case "jobTitle" -> jobTitle != null;
+            case "positionPercent" -> positionPercent != null;
+            case "annualSalaryFullTime" -> annualSalaryFullTime != null;
+            case "stillingskode" -> stillingskode != null;
+            case "lonnstrinn" -> lonnstrinn != null;
+            case "ansiennitetsdato" -> ansiennitetsdato != null;
+            default -> false;
+        };
+    }
+
+    /** The value with this form name, or null. */
+    public Object valueOf(String field) {
+        return switch (field) {
+            case "employerName" -> employerName;
+            case "jobTitle" -> jobTitle;
+            case "positionPercent" -> positionPercent;
+            case "annualSalaryFullTime" -> annualSalaryFullTime;
+            case "stillingskode" -> stillingskode;
+            case "lonnstrinn" -> lonnstrinn;
+            case "ansiennitetsdato" -> ansiennitetsdato;
+            default -> null;
+        };
+    }
+
+    public static final java.util.List<String> FIELD_NAMES = java.util.List.of("employerName", "jobTitle",
+            "positionPercent", "annualSalaryFullTime", "stillingskode", "lonnstrinn", "ansiennitetsdato");
+
     public int foundCount() {
         int count = 0;
         for (Object value : new Object[]{stillingskode, lonnstrinn, ansiennitetsdato, employerName, jobTitle,

@@ -37,7 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * validation of what the model returned, agreement rules, seniority, pay lookup) except the network call: the
  * {@link ChatApi} is replaced, so no external model is called. The PDF holds invented data.
  */
-@SpringBootTest(properties = "app.rate-limit.per-client-per-minute=1000")
+@SpringBootTest(properties = {"app.rate-limit.per-client-per-minute=1000", "app.payslip.ai-mode=missing"})
 @AutoConfigureMockMvc
 class PayslipToEstimateIntegrationTest {
 
@@ -67,7 +67,6 @@ class PayslipToEstimateIntegrationTest {
 
     @Test
     void thePayslipIsReadAndItsValuesFeedTheEstimate() throws Exception {
-        when(chat.send(anyString(), anyString(), anyInt())).thenReturn(EXTRACTION_ANSWER);
 
         // Step 1: upload the payslip
         String parsed = parseSamplePayslip();
@@ -80,16 +79,9 @@ class PayslipToEstimateIntegrationTest {
         assertThat(JsonPath.<String>read(parsed, "$.agreement.status")).isEqualTo("available");
         assertThat(JsonPath.<String>read(parsed, "$.agreement.jobCategory")).isEqualTo("nurse");
 
-        // Only the labelled lines went to the model, with no personal data and no PDF.
-        org.mockito.ArgumentCaptor<String> sent = org.mockito.ArgumentCaptor.forClass(String.class);
-        verify(chat, times(1)).send(anyString(), sent.capture(), anyInt());
-        assertThat(sent.getValue())
-                .contains("<user_data>")
-                .contains("Arbeidsgiver: Oslo kommune")
-                .contains("Årslønn i 100 % stilling før skatt 576 000,00")
-                .contains("58 Sykepleier 26 01.08.2023")
-                .doesNotContain("Kari").doesNotContain("Testesen")
-                .doesNotContain("01019012345").doesNotContain("4202");
+        // Every value is clearly labelled, so the rules read all of them and no model call was needed.
+        assertThat(JsonPath.<String>read(parsed, "$.fieldStatus.annualSalaryFullTime")).isEqualTo("rules");
+        verify(chat, never()).send(anyString(), anyString(), anyInt());
 
         // Step 2: the page sends the checked values, plus the work history, to the estimate
         String estimate = "{\"agreementId\":\"" + JsonPath.read(parsed, "$.agreement.agreementId") + "\","
@@ -119,23 +111,28 @@ class PayslipToEstimateIntegrationTest {
                 .andExpect(jsonPath("$.confidence.level").value("medium"))
                 .andExpect(jsonPath("$.explanation").doesNotExist());
 
-        // Only one call was made: it read the payslip. The estimate itself makes no model call.
-        verify(chat, times(1)).send(anyString(), anyString(), anyInt());
-        verify(chat, times(1)).send(anyString(), contains("Sykepleier"), anyInt());
+        // The estimate itself makes no model call either.
+        verify(chat, never()).send(anyString(), anyString(), anyInt());
     }
 
     @Test
     void aValueTheModelMadeUpIsDroppedAndDoesNotReachTheForm() throws Exception {
-        // 600000 is not written anywhere in the payslip, so the salary (and the figure derived from it) is dropped.
+        // The rules cannot read this payslip, so the model is asked. 600000 is not written anywhere in it, so the
+        // salary (and the figure derived from it) is dropped.
         when(chat.send(anyString(), anyString(), anyInt())).thenReturn(
-                "{\"employerName\":\"Oslo kommune\",\"positionPercent\":100,\"annualSalaryFullTime\":600000,"
-                        + "\"lonnstrinn\":26}");
+                "{\"employerName\":\"Oslo kommune\",\"positionPercent\":80,\"annualSalaryFullTime\":600000}");
+        byte[] hard = com.tariffhelper.TestPdf.withLines(java.util.List.of(
+                "Arbeidsgiverinfo: Oslo kommune, Bydel Vestre Aker", "Din stilling er sykepleier i 80 prosent"));
 
-        String parsed = parseSamplePayslip();
+        String parsed = mvc.perform(multipart("/api/payslips/parse")
+                        .file(new MockMultipartFile("file", "payslip.pdf", "application/pdf", hard)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
 
         assertThat(JsonPath.<Object>read(parsed, "$.annualSalaryFullTime")).isNull();
         assertThat(JsonPath.<Object>read(parsed, "$.currentAnnualSalary")).isNull();
-        assertThat(JsonPath.<Integer>read(parsed, "$.lonnstrinn")).isEqualTo(26);
+        assertThat(JsonPath.<String>read(parsed, "$.fieldStatus.annualSalaryFullTime")).isEqualTo("notFound");
+        assertThat(JsonPath.<Integer>read(parsed, "$.positionPercent")).isEqualTo(80);
         assertThat(JsonPath.<String>read(parsed, "$.agreement.agreementId")).isEqualTo("oslo-kommune");
     }
 
@@ -144,12 +141,28 @@ class PayslipToEstimateIntegrationTest {
         when(chat.send(anyString(), anyString(), anyInt()))
                 .thenThrow(new com.tariffhelper.llm.LlmException("down"));
 
+        // A payslip the rules cannot read: the person gets an empty form to fill in, not an error.
+        byte[] hard = com.tariffhelper.TestPdf.withLines(java.util.List.of(
+                "Arbeidsgiverinfo: Oslo kommune, Bydel Vestre Aker", "Din stilling er sykepleier i 80 prosent"));
         mvc.perform(multipart("/api/payslips/parse")
-                        .file(new MockMultipartFile("file", "payslip.pdf", "application/pdf", samplePdf())))
+                        .file(new MockMultipartFile("file", "payslip.pdf", "application/pdf", hard)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.employerName").doesNotExist())
                 .andExpect(jsonPath("$.agreement").doesNotExist())
+                .andExpect(jsonPath("$.fieldStatus.employerName").value("notFound"))
                 .andExpect(content().string(not(containsString("Kari"))));
+    }
+
+    @Test
+    void aClearlyLabelledPayslipIsStillReadWhenTheModelIsDown() throws Exception {
+        when(chat.send(anyString(), anyString(), anyInt()))
+                .thenThrow(new com.tariffhelper.llm.LlmException("down"));
+
+        mvc.perform(multipart("/api/payslips/parse")
+                        .file(new MockMultipartFile("file", "payslip.pdf", "application/pdf", samplePdf())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.employerName").value("Oslo kommune"))
+                .andExpect(jsonPath("$.agreement.agreementId").value("oslo-kommune"));
     }
 
     @Test

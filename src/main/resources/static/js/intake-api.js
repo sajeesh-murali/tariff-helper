@@ -192,9 +192,11 @@ function askPayslipPassword(file, wrong) {
 }
 
 function applyPayslip(p) {
+  intake.fieldStatus = p.fieldStatus || {};
   intake.employer = p.employerName || '';
   intake.job = p.jobTitle || '';
-  intake.percent = p.positionPercent ?? 100;
+  // A percentage that was not found stays empty: a made-up 100 would give a wrong estimate without the person noticing.
+  intake.percent = p.positionPercent ?? '';
   intake.salary = p.annualSalaryFullTime != null ? String(p.annualSalaryFullTime) : '';
   intake.ansiennitetsdato = p.ansiennitetsdato || '';
   intake.stillingskode = p.stillingskode || '';
@@ -233,13 +235,41 @@ function jobCategorySelect() {
     + `onchange="intakeField('jobCategory',this.value)"><option value="">Velg stilling</option>${options}</select></div>`;
 }
 
+/** The form field names and the names the server uses in fieldStatus. */
+const STATUS_KEY = {employer: 'employerName', job: 'jobTitle', salary: 'annualSalaryFullTime', percent: 'positionPercent',
+  ansiennitetsdato: 'ansiennitetsdato', lonnstrinn: 'lonnstrinn', stillingskode: 'stillingskode'};
+
+/** A short note under a field that says whether the payslip gave the value, and if not, why it is empty. */
+function fieldHint(k) {
+  if (!intake.fromPayslip || intake.manual) return '';
+  const status = (intake.fieldStatus || {})[STATUS_KEY[k]];
+  if (status === 'confirmed') return '<span class="small">Funnet og bekreftet to ganger</span>';
+  if (status === 'disagree') return '<span class="small"><b>Sjekk denne:</b> vi leste den ulikt to ganger. Se lønnsslippen.</span>';
+  if (status === 'rules' || status === 'ai') return '<span class="small">Funnet på lønnsslippen</span>';
+  if (status === 'notPrinted') return '<span class="small">Står ikke på denne lønnsslippen. Fyll inn selv.</span>';
+  if (status === 'notFound') return '<span class="small">Fant vi ikke. Fyll inn selv.</span>';
+  return '';
+}
+
+function missingSummary() {
+  if (!intake.fromPayslip || intake.manual) return '';
+  const statuses = Object.values(intake.fieldStatus || {});
+  const found = statuses.filter(s => ['confirmed', 'disagree', 'rules', 'ai'].includes(s)).length;
+  const check = statuses.filter(s => s === 'disagree').length;
+  if (!statuses.length || (found === statuses.length && !check)) return '';
+  return (found < statuses.length
+      ? ` Vi fant ${found} av ${statuses.length} opplysninger. Det som mangler må du fylle inn selv.` : '')
+    + (check ? ` Sjekk ekstra nøye feltene merket «Sjekk denne».` : '');
+}
+
 function intakeConfirm() {
   const field = (k, label, type, extra = '', required = false) => `<div><label for="intake-${k}">${label}</label>`
     + `<input id="intake-${k}" type="${type}" value="${esc(intake[k])}" ${extra} ${required ? 'required' : ''} `
-    + `oninput="intakeField('${k}',this.value)"></div>`;
+    + `oninput="intakeField('${k}',this.value)">${fieldHint(k)}</div>`;
   const lead = intake.manual
     ? 'Fyll inn det du vet. Årslønn og stillingsprosent trengs for å regne ut et anslag.'
-    : 'Vi har lest disse opplysningene automatisk fra lønnsslippen. Sjekk dem mot lønnsslippen din og rett det som er feil.';
+    : 'Vi har lest disse opplysningene automatisk fra lønnsslippen. Sjekk dem mot lønnsslippen din og rett det som er feil.'
+      + missingSummary();
   return intakeProgress(1) + `<section class="intake-work">${title(intake.manual ? 'Fyll inn selv' : 'Fra lønnsslippen din',
     'Stemmer opplysningene?', lead)}<form onsubmit="event.preventDefault();confirmIntake()" class="card">`
     + `<div class="fieldgrid">`

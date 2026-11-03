@@ -13,12 +13,15 @@ import java.time.YearMonth;
  * checking. Any value may be null. The names match the estimate form. currentAnnualSalary is calculated by the
  * application from the printed full-time salary and the position percentage; it is what the estimate form asks for.
  *
- * @param agreement the suggested agreement, or null when none could be chosen (the person picks one from the list)
+ * @param agreement   the suggested agreement, or null when none could be chosen (the person picks one from the list)
+ * @param fieldStatus for each value: "rules", "ai", "notPrinted" (the payslip leaves it out) or "notFound"; it lets
+ *                    the page say why a field is empty
  */
 public record PayslipResponse(String employerName, String jobTitle, Integer positionPercent,
                               BigDecimal annualSalaryFullTime, BigDecimal currentAnnualSalary,
                               String stillingskode, Integer lonnstrinn, YearMonth ansiennitetsdato,
-                              SuggestedAgreement agreement, String note) {
+                              SuggestedAgreement agreement, java.util.Map<String, String> fieldStatus,
+                              String note) {
 
     static final String NOTE = "These values were read automatically. Check them against your payslip before using them.";
 
@@ -38,7 +41,7 @@ public record PayslipResponse(String employerName, String jobTitle, Integer posi
         return new PayslipResponse(fields.employerName(), fields.jobTitle(), fields.positionPercent(),
                 fields.annualSalaryFullTime(), fields.currentAnnualSalary(),
                 fields.stillingskode(), fields.lonnstrinn(), fields.ansiennitetsdato(),
-                suggested(result), NOTE);
+                suggested(result), result.fieldStatus(), NOTE);
     }
 
     private static SuggestedAgreement suggested(PayslipService.Result result) {

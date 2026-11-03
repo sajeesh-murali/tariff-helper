@@ -139,7 +139,92 @@ public final class PayslipImages {
             g.dispose();
         }
         stretchContrast(grey);
+        removeRuledLines(grey);
         return grey;
+    }
+
+    /**
+     * Payslip tables are often drawn with boxes and rules. Text recognition reads a line next to text as part of it and
+     * can drop the whole row (a table header, for example). Long straight dark lines are far longer than any letter, so
+     * they are painted white. Only runs that are clearly longer than text are touched.
+     */
+    static void removeRuledLines(BufferedImage grey) {
+        int width = grey.getWidth();
+        int height = grey.getHeight();
+        byte[] pixels = ((DataBufferByte) grey.getRaster().getDataBuffer()).getData();
+        int minHorizontal = Math.max(80, width / 8);
+        int minVertical = Math.max(45, height / 50);
+        boolean[] erase = new boolean[pixels.length];
+        for (int y = 0; y < height; y++) {
+            int runStart = -1;
+            for (int x = 0; x <= width; x++) {
+                boolean dark = x < width && (pixels[y * width + x] & 0xFF) < 110;
+                if (dark && runStart < 0) {
+                    runStart = x;
+                } else if (!dark && runStart >= 0) {
+                    if (x - runStart >= minHorizontal && isThin(pixels, width, height, runStart, y, x - runStart, true)) {
+                        for (int k = runStart; k < x; k++) {
+                            erase[y * width + k] = true;
+                        }
+                    }
+                    runStart = -1;
+                }
+            }
+        }
+        for (int x = 0; x < width; x++) {
+            int runStart = -1;
+            for (int y = 0; y <= height; y++) {
+                boolean dark = y < height && (pixels[y * width + x] & 0xFF) < 110;
+                if (dark && runStart < 0) {
+                    runStart = y;
+                } else if (!dark && runStart >= 0) {
+                    if (y - runStart >= minVertical && isThin(pixels, width, height, x, runStart, y - runStart, false)) {
+                        for (int k = runStart; k < y; k++) {
+                            erase[k * width + x] = true;
+                        }
+                    }
+                    runStart = -1;
+                }
+            }
+        }
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                if (erase[y * width + x]) {
+                    // the line and the pixel next to it on each side (a rule is often two or three pixels thick)
+                    for (int dy = -1; dy <= 1; dy++) {
+                        for (int dx = -1; dx <= 1; dx++) {
+                            int yy = y + dy;
+                            int xx = x + dx;
+                            if (yy >= 0 && yy < height && xx >= 0 && xx < width) {
+                                pixels[yy * width + xx] = (byte) 255;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * A rule is thin: a few pixels away from it, on both sides, the page is mostly white again. A solid block (a logo, a
+     * shaded cell) is also a long dark run, but it is not a line and its text must stay.
+     */
+    private static boolean isThin(byte[] pixels, int width, int height, int x, int y, int length, boolean horizontal) {
+        int distance = 7;
+        for (int side = -1; side <= 1; side += 2) {
+            int dark = 0;
+            for (int k = 0; k < length; k++) {
+                int px = horizontal ? x + k : x + side * distance;
+                int py = horizontal ? y + side * distance : y + k;
+                if (px >= 0 && px < width && py >= 0 && py < height && (pixels[py * width + px] & 0xFF) < 110) {
+                    dark++;
+                }
+            }
+            if (dark * 2 > length) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**

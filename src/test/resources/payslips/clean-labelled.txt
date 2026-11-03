@@ -1,0 +1,20 @@
+Eksempel kommune (fiktiv) LØNNSSLIPP
+Org.nr 000 000 000 · Pleie og omsorg – Sykehjem Nord Periode: oktober 2026
+Utbetalt: 20.10.2026
+Arbeidsgiver Eksempel kommune (fiktiv) Organisasjonsnr. 000 000 000
+Navn Kari Testesen Ansattnummer 100231
+Fødselsdato / 14.03.1991 / 140391 ***** Utbetales til konto 1234 56 78901
+personnr.
+Adresse Testveien 1, 0000 Teststad Skattekort Tabelltrekk, tabell 7100
+STILLING OG LØNNSPLASSERING
+Stilling Helsefagarbeider Stillingskode 7136
+Stillingsprosent 100 % Avtaleområde Hovedtariffavtalen i KS
+Lønnstrinn 34 Årslønn (100 %) 497 600,00
+Ansiennitetsdato 01.09.2019 Lønnsansiennitet 7 år 1 mnd
+pr. 01.10.2026
+Årslønn i stilling 497 600,00
+LØNNSARTER
+Art Beskrivelse Antall Sats Beløp
+1000 Månedslønn 100 % stilling 1,00 md 41 466,67
+2210 Kveldstillegg 36,5 t 34,00 1 241,00
+Sum brutto lønn 44 195,67
