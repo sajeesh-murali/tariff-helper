@@ -1,0 +1,10 @@
+BARNEHAGER
+Lønnsmottaker                                  Arbeidsgivers navn                               Ansattnr.        Fødselsnr.
+Kari Testesen                                                                    Eksempel Barnehage AS              123456               01010100000
+Testveien 1                                                                              en                                                                                NG            .
+1234 TESTBY                                                             000000003                                                                        18.09.2026          XXXX XX 00000
+Org.enhet                                                                                        Periode
+I                                                                                                         129-Eksempel Barnehage AS 9/095 - Lønn september 2026,
+Tekst                                                         Fer.o Skatt                     Antall            Timer                Sats                     Beløp
+1050 Ferie uten lønn (trekkes)                  El væ                                                                                                                            -1625,78
+1100 Fastlønn (80.00-4)                             te.                                                    422 700,00             28 180,00                                                 242 924,41

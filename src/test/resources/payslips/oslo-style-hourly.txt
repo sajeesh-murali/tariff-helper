@@ -1,0 +1,17 @@
+08:39
+Oslo kommune
+Utbetalingsdato        Periode              Juridisk organisasjonsnr
+Bydel Testvik                                               28.09.2026            202609            000000001
+Testveien 1 A
+0123 TESTBY                                             Ressursnummer                      Fødselsnummer
+10000001                                    01010100000
+Testesen, Kari Anne                                      Arbeidssted hovedstilling
+Storgata 9 B                                      BYDEL TESTVIK HJEMMETJENESTE
+0123 TESTBY                                                  N                                                                2
+Stilling Stillingskode - Tittel                St-% Ansiennitet L-ramme- Alt Ltr                     Orgenhet
+S000001  0058000 -       Sykepleier          0       01.12.2020      026     - 8 31               Hjemmetjeneste Testvik
+Kode  Lønn/trekk                                   Stilling  Opptjenings Creme,  Antall/        Sats           Beløp
+Periode  Frikortsaldo)  Gr-lag
+2000  Timelønn - 01.08.2026                                     S000001              202608                            7,50        328,39              2462,89
+2000  Timelønn - 13.08.2026                                 S000001            202608                         7,25       328,39            2 380,80
+8910  Skattetrekk hoveddel (tabell/prosent)  202609  26,00  -3 484,00

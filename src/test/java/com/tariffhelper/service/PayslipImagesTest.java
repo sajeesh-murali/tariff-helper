@@ -95,6 +95,27 @@ class PayslipImagesTest {
     }
 
     @Test
+    void longThinRulesOfATableAreErasedButLettersAndSolidBlocksStay() {
+        BufferedImage grey = new BufferedImage(1000, 600, BufferedImage.TYPE_BYTE_GRAY);
+        java.awt.Graphics2D g = grey.createGraphics();
+        g.setColor(java.awt.Color.WHITE);
+        g.fillRect(0, 0, 1000, 600);
+        g.setColor(java.awt.Color.BLACK);
+        g.fillRect(50, 100, 900, 3);      // a horizontal rule
+        g.fillRect(300, 150, 3, 400);     // a vertical rule
+        g.fillRect(500, 300, 12, 30);     // something the size of a letter
+        g.fillRect(700, 350, 200, 200);   // a solid block, such as a logo
+        g.dispose();
+
+        PayslipImages.removeRuledLines(grey);
+
+        assertThat(grey.getRaster().getSample(500, 101, 0)).isEqualTo(255);   // rule gone
+        assertThat(grey.getRaster().getSample(301, 400, 0)).isEqualTo(255);   // rule gone
+        assertThat(grey.getRaster().getSample(505, 315, 0)).isEqualTo(0);     // letter kept
+        assertThat(grey.getRaster().getSample(800, 450, 0)).isEqualTo(0);     // block kept
+    }
+
+    @Test
     void thePreparedPictureIsGrey() throws IOException {
         BufferedImage image = decode(PayslipImages.prepare(TestImages.png(1200, 800), PayslipFileType.PNG));
 

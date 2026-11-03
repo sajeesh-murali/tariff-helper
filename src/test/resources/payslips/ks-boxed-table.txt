@@ -1,0 +1,17 @@
+20:58
+svarut.ks.no
+Testby kommune
+Retur: Postboks 10, 1234 TESTBY
+Arbeidsgivernr.           Periodenr
+000000002                  202609
+Fødselsnr                   Ansatt nr.
+Utlønningssted
+|   St.kode          Betegnelse                                            St-%                    LR               Ansiennitet
+|   123456          Pleiemedarbeider                                     87,50                   4.1                 01.03.2021
+LØNNSSPESIFIKASJON
+Denne perioden                               H
+Kode                 Lønn/trekk                  Tab/%                        P
+Ant/ Gr.lag      Sats          Beløp        Ant/ Gr.lag
+1100 = Månedslønn (3003)                                                   34 983,33                        32 051,73
+1404  Nattillegg fom. kl. 21.00 turnus, fast                                187,32                       1 124,66
+2000 | Timelønn (3003)                                                      8,00                  1 819,29

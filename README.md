@@ -17,9 +17,13 @@ is worked out from the payslip.
 
 - The file (PDF, JPG, PNG, WebP, TIFF, HEIC or HEIF) is read in memory and never stored. A PDF with a text layer is read directly; a
   picture or a scanned PDF is read with OCR (Tesseract) on this server, so the picture never goes to a third party.
-  The file type is decided from its first bytes, not its name. Only a few masked lines go to the AI, which copies out the employer,
-  job title, position percentage, full-time salary, stillingskode, lønnstrinn and seniority date. Each value must
-  appear in those lines and be in range, or it is dropped.
+  The file type is decided from its first bytes, not its name. Fixed rules in code read the employer, job title,
+  position percentage, full-time salary, stillingskode, lønnstrinn and seniority date from the whole text first (titles and
+  abbreviations such as St-%, St.kode or Ltr, also in tables), and nothing leaves the server for that. Then a few masked
+  lines go to the AI as a second opinion (`PAYSLIP_AI_MODE=always`, the default), which copies the values out. Each value
+  must appear in the text and be in range, or it is dropped. The two readings are compared per field: the response says
+  whether a value is confirmed by both, differs (the person is asked to check it), or came from one reading only, or why it
+  is empty (`fieldStatus`), and the page shows this. `missing` asks the AI only for what the rules did not find; `off` sends nothing.
 - The code calculates the person's current salary at their own percentage. The AI does not.
 - The agreement is suggested from the employer name (see below). The person only checks the values and answers the
   work-history questions.
@@ -262,6 +266,7 @@ mvn spring-boot:run
 | `RATE_LIMIT_PER_DAY` | 500 | Max of those requests for the whole service per UTC day. This caps Claude spend. |
 | `RATE_LIMIT_ENABLED` | true | Turn the limiter off (local testing only) |
 | `BOOKING_URL` | the Calendly link | Where "book en samtale" opens (must start with `https://`). Empty hides the booking button. Served to the page by `GET /api/config` |
+| `PAYSLIP_AI_MODE` | always | `always`: the AI also reads the redacted payslip excerpt on every payslip and the result is compared with the rules. `missing`: only for values the rules did not find. `off`: no payslip text is sent to any AI |
 | `OCR_ENABLED` | true | Turn picture reading off. Pictures then get a clear "not available" message |
 | `OCR_COMMAND` | tesseract | The Tesseract program. Install it locally to try pictures (`nor` and `eng` language packs) |
 | `OCR_LANGUAGES` | nor+eng | Tesseract language packs |

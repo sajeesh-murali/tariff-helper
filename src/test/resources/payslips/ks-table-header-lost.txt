@@ -1,0 +1,9 @@
+Testby kommune
+Retur: Postboks 10, 1234 TESTBY
+Arbeidsgivernr.           Periodenr
+000000002                  202609
+Utlønningssted
+|   123456          Pleiemedarbeider                                     87,50                   4.1                 01.03.2021
+LØNNSSPESIFIKASJON
+Kode                 Lønn/trekk                  Tab/%                        P
+1100 = Månedslønn (3003)                                                   34 983,33                        32 051,73

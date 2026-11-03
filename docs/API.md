@@ -322,8 +322,18 @@ curl -F "file=@payslip.pdf;type=application/pdf" http://localhost:8080/api/paysl
                  "unavailableReason": null, "confidence": "high", "source": "rules",
                  "reason": "The employer name is Oslo kommune or one of its districts (bydeler) or agencies (etater).",
                  "jobCategory": "nurse" },
+  "fieldStatus": { "employerName": "rules", "jobTitle": "rules", "positionPercent": "rules",
+                   "annualSalaryFullTime": "rules", "stillingskode": "rules", "lonnstrinn": "rules",
+                   "ansiennitetsdato": "rules" },
   "note": "These values were read automatically. Check them against your payslip before using them." }
 ```
+
+`fieldStatus` says, for each of the seven values, where it came from or why it is empty: `confirmed` (the rules and the
+model read the same value), `disagree` (both read a value and they differ; the rules' value is returned and the page asks
+the person to check it), `rules` (only the rules found it), `ai` (only the model found it, and the value was checked),
+`notPrinted` (the payslip itself leaves it out, for example hourly pay has no yearly salary and "St-%" 0 means not given)
+or `notFound`. The page uses it to tell the person which fields to check or fill in. Text values count as the same when one
+contains the other once case, spacing and punctuation are ignored; numbers, dates and codes must be equal.
 
 | Field | Read from the payslip | Goes to the estimate form as |
 |---|---|---|
@@ -343,20 +353,38 @@ for those returns `422`, so the UI can say so before asking the experience quest
 (fixed rules in code) or `ai` (the model, validated against the list of agreements). `jobCategory` is
 set only when the job title matches one of that agreement's job categories.
 
-Any value is `null` when it was not found or did not pass the checks; `currentAnnualSalary` is `null` unless both
+Any value is `null` when it was not found or did not pass the checks (see `fieldStatus` for which case); `currentAnnualSalary` is `null` unless both
 `annualSalaryFullTime` and `positionPercent` were read. With `LLM_PROVIDER=stub` everything is always `null`.
 
 ### How it works
+Payslips have no common layout, so the values are read in two layers: fixed rules in code first, the model only for what
+the rules did not find.
+
+0. **Rules in code** (`PayslipRuleReader`, steps 1 to 2 below run before it). The rules read the **whole** text on this
+   server, so nothing leaves it. They know the titles and abbreviations payslips use (Stillingsprosent, St-%, St.kode,
+   Betegnelse, Ltr, Ans.dato, Årslønn (100 %), ...), allowing for case, accents and a one-letter OCR mistake. They find a value
+   after its title on the same line, under a row of column titles (the picture reader keeps the gaps between columns, and
+   titles and values are paired by cell and by position), or in a row that has a code, a title, a percentage and a date
+   with no titles at all. "LR" and "L-ramme" are never taken for the pay step. A seven-digit stillingskode (Oslo's
+   `0058000`) is not accepted, because the form takes up to six digits. Every value is checked like the model's.
+   Where the rules found a value, the model's answer for it is never used in its place.
+   `PAYSLIP_AI_MODE` decides when the model also reads the redacted excerpt: `always` (default; a second opinion on every
+   payslip, compared field by field with the rules), `missing` (only for values the rules did not find) or `off` (never; no
+   payslip text leaves the server). The excerpt also includes the lines the rules read their values from, even when no
+   keyword is near them.
+
 1. **Read.** A PDF with a text layer is read by PDFBox in memory. A picture, or a PDF without a text layer, is
-   turned upright (EXIF), scaled to at most 3000 px (`OCR_MAX_SIDE`), contrast-stretched and read by Tesseract OCR on this server (languages `nor+eng`).
+   turned upright (EXIF), scaled to at most 3000 px (`OCR_MAX_SIDE`), contrast-stretched, cleared of the long straight lines of
+   table boxes (they make Tesseract drop whole rows, such as a table header) and read by Tesseract OCR on this server (languages `nor+eng`).
    The file is never stored and the picture is never sent to the LLM. If Tesseract is not installed or `OCR_ENABLED`
    is false, pictures get a `400`; PDFs with a text layer still work.
 2. **Cut down and mask.** Only lines that mention arbeidsgiver, stilling, prosent, årslønn, lønnstrinn, ansiennitet or
    kode, and the two rows below them, are kept (at most 30 lines of 160 characters). Lines with a personal label
    (name, address, account, birth, phone, email) are dropped. National ID numbers, account numbers, IBAN, phone numbers and email addresses are masked.
    If no line is kept, nothing is sent to the LLM and all values are `null`.
-3. **Copy out.** The excerpt goes to the LLM inside `<user_data>` tags. The model only copies values; it calculates
-   nothing.
+3. **Copy out.** In `always` mode the excerpt goes to the LLM inside `<user_data>` tags for every payslip (in `missing`
+   mode only if the rules did not find all seven values). The model only copies values; it calculates nothing. Its answer
+   fills only the gaps the rules left and is compared with what the rules found.
 4. **Check.** Each value is accepted only if it is in range **and** is written in the excerpt that was sent. Ranges
    are the estimate form's: `employerName` 2 to 100 and `jobTitle` 2 to 60 characters from the same character
    whitelist, `positionPercent` and `lonnstrinn` 1 to 100, `annualSalaryFullTime` 1 to 5,000,000 whole NOK (printed as

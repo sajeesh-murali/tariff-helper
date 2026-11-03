@@ -64,8 +64,21 @@ public class PayslipRedactor {
 
     /** The text to send to the LLM; empty when the payslip has no line worth sending. */
     public String excerpt(String payslipText) {
+        return excerpt(payslipText, java.util.Set.of());
+    }
+
+    /**
+     * @param alsoKeep numbers of lines the rules in code read values or titles from, kept even when no keyword is
+     *                 near them, so a row with no titles still reaches the model
+     */
+    public String excerpt(String payslipText, java.util.Set<Integer> alsoKeep) {
         String[] lines = payslipText.split("\\R");
         TreeSet<Integer> keep = new TreeSet<>();
+        for (int index : alsoKeep) {
+            if (index >= 0 && index < lines.length) {
+                keep.add(index);
+            }
+        }
         for (int i = 0; i < lines.length; i++) {
             if (KEYWORD.matcher(lines[i]).find() || looksLikeALabel(lines[i])) {
                 for (int j = i; j <= i + 2 && j < lines.length; j++) {

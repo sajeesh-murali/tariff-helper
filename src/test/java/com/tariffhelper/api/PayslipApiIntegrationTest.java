@@ -39,7 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /** The extractor (the LLM call) is mocked, so no external calls are made. */
-@SpringBootTest(properties = "app.rate-limit.per-client-per-minute=1000")
+@SpringBootTest(properties = {"app.rate-limit.per-client-per-minute=1000", "app.payslip.ai-mode=missing"})
 @AutoConfigureMockMvc
 class PayslipApiIntegrationTest {
 
@@ -64,15 +64,30 @@ class PayslipApiIntegrationTest {
                 .file(new MockMultipartFile("file", name, contentType, bytes)));
     }
 
+    /**
+     * A payslip written in words the rules do not know ("Arbeidsgiverinfo", "Kode for stillingen"): the excerpt still
+     * has the keywords, so the model is asked. The values themselves are only in sentences, not under a known title.
+     */
+    private static final List<String> HARD_LINES = List.of(
+            "Lønnsslipp august 2026",
+            "Navn: Kari Testesen",
+            "Fødselsnummer: 01019012345",
+            "Kontonummer: 4202.15.12345",
+            "Arbeidsgiverinfo: Oslo kommune, Bydel Vestre Aker",
+            "Din stilling er sykepleier i 80 prosent",
+            "Kode for stillingen: 7936",
+            "Skattetrekk 12 345,00");
+
+    private static byte[] hardPayslip() {
+        return TestPdf.withLines(HARD_LINES);
+    }
+
     private static String sampleText() {
         return String.join(System.lineSeparator(), TestPdf.SAMPLE_PAYSLIP_LINES);
     }
 
     @Test
-    void returnsTheExtractedValuesAndNeverPassesPersonalDataOn() throws Exception {
-        when(extractor.extract(anyString())).thenReturn(new PayslipFields("7936", 45, YearMonth.of(2015, 8),
-                "Oslo kommune", "Sykepleier", 80, BigDecimal.valueOf(612300)));
-
+    void aClearlyLabelledPayslipIsReadByTheRulesAloneAndNothingIsSentToTheModel() throws Exception {
         upload(TestPdf.samplePayslip())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.employerName").value("Oslo kommune"))
@@ -90,19 +105,50 @@ class PayslipApiIntegrationTest {
                 .andExpect(jsonPath("$.agreement.confidence").value("high"))
                 .andExpect(jsonPath("$.agreement.reason").isNotEmpty())
                 .andExpect(jsonPath("$.agreement.jobCategory").value("nurse"))
+                .andExpect(jsonPath("$.fieldStatus.employerName").value("rules"))
+                .andExpect(jsonPath("$.fieldStatus.annualSalaryFullTime").value("rules"))
+                .andExpect(jsonPath("$.fieldStatus.stillingskode").value("rules"))
                 .andExpect(jsonPath("$.note").value(org.hamcrest.Matchers.containsString("Check them")));
         verify(suggester, never()).suggest(any(), any(), anyList());
+        verify(extractor, never()).extract(anyString());
+    }
+
+    @Test
+    void theModelIsOnlyAskedForWhatTheRulesMissedAndNeverSeesPersonalData() throws Exception {
+        when(extractor.extract(anyString())).thenReturn(new PayslipFields("7936", null, null,
+                "Oslo kommune", "Sykepleier", 80, null));
+
+        upload(hardPayslip())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.employerName").value("Oslo kommune"))
+                .andExpect(jsonPath("$.positionPercent").value(80))
+                .andExpect(jsonPath("$.stillingskode").value("7936"))
+                .andExpect(jsonPath("$.fieldStatus.employerName").value("ai"))
+                .andExpect(jsonPath("$.fieldStatus.positionPercent").value("ai"))
+                .andExpect(jsonPath("$.fieldStatus.lonnstrinn").value("notFound"))
+                .andExpect(jsonPath("$.agreement.agreementId").value("oslo-kommune"));
 
         ArgumentCaptor<String> sent = ArgumentCaptor.forClass(String.class);
         verify(extractor).extract(sent.capture());
         assertThat(sent.getValue())
-                .contains("Arbeidsgiver: Oslo kommune")
-                .contains("Stillingsprosent: 80 %")
-                .contains("Årslønn i 100 % stilling før skatt 612 300,00")
-                .contains("Registrert ansiennitet: 01.08.2015")
-                .contains("7936 Sykepleier 45 01.08.2015")
+                .contains("Arbeidsgiverinfo: Oslo kommune")
+                .contains("Din stilling er sykepleier i 80 prosent")
                 .doesNotContain("Kari").doesNotContain("Testesen")
                 .doesNotContain("01019012345").doesNotContain("4202").doesNotContain("Lønnsslipp");
+    }
+
+    @Test
+    void aValueTheRulesFoundIsNeverReplacedByTheModelsAnswer() throws Exception {
+        when(extractor.extract(anyString())).thenReturn(new PayslipFields("1111", 99, YearMonth.of(2001, 1),
+                "Annen kommune", "Lege", 50, BigDecimal.valueOf(900000)));
+        byte[] partlyLabelled = TestPdf.withLines(List.of("Arbeidsgiver: Oslo kommune", "Din stilling er sykepleier"));
+
+        upload(partlyLabelled)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.employerName").value("Oslo kommune"))
+                .andExpect(jsonPath("$.fieldStatus.employerName").value("disagree"))
+                .andExpect(jsonPath("$.jobTitle").value("Lege"))
+                .andExpect(jsonPath("$.fieldStatus.jobTitle").value("ai"));
     }
 
     private static PayslipFields onlyEmployer(String employer, String jobTitle) {
@@ -113,7 +159,7 @@ class PayslipApiIntegrationTest {
     void anAgreementWithoutRulesIsSuggestedButFlaggedAsNotAvailable() throws Exception {
         when(extractor.extract(anyString())).thenReturn(onlyEmployer("NAV Grünerløkka", "Rådgiver"));
 
-        upload(TestPdf.samplePayslip())
+        upload(hardPayslip())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.agreement.agreementId").value("staten"))
                 .andExpect(jsonPath("$.agreement.status").value("placeholder"))
@@ -126,7 +172,7 @@ class PayslipApiIntegrationTest {
         when(suggester.suggest(eq("Lovisenberg Diakonale"), isNull(), anyList()))
                 .thenReturn(new AgreementSuggestion("spekter", ConfidenceLevel.MEDIUM, "A private hospital."));
 
-        upload(TestPdf.samplePayslip())
+        upload(hardPayslip())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.agreement.agreementId").value("spekter"))
                 .andExpect(jsonPath("$.agreement.source").value("ai"))
@@ -141,7 +187,7 @@ class PayslipApiIntegrationTest {
         when(extractor.extract(anyString())).thenReturn(onlyEmployer("Coop Norge", "Assistent"));
         when(suggester.suggest(any(), any(), anyList())).thenReturn(AgreementSuggestion.unknown());
 
-        upload(TestPdf.samplePayslip())
+        upload(hardPayslip())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.employerName").value("Coop Norge"))
                 .andExpect(jsonPath("$.agreement").doesNotExist());
@@ -152,7 +198,7 @@ class PayslipApiIntegrationTest {
         when(extractor.extract(anyString())).thenReturn(new PayslipFields("7936", 45, null, null, "Sykepleier",
                 null, null));
 
-        upload(TestPdf.samplePayslip())
+        upload(hardPayslip())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.agreement").doesNotExist());
 
@@ -172,23 +218,36 @@ class PayslipApiIntegrationTest {
 
     @Test
     void aPictureIsReadWithOcrAndNeverPassesPersonalDataOn() throws Exception {
-        when(ocr.recognize(any())).thenReturn(sampleText());
+        when(ocr.recognize(any())).thenReturn(String.join("\n", HARD_LINES));
         when(extractor.extract(anyString())).thenReturn(new PayslipFields("7936", 45, YearMonth.of(2015, 8),
                 "Oslo kommune", "Sykepleier", 80, BigDecimal.valueOf(612300)));
 
         upload(TestImages.jpeg(1600, 1200), "photo.jpg", "image/jpeg")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.employerName").value("Oslo kommune"))
-                .andExpect(jsonPath("$.lonnstrinn").value(45))
+                .andExpect(jsonPath("$.stillingskode").value("7936"))
                 .andExpect(jsonPath("$.agreement.agreementId").value("oslo-kommune"));
 
         ArgumentCaptor<String> sent = ArgumentCaptor.forClass(String.class);
         verify(extractor).extract(sent.capture());
         assertThat(sent.getValue())
-                .contains("Arbeidsgiver: Oslo kommune")
-                .contains("7936 Sykepleier 45 01.08.2015")
+                .contains("Arbeidsgiverinfo: Oslo kommune")
+                .contains("Kode for stillingen: 7936")
                 .doesNotContain("Kari").doesNotContain("Testesen")
                 .doesNotContain("01019012345").doesNotContain("4202");
+    }
+
+    @Test
+    void aPictureWithClearTitlesIsReadByTheRulesWithoutTheModel() throws Exception {
+        when(ocr.recognize(any())).thenReturn(sampleText());
+
+        upload(TestImages.jpeg(1600, 1200), "photo.jpg", "image/jpeg")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.employerName").value("Oslo kommune"))
+                .andExpect(jsonPath("$.lonnstrinn").value(45))
+                .andExpect(jsonPath("$.fieldStatus.lonnstrinn").value("rules"));
+
+        verify(extractor, never()).extract(anyString());
     }
 
     @Test
