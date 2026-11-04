@@ -1,0 +1,642 @@
+[
+ {
+  "id": "s01-ks-keyvalue-two-per-line",
+  "layout": "key-colon-value, two pairs per line",
+  "hard": false,
+  "text": "Bergen kommune                                              LØNNSSLIPP\nPeriode: 10.2026                  Utbetalingsdato: 12.10.2026\nNavn: Amina Eksempel              Ansattnr: 204511\nArbeidsgiver: Bergen kommune\nStilling: Helsefagarbeider                    Stillingskode: 7076\nStillingsprosent: 75,00 %                     Avtaleområde: HTA KS\nÅrslønn 100 %: 512 300,00                     Ansiennitetsdato: 01.04.2017\nLønnsart   Tekst                    Antall      Sats         Beløp\n1000       Månedslønn               1,00        32 018,75    32 018,75\n",
+  "expected": {
+   "employerName": "Bergen kommune",
+   "jobTitle": "Helsefagarbeider",
+   "positionPercent": 75,
+   "annualSalaryFullTime": 512300,
+   "stillingskode": "7076",
+   "lonnstrinn": null,
+   "ansiennitetsdato": "2017-04"
+  },
+  "notes": "Baseline KS layout. 7076 = HELSEFAGARB/HJELPEPL. in the KS PAI table. KS slips usually print no lønnstrinn."
+ },
+ {
+  "id": "s02-oslo-header-over-values",
+  "layout": "column titles over values (Oslo SAP style)",
+  "hard": false,
+  "text": "Oslo kommune\nUtbetalingsdato        Periode              Juridisk organisasjonsnr\nSykehjemsetaten                                             20.10.2026            202610            000000001\nRessursnummer                      Fødselsnummer\n10000002                                    00000000000\nEksempel, Ola Fiktiv                                      Arbeidssted hovedstilling\n                                                  TESTLIA SYKEHJEM\nStilling Stillingskode - Tittel                St-% Ansiennitet L-ramme- Alt Ltr                     Orgenhet\nS000002  0059000 -       Spesialsykepleier   100     01.06.2014      030     - 1 52               Testlia sykehjem\nKode  Lønn/trekk                                   Stilling  Opptjenings  Antall/        Sats           Beløp\n1000  Månedslønn                                       S000002              202610                            1,00        58 112,50         58 112,50\n",
+  "expected": {
+   "employerName": "Oslo kommune",
+   "jobTitle": "Spesialsykepleier",
+   "positionPercent": 100,
+   "annualSalaryFullTime": null,
+   "stillingskode": null,
+   "lonnstrinn": 52,
+   "ansiennitetsdato": "2014-06"
+  },
+  "notes": "Oslo prints the code as 7 digits (0059000 ~ stillingskode 59?). Mapping 0059000 -> 59 is NOT verified, so the safe answer is null. No årslønn printed."
+ },
+ {
+  "id": "s03-trondheim-table-below",
+  "layout": "header row, value row below, wide gaps",
+  "hard": false,
+  "text": "Trondheim kommune                                                         Lønnsspesifikasjon oktober 2026\nAnsattnr      Navn                         Fødselsdato\n  301122      Kari Prøvesen                 00.00.0000\nStillingskode    Stillingsbetegnelse          Stillingsprosent    Ansiennitetsdato    Årslønn 100 %\n    7174         Sykepleier                        80,00             15.08.2019          598 400,00\nLønnsart  Beskrivelse                   Antall     Sats        Beløp\n1010      Fastlønn                        0,80                 39 893,33\n",
+  "expected": {
+   "employerName": "Trondheim kommune",
+   "jobTitle": "Sykepleier",
+   "positionPercent": 80,
+   "annualSalaryFullTime": 598400,
+   "stillingskode": "7174",
+   "lonnstrinn": null,
+   "ansiennitetsdato": "2019-08"
+  },
+  "notes": "Header-over-values. 7174 = SYKEPLEIER (KS PAI). Fødselsdato column must not be taken."
+ },
+ {
+  "id": "s04-state-dfo-two-seniority-dates",
+  "layout": "state (DFØ/SAP) key-value block with two seniority dates",
+  "hard": false,
+  "text": "Universitetet i Testby\nLønnsslipp for oktober 2026                         Utbetalingsdato 12.10.2026\nAnsattnummer 00451122\nAnsiennitetsdato stilling   01.08.2023\nAnnen ansiennitetsdato      15.01.2019\nStillingskode   1017 Stipendiat\nLønnstrinn      54                     Stillingsprosent  100,00\nBrutto årslønn  532 200,00\nSkattetrekk tabell 7100      Skattekommune 9999 Testby\n",
+  "expected": {
+   "employerName": "Universitetet i Testby",
+   "jobTitle": "Stipendiat",
+   "positionPercent": 100,
+   "annualSalaryFullTime": 532200,
+   "stillingskode": "1017",
+   "lonnstrinn": 54,
+   "ansiennitetsdato": "2023-08"
+  },
+  "notes": "DFØ's guide: 'Seniority date for position' drives ladder raises, 'Other seniority date(s)' may not affect salary [dfo.no/node/2061]. Exact Norwegian label wording is invented; verify. Brutto årslønn at 100 % equals full-time salary."
+ },
+ {
+  "id": "s05-helse-mingat-arslonn-plain",
+  "layout": "helseforetak (MinGat/HR portal style) with plain 'Årslønn'",
+  "hard": false,
+  "text": "Helse Testfjord HF\nLØNNSSLIPP                                   Periode 2026-10        Utbetalt 20.10.2026\nLønnsmottaker  Lise Eksempel                  Ansattnr 77001\nKoststed  4410 Kirurgisk sengepost\nStilling  Sykepleier                          Stillingsprosent  80,00\nAnsiennitet  01.02.2016                       Årslønn  560 000,00\nBasislønn  566 000,00\nLønnart  Tekst                       Opptjeningsperiode   Antall/Gr.lag   Sats   Beløp\n1010     Månedslønn                  2026-10                                      37 333,33\n1100     Fast tillegg individuelt    2026-10                                         400,00\n",
+  "expected": {
+   "employerName": "Helse Testfjord HF",
+   "jobTitle": "Sykepleier",
+   "positionPercent": 80,
+   "annualSalaryFullTime": 560000,
+   "stillingskode": null,
+   "lonnstrinn": null,
+   "ansiennitetsdato": "2016-02"
+  },
+  "notes": "Spekter health: no lønnstrinn. 'Årslønn' with no 100 % mark: the Helse Stavanger guide computes Månedslønn = årslønn/12 x stillingsprosent, so årslønn is the full-time figure; here 560 000/12 x 80 % = 37 333,33 confirms it. Basislønn (årslønn + fixed individual tillegg) must NOT be taken."
+ },
+ {
+  "id": "s06-helse-basislonn-only",
+  "layout": "helseforetak, only Basislønn printed",
+  "hard": true,
+  "text": "Helse Testfjord HF\nStilling  Helsefagarbeider                     Stillingsprosent  100,00\nAnsiennitet  01.09.2012\nBasislønn  468 500,00\n1010     Månedslønn                  2026-10                                      39 041,67\n",
+  "expected": {
+   "employerName": "Helse Testfjord HF",
+   "jobTitle": "Helsefagarbeider",
+   "positionPercent": 100,
+   "annualSalaryFullTime": null,
+   "stillingskode": null,
+   "lonnstrinn": null,
+   "ansiennitetsdato": "2012-09"
+  },
+  "notes": "HARD: Basislønn includes fixed individual tillegg (Helse Stavanger guide), so it is not the tariff årslønn. Safe answer: salary null."
+ },
+ {
+  "id": "s07-pbl-kindergarten-years",
+  "layout": "private kindergarten (PBL), Tripletex-like, seniority as years",
+  "hard": false,
+  "text": "Eksempel Naturbarnehage AS\nOrg.nr 000 000 000\nLØNNSSLIPP september 2026\nAnsatt: Sara Testdatter                Ansattnr: 12\nStilling: Barnehagelærer               Stillingsprosent: 100\nAnsiennitet: 8 år\nÅrslønn 100%: 538 000\nLønnsart          Antall       Sats          Beløp\nFastlønn            1,00                     44 833,33\nSkattetrekk                                  -11 200,00\n",
+  "expected": {
+   "employerName": "Eksempel Naturbarnehage AS",
+   "jobTitle": "Barnehagelærer",
+   "positionPercent": 100,
+   "annualSalaryFullTime": 538000,
+   "stillingskode": null,
+   "lonnstrinn": null,
+   "ansiennitetsdato": null
+  },
+  "notes": "Ansiennitet as a number of years: never turn it into a date (no reference date is given and the rule must not guess). Employer from letterhead (private: no 'kommune' keyword, so the current letterhead rule misses it)."
+ },
+ {
+  "id": "s08-virke-monthly-only",
+  "layout": "private health (Virke), monthly fixed pay only",
+  "hard": true,
+  "text": "Stiftelsen Eksempelhjemmet\nArbeidsgiver   Stiftelsen Eksempelhjemmet          Org.nr. 000000000\nYrke           Vernepleier                         Stillings%   60\nAns.dato       01.01.2020\nFastlønn (månedlig)                                         26 500,00\n",
+  "expected": {
+   "employerName": "Stiftelsen Eksempelhjemmet",
+   "jobTitle": "Vernepleier",
+   "positionPercent": 60,
+   "annualSalaryFullTime": null,
+   "stillingskode": null,
+   "lonnstrinn": null,
+   "ansiennitetsdato": "2020-01"
+  },
+  "notes": "HARD: only monthly pay is printed. Do not derive årslønn (26 500 x 12 / 0,6 would be arithmetic on an unconfirmed basis). Salary null."
+ },
+ {
+  "id": "s09-agency-hourly",
+  "layout": "staffing agency (bemanning), hourly pay, client named",
+  "hard": false,
+  "text": "Eksempel Bemanning AS                                        LØNNSSLIPP UKE 41-42\nArbeidsgiver: Eksempel Bemanning AS\nOppdragsgiver: Testvik kommune\nStilling: Sykepleier\nTimelønn                       75,00 t       395,00        29 625,00\nFeriepenger 12 %                                            3 555,00\n",
+  "expected": {
+   "employerName": "Eksempel Bemanning AS",
+   "jobTitle": "Sykepleier",
+   "positionPercent": null,
+   "annualSalaryFullTime": null,
+   "stillingskode": null,
+   "lonnstrinn": null,
+   "ansiennitetsdato": null
+  },
+  "notes": "Legal employer is the agency, not the client (Oppdragsgiver must be a stop label). Hourly pay: percent and salary not printed."
+ },
+ {
+  "id": "s10-english-dfo-university",
+  "layout": "English-language state payslip",
+  "hard": false,
+  "text": "University of Testby\nPayslip October 2026\nEmployee number      00451200\nPosition code        1352 Postdoctoral fellow\nSalary grade         59\nPosition percentage  100.00 %\nSeniority date for position   01.09.2022\nGross annual salary  580 000.00\nTax deduction table  7100\n",
+  "expected": {
+   "employerName": "University of Testby",
+   "jobTitle": "Postdoctoral fellow",
+   "positionPercent": 100,
+   "annualSalaryFullTime": 580000,
+   "stillingskode": "1352",
+   "lonnstrinn": 59,
+   "ansiennitetsdato": "2022-09"
+  },
+  "notes": "English labels (DFØ publishes an English payslip guide). 'Gross annual salary' at 100 % equals the full-time figure. 580 000.00 uses '.' as the decimal mark; AMOUNT already stops at a 2-digit group, keep it that way."
+ },
+ {
+  "id": "s11-english-part-time-gross",
+  "layout": "English payslip, part-time with 'Gross annual salary'",
+  "hard": true,
+  "text": "University of Testby\nPosition code        1009 Universitetslektor\nSalary grade         62\nPosition percentage  50.00 %\nGross annual salary  305 000.00\n",
+  "expected": {
+   "employerName": "University of Testby",
+   "jobTitle": "Universitetslektor",
+   "positionPercent": 50,
+   "annualSalaryFullTime": null,
+   "stillingskode": "1009",
+   "lonnstrinn": 62,
+   "ansiennitetsdato": null
+  },
+  "notes": "HARD: at 50 % it is unclear whether 'Gross annual salary' is the full-time or the own amount (DFØ text: 'annual salary before deductions'). Safe answer: salary null."
+ },
+ {
+  "id": "s12-nynorsk-fylkeskommune",
+  "layout": "nynorsk labels",
+  "hard": false,
+  "text": "Vestfjord fylkeskommune\nLØNSSLIPP OKTOBER 2026\nArbeidsgjevar: Vestfjord fylkeskommune\nStillingsnemning: Lektor m. tilleggsutd.        Stillingskode: 7966\nStillingsstorleik: 100 %\nAnsiennitetsdato: 01.08.2011\nÅrsløn i 100 % stilling: 702 000,00\n",
+  "expected": {
+   "employerName": "Vestfjord fylkeskommune",
+   "jobTitle": "Lektor m. tilleggsutd.",
+   "positionPercent": 100,
+   "annualSalaryFullTime": 702000,
+   "stillingskode": "7966",
+   "lonnstrinn": null,
+   "ansiennitetsdato": "2011-08"
+  },
+  "notes": "Nynorsk: Arbeidsgjevar, Stillingsnemning, Stillingsstorleik, Årsløn. 7966 = LEKTOR M. TILLEGGSUTD. (KS PAI)."
+ },
+ {
+  "id": "s13-ocr-noise",
+  "layout": "photo OCR with letter/digit confusions",
+  "hard": false,
+  "text": "Testvik kommune\nArbeidsglver   Testvik kommune\nStlllngsprosent   8O,OO %\nStilllngskode   7O76      Stilling   Helsefagarbeider\nAnsiennltetsdato   O1.O3.2O18\nArslønn 1OO %   498 1OO,OO\n",
+  "expected": {
+   "employerName": "Testvik kommune",
+   "jobTitle": "Helsefagarbeider",
+   "positionPercent": 80,
+   "annualSalaryFullTime": 498100,
+   "stillingskode": "7076",
+   "lonnstrinn": null,
+   "ansiennitetsdato": "2018-03"
+  },
+  "notes": "OCR read 0 as O inside numbers. Truth shown; repairing O->0 inside a token that is otherwise digits/separators is safe. If the repair is not implemented, null is the acceptable output for percent, code, date and salary. Label 'Stilllngskode' has 2 errors (double l + l for i): only a distance-2 rule would catch it."
+ },
+ {
+  "id": "s14-code-title-no-dash",
+  "layout": "Stillingskode/-tittel with code and title, no dash",
+  "hard": false,
+  "text": "Strandvik kommune\nStillingskode/-tittel   7174 Sykepleier\nStillingsprosent   100,00\nAnsiennitetsdato   01.11.2015\n",
+  "expected": {
+   "employerName": "Strandvik kommune",
+   "jobTitle": "Sykepleier",
+   "positionPercent": 100,
+   "annualSalaryFullTime": null,
+   "stillingskode": "7174",
+   "lonnstrinn": null,
+   "ansiennitetsdato": "2015-11"
+  },
+  "notes": "The combined label is split into code + title, but with no dash the title cell starts with a 4-digit number and cellText stops there, so the title is lost today."
+ },
+ {
+  "id": "s15-lr-ltr-combined",
+  "layout": "combined LR/Ltr label with slash value",
+  "hard": false,
+  "text": "Oslo kommune\nStilling: Sykepleier\nLR/Ltr: 26/45\nStillingsprosent: 100\nAnsiennitet: 01.03.2018\n",
+  "expected": {
+   "employerName": "Oslo kommune",
+   "jobTitle": "Sykepleier",
+   "positionPercent": 100,
+   "annualSalaryFullTime": null,
+   "stillingskode": null,
+   "lonnstrinn": 45,
+   "ansiennitetsdato": "2018-03"
+  },
+  "notes": "Combined label 'LR/Ltr' -> key 'lrltr'. The second number is the lønnstrinn. Only accept the split when the label names both ramme and trinn in this order."
+ },
+ {
+  "id": "s16-lonnsplassering-ambiguous",
+  "layout": "Lønnsplassering 20.34",
+  "hard": true,
+  "text": "Eksempel kommune\nStilling   Konsulent\nLønnsplassering   20.34\nStillingsprosent   100\n",
+  "expected": {
+   "employerName": "Eksempel kommune",
+   "jobTitle": "Konsulent",
+   "positionPercent": 100,
+   "annualSalaryFullTime": null,
+   "stillingskode": null,
+   "lonnstrinn": null,
+   "ansiennitetsdato": null
+  },
+  "notes": "HARD: '20.34' could be ramme.trinn, trinn.alternativ, or a decimal. Safe answer: lønnstrinn null."
+ },
+ {
+  "id": "s17-hoved-and-bistilling",
+  "layout": "two positions: hovedstilling first, bistilling second",
+  "hard": false,
+  "text": "Fjordby kommune\nHOVEDSTILLING\nStillingskode  7076   Stilling  Helsefagarbeider   Stillingsprosent  60,00\nAnsiennitetsdato  01.05.2016\nBISTILLING\nStillingskode  6572   Stilling  Assistent          Stillingsprosent  20,00\nAnsiennitetsdato  01.08.2023\n",
+  "expected": {
+   "employerName": "Fjordby kommune",
+   "jobTitle": "Helsefagarbeider",
+   "positionPercent": 60,
+   "annualSalaryFullTime": null,
+   "stillingskode": "7076",
+   "lonnstrinn": null,
+   "ansiennitetsdato": "2016-05"
+  },
+  "notes": "Use the hovedstilling block only. Do not add 60 + 20 percent."
+ },
+ {
+  "id": "s18-bistilling-printed-first",
+  "layout": "tilleggsstilling block printed before hovedstilling",
+  "hard": true,
+  "text": "Fjordby kommune\nTilleggsstilling (vikariat)\nStillingskode  6572   Stilling  Assistent          Stillingsprosent  20,00\nAnsiennitetsdato  01.08.2023\nHovedstilling\nStillingskode  7076   Stilling  Helsefagarbeider   Stillingsprosent  60,00\nAnsiennitetsdato  01.05.2016\n",
+  "expected": {
+   "employerName": "Fjordby kommune",
+   "jobTitle": "Helsefagarbeider",
+   "positionPercent": 60,
+   "annualSalaryFullTime": null,
+   "stillingskode": "7076",
+   "lonnstrinn": null,
+   "ansiennitetsdato": "2016-05"
+  },
+  "notes": "HARD: the current 'earliest line wins' tie-break takes the tilleggsstilling. Values must come from the block headed 'Hovedstilling'."
+ },
+ {
+  "id": "s19-two-positions-no-marker",
+  "layout": "two position rows with no main/secondary marker",
+  "hard": true,
+  "text": "Nordvik kommune\nStillingskode   Stillingsbetegnelse        St-%      Ansiennitet\n6572            Assistent                  40,00     01.08.2021\n7076            Helsefagarbeider           50,00     01.02.2019\n",
+  "expected": {
+   "employerName": "Nordvik kommune",
+   "jobTitle": null,
+   "positionPercent": null,
+   "annualSalaryFullTime": null,
+   "stillingskode": null,
+   "lonnstrinn": null,
+   "ansiennitetsdato": null
+  },
+  "notes": "HARD: two equal rows, neither marked as hovedstilling. Safe answer: null for code, title, percent and date (the person must choose). Employer is still clear."
+ },
+ {
+  "id": "s20-many-dates",
+  "layout": "several dates: birth, payment, start, seniority",
+  "hard": false,
+  "text": "Testby kommune\nFødselsdato         12.04.1988\nUtbetalingsdato     20.10.2026\nTiltredelsesdato    01.06.2021\nAnsiennitetsdato    01.03.2014\nStilling            Sykepleier          Stillingsprosent   100\n",
+  "expected": {
+   "employerName": "Testby kommune",
+   "jobTitle": "Sykepleier",
+   "positionPercent": 100,
+   "annualSalaryFullTime": null,
+   "stillingskode": null,
+   "lonnstrinn": null,
+   "ansiennitetsdato": "2014-03"
+  },
+  "notes": "Only the ansiennitetsdato counts. Tiltredelse (2021) is later than ansiennitet (2014) because earlier work was credited. Picking it would undercount seniority by 7 years."
+ },
+ {
+  "id": "s21-only-ansettelsesdato",
+  "layout": "only start date printed",
+  "hard": true,
+  "text": "Testby kommune\nAnsatt dato         01.06.2021\nStilling            Sykepleier          Stillingsprosent   100\n",
+  "expected": {
+   "employerName": "Testby kommune",
+   "jobTitle": "Sykepleier",
+   "positionPercent": 100,
+   "annualSalaryFullTime": null,
+   "stillingskode": null,
+   "lonnstrinn": null,
+   "ansiennitetsdato": null
+  },
+  "notes": "HARD: ansettelsesdato is not the seniority date. Safe answer: null."
+ },
+ {
+  "id": "s22-ansiennitet-duration",
+  "layout": "Ansiennitet: 5 år 3 mnd pr. date",
+  "hard": true,
+  "text": "Eksempel kommune (fiktiv)\nStilling   Barne- og ungdomsarbeider\nStillingsprosent   100 %\nAnsiennitet: 5 år 3 mnd   pr. 01.10.2026\n",
+  "expected": {
+   "employerName": "Eksempel kommune (fiktiv)",
+   "jobTitle": "Barne- og ungdomsarbeider",
+   "positionPercent": 100,
+   "annualSalaryFullTime": null,
+   "stillingskode": null,
+   "lonnstrinn": null,
+   "ansiennitetsdato": null
+  },
+  "notes": "HARD: a duration plus a reference date. The 'pr.' date is the reference, NOT the seniority date. Safe answer: null (deriving 2021-07 is arithmetic on a rounded duration)."
+ },
+ {
+  "id": "s23-lonnsansiennitet-date",
+  "layout": "Lønnsansiennitet printed as a date",
+  "hard": false,
+  "text": "Testby kommune\nStilling            Renholder\nStillingsprosent    50,00\nLønnsansiennitet    12.03.2018\n",
+  "expected": {
+   "employerName": "Testby kommune",
+   "jobTitle": "Renholder",
+   "positionPercent": 50,
+   "annualSalaryFullTime": null,
+   "stillingskode": null,
+   "lonnstrinn": null,
+   "ansiennitetsdato": "2018-03"
+  },
+  "notes": "Skatteetaten defines lønnsansiennitet as 'the date lønnsansiennitet is counted from'. Today 'lonnsansiennitet' is a stop label, so this is missed."
+ },
+ {
+  "id": "s24-kommune-vs-lonnsansiennitet",
+  "layout": "two seniority dates: service in the kommune vs pay seniority",
+  "hard": false,
+  "text": "Testby kommune\nStilling                        Fagarbeider\nAnsiennitetsdato i kommunen     01.01.2020\nLønnsansiennitet                01.05.2014\nStillingsprosent                100\n",
+  "expected": {
+   "employerName": "Testby kommune",
+   "jobTitle": "Fagarbeider",
+   "positionPercent": 100,
+   "annualSalaryFullTime": null,
+   "stillingskode": null,
+   "lonnstrinn": null,
+   "ansiennitetsdato": "2014-05"
+  },
+  "notes": "The date in the kommune is service seniority, the lønnsansiennitet is what sets pay. Expected 2014-05. If only the 'i kommunen' date were printed, null would be safer."
+ },
+ {
+  "id": "s25-month-name-date",
+  "layout": "seniority date as month name",
+  "hard": false,
+  "text": "Testby kommune\nStilling: Miljøterapeut\nStillingsprosent: 100\nAns.dato: mars 2018\n",
+  "expected": {
+   "employerName": "Testby kommune",
+   "jobTitle": "Miljøterapeut",
+   "positionPercent": 100,
+   "annualSalaryFullTime": null,
+   "stillingskode": null,
+   "lonnstrinn": null,
+   "ansiennitetsdato": "2018-03"
+  },
+  "notes": "Month name + 4-digit year. Accept Norwegian month names (januar..desember, jan..des, mai/juni/juli) and English ones."
+ },
+ {
+  "id": "s26-two-digit-year",
+  "layout": "dd.mm.yy",
+  "hard": false,
+  "text": "Testby kommune\nStilling: Vernepleier\nStillingsprosent: 100\nAnsiennitetsdato: 01.03.18\n",
+  "expected": {
+   "employerName": "Testby kommune",
+   "jobTitle": "Vernepleier",
+   "positionPercent": 100,
+   "annualSalaryFullTime": null,
+   "stillingskode": null,
+   "lonnstrinn": null,
+   "ansiennitetsdato": "2018-03"
+  },
+  "notes": "2-digit year. Accept only after an explicit seniority label, mapping yy <= current yy to 20yy and the rest to 19yy. Otherwise null."
+ },
+ {
+  "id": "s27-iso-date-unit4",
+  "layout": "ISO dates, Unit4/Agresso-like table",
+  "hard": false,
+  "text": "Eksempel fylkeskommune\nRessursnr   Navn                Stilling                 Stillingskode   Stillingsprosent   Ansiennitet fra\n   88812    Per Prøvesen        Rådgiver                 8530            100,00             2016-09-01\n",
+  "expected": {
+   "employerName": "Eksempel fylkeskommune",
+   "jobTitle": "Rådgiver",
+   "positionPercent": 100,
+   "annualSalaryFullTime": null,
+   "stillingskode": "8530",
+   "lonnstrinn": null,
+   "ansiennitetsdato": "2016-09"
+  },
+  "notes": "Header 'Ansiennitet fra' over an ISO date. 8530 = RÅDGIVER (KS PAI). The Navn column must not leak into the title."
+ },
+ {
+  "id": "s28-fraction-percent",
+  "layout": "position share printed as a fraction",
+  "hard": false,
+  "text": "Eksempel Omsorg AS\nArbeidsgiver   Eksempel Omsorg AS\nStilling       Assistent\nStillingsbrøk  0,5\n",
+  "expected": {
+   "employerName": "Eksempel Omsorg AS",
+   "jobTitle": "Assistent",
+   "positionPercent": 50,
+   "annualSalaryFullTime": null,
+   "stillingskode": null,
+   "lonnstrinn": null,
+   "ansiennitetsdato": null
+  },
+  "notes": "0,5 = 50 %. Today percent() rounds 0.5 up to 1 and returns 1 %."
+ },
+ {
+  "id": "s29-zero-percent-on-call",
+  "layout": "tilkallingsvikar: 0 % and hourly pay",
+  "hard": false,
+  "text": "Testby kommune\nStilling          Assistent\nStillingsprosent  0,00\nTimelønn          32,50 t      245,30      7 972,25\n",
+  "expected": {
+   "employerName": "Testby kommune",
+   "jobTitle": "Assistent",
+   "positionPercent": null,
+   "annualSalaryFullTime": null,
+   "stillingskode": null,
+   "lonnstrinn": null,
+   "ansiennitetsdato": null
+  },
+  "notes": "0 % means not given (on-call/hourly). Percent and salary null and marked notPrinted."
+ },
+ {
+  "id": "s30-lonnsart-row-false-positive",
+  "layout": "only pay-line rows that look like code+title+percent+date",
+  "hard": true,
+  "text": "Testby kommune\nArt    Tekst                     Prosent    Fra dato      Til dato        Beløp\n1010   Månedslønn                100,00     01.10.2026    31.10.2026      41 466,67\n1033   Sykevikar                  25,00     09.10.2026    31.10.2026       5 332,67\n",
+  "expected": {
+   "employerName": "Testby kommune",
+   "jobTitle": null,
+   "positionPercent": null,
+   "annualSalaryFullTime": null,
+   "stillingskode": null,
+   "lonnstrinn": null,
+   "ansiennitetsdato": null
+  },
+  "notes": "HARD: 1010/1033 are lønnsarter, not stillingskoder; 'Fra dato' is the pay period. Today shapeRow takes 1010 / Månedslønn / 100 / 2026-10. Safe answer: only the employer."
+ },
+ {
+  "id": "s31-arslonn-own-and-full",
+  "layout": "Årslønn i stilling next to Årslønn 100 %",
+  "hard": false,
+  "text": "Testby kommune\nStilling: Spesialsykepleier                 Stillingskode: 7523\nStillingsprosent: 75\nÅrslønn i stilling: kr 389 550,-\nÅrslønn 100 %: kr 519 400,-\nAnsiennitetsdato: 01.06.2010\n",
+  "expected": {
+   "employerName": "Testby kommune",
+   "jobTitle": "Spesialsykepleier",
+   "positionPercent": 75,
+   "annualSalaryFullTime": 519400,
+   "stillingskode": "7523",
+   "lonnstrinn": null,
+   "ansiennitetsdato": "2010-06"
+  },
+  "notes": "Two salaries. 'Årslønn i stilling' is the own (75 %) salary and must be a stop label. 7523 = SPESIALSYKEPLEIER (KS PAI). 'kr' prefix and ',-' suffix."
+ },
+ {
+  "id": "s32-only-own-arslonn",
+  "layout": "only own-position annual salary",
+  "hard": true,
+  "text": "Testby kommune\nStilling: Spesialsykepleier\nStillingsprosent: 75\nÅrslønn i stilling: 389 550,00\n",
+  "expected": {
+   "employerName": "Testby kommune",
+   "jobTitle": "Spesialsykepleier",
+   "positionPercent": 75,
+   "annualSalaryFullTime": null,
+   "stillingskode": null,
+   "lonnstrinn": null,
+   "ansiennitetsdato": null
+  },
+  "notes": "HARD: full-time salary is not printed. Safe answer: null (do not divide by 0,75 and present it as printed)."
+ },
+ {
+  "id": "s33-yrkeskode-only",
+  "layout": "STYRK yrkeskode instead of stillingskode",
+  "hard": true,
+  "text": "Eksempel Helsehus AS\nArbeidsgiver   Eksempel Helsehus AS\nYrkeskode      5321 105\nStilling       Helsefagarbeider\nStillingsprosent   100\n",
+  "expected": {
+   "employerName": "Eksempel Helsehus AS",
+   "jobTitle": "Helsefagarbeider",
+   "positionPercent": 100,
+   "annualSalaryFullTime": null,
+   "stillingskode": null,
+   "lonnstrinn": null,
+   "ansiennitetsdato": null
+  },
+  "notes": "HARD: yrkeskode is the 7-digit STYRK code from a-meldingen (Skatteetaten), sometimes printed '5321 105'. Its first 4 digits must not become the stillingskode."
+ },
+ {
+  "id": "s34-payroll-bureau-letterhead",
+  "layout": "payroll bureau letterhead + skattekommune line",
+  "hard": true,
+  "text": "Fjordlys Regnskap og Lønn AS\nSkattekommune Testvik kommune\nLØNNSSLIPP                         Periode 10/2026\nStilling        Assistent\nStillingsprosent   40\n",
+  "expected": {
+   "employerName": null,
+   "jobTitle": "Assistent",
+   "positionPercent": 40,
+   "annualSalaryFullTime": null,
+   "stillingskode": null,
+   "lonnstrinn": null,
+   "ansiennitetsdato": null
+  },
+  "notes": "HARD: the letterhead is the payroll bureau and the only 'kommune' is the tax municipality. The employer is not printed: null. Today the letterhead rule may return 'Skattekommune Testvik kommune'."
+ },
+ {
+  "id": "s35-two-column-interleaved",
+  "layout": "two blocks side by side (person left, position right)",
+  "hard": false,
+  "text": "Lønnsmottaker                                   Arbeidsforhold\nNavn         Ali Fiktivsen                      Arbeidsgiver      Eksempel kommune (fiktiv)\nAdresse      Prøvevegen 9                       Stilling          Pedagogisk leder\nPostnr/sted  0000 TESTBY                        Stillingskode     7637\nFødselsnr    000000 00000                       Stillingsprosent  100,00\nSkattetabell 7100                               Ansiennitetsdato  01.08.2013\n",
+  "expected": {
+   "employerName": "Eksempel kommune (fiktiv)",
+   "jobTitle": "Pedagogisk leder",
+   "positionPercent": 100,
+   "annualSalaryFullTime": null,
+   "stillingskode": "7637",
+   "lonnstrinn": null,
+   "ansiennitetsdato": "2013-08"
+  },
+  "notes": "Two independent label columns per line. Values on the left (name, address) must not leak into fields. 7637 = PEDAGOGISK LEDER (KS PAI)."
+ },
+ {
+  "id": "s36-wrapped-header",
+  "layout": "column titles wrapped over two lines",
+  "hard": false,
+  "text": "Testby kommune\nStillings-    Stillings-        Stillings-   Ansiennitets-\nkode          betegnelse        prosent      dato\n7174          Sykepleier        60,00        01.04.2020\n",
+  "expected": {
+   "employerName": "Testby kommune",
+   "jobTitle": "Sykepleier",
+   "positionPercent": 60,
+   "annualSalaryFullTime": null,
+   "stillingskode": "7174",
+   "lonnstrinn": null,
+   "ansiennitetsdato": "2020-04"
+  },
+  "notes": "Hyphenated column titles split over two lines. The current rules already read it (the second header line holds kode/betegnelse/prosent/dato fragments and the value row lines up). Keep it as a regression test."
+ },
+ {
+  "id": "s37-sko-state-short-labels",
+  "layout": "state short labels: SKO, Ltr, St.pst",
+  "hard": false,
+  "text": "Statens testverk\nLønnsslipp 10.2026\nSKO 1364 Seniorrådgiver      Ltr 70      St.pst 100,00\nAns.dato 01.02.2017\nÅrslønn 100 % 812 400\n",
+  "expected": {
+   "employerName": "Statens testverk",
+   "jobTitle": "Seniorrådgiver",
+   "positionPercent": 100,
+   "annualSalaryFullTime": 812400,
+   "stillingskode": "1364",
+   "lonnstrinn": 70,
+   "ansiennitetsdato": "2017-02"
+  },
+  "notes": "'SKO' is used for stillingskode in the state sector (UiO protocol 'SKO 1011'). 1364 = Seniorrådgiver (state lønnsplan, regjeringen.no). No 'kommune' keyword, so the letterhead needs a state keyword list or an employer label."
+ },
+ {
+  "id": "s38-future-and-placeholder-dates",
+  "layout": "placeholder and future dates",
+  "hard": true,
+  "text": "Testby kommune\nStilling             Konsulent              Stillingskode   6559\nAnsiennitetsdato     00.00.0000\nNeste opprykk        01.03.2027\nStillingsprosent     100\n",
+  "expected": {
+   "employerName": "Testby kommune",
+   "jobTitle": "Konsulent",
+   "positionPercent": 100,
+   "annualSalaryFullTime": null,
+   "stillingskode": "6559",
+   "lonnstrinn": null,
+   "ansiennitetsdato": null
+  },
+  "notes": "HARD: DFØ prints 00.00.0000 when the date is not used. 'Neste opprykk' is a future date and must be a stop label. Date null. 6559 = KONSULENT (KS PAI)."
+ },
+ {
+  "id": "s39-betegnelse-is-paytype-column",
+  "layout": "'Betegnelse' as the pay-line description column",
+  "hard": true,
+  "text": "Eksempel kommune (fiktiv)\nLønnsart   Betegnelse                 Antall    Sats          Beløp\n1000       Månedslønn                  1,00                   32 000,00\n2210       Kveldstillegg              12,00     56,00            672,00\n",
+  "expected": {
+   "employerName": "Eksempel kommune (fiktiv)",
+   "jobTitle": null,
+   "positionPercent": null,
+   "annualSalaryFullTime": null,
+   "stillingskode": null,
+   "lonnstrinn": null,
+   "ansiennitetsdato": null
+  },
+  "notes": "HARD: here 'Betegnelse' heads the pay-line text, not the job title. Pay-line words (Månedslønn, Fastlønn, Timelønn, ...tillegg, ...trekk) must never be accepted as a job title."
+ },
+ {
+  "id": "s40-virksomhet-is-unit",
+  "layout": "'Virksomhet' names a unit, 'Arbeidsgiver' names the employer",
+  "hard": false,
+  "text": "Virksomhet: Hjemmetjenesten Sentrum\nArbeidsgiver: Testby kommune\nStilling: Helsefagarbeider          Stillingsprosent: 90\n",
+  "expected": {
+   "employerName": "Testby kommune",
+   "jobTitle": "Helsefagarbeider",
+   "positionPercent": 90,
+   "annualSalaryFullTime": null,
+   "stillingskode": null,
+   "lonnstrinn": null,
+   "ansiennitetsdato": null
+  },
+  "notes": "Many kommuner call their units 'virksomheter'. When both labels exist, Arbeidsgiver must win; today both have strength 2 and the earlier line wins."
+ }
+]
