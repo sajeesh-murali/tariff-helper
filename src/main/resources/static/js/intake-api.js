@@ -34,20 +34,128 @@ function agreementById(id) {
 
 /* ---------- small helpers ---------- */
 
-function setBusy(text) {
-  clearBusy();
-  const d = document.createElement('div');
-  d.id = 'busy';
-  d.setAttribute('role', 'status');
-  d.setAttribute('aria-live', 'polite');
-  d.style.cssText = 'position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;'
-    + 'background:rgba(246,248,246,.88);font-size:20px;color:var(--ink);text-align:center;padding:24px';
-  d.textContent = text;
-  document.body.appendChild(d);
-}
-
 function clearBusy() {
   document.getElementById('busy')?.remove();
+}
+
+/**
+ * A progress card with a bar and a list of steps, shown while the server works.
+ *
+ * The server answers with one response when it is done, so it cannot report how far it has got. What the bar shows is
+ * therefore honest in two ways: a step marked `upload` follows the real number of bytes sent, and the other steps follow
+ * the order the server really works in, with a time estimate (`ms`) for each. The bar eases toward the end of the
+ * current step and never reaches 100 % until the answer is in, so it does not stall at "100 %" or run ahead.
+ * The card only appears if the work takes longer than a moment, so a fast answer does not flash.
+ *
+ * @param steps [{label, ms, weight, upload?}]
+ * @returns {{upload(fraction), finish(): Promise, close()}}
+ */
+function showProgress(title, sub, steps) {
+  clearBusy();
+  const overlay = document.createElement('div');
+  overlay.id = 'busy';
+  overlay.className = 'prog-overlay';
+  overlay.hidden = true;
+  overlay.innerHTML = `<div class="prog-card fade">`
+    + `<h2 class="prog-title">${esc(title)}</h2><p class="prog-sub">${esc(sub)}</p>`
+    + `<div class="prog-track" role="progressbar" aria-label="${esc(title)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">`
+    + `<div class="prog-fill"></div></div>`
+    + `<div class="prog-meta"><span class="prog-now" role="status" aria-live="polite"></span><span class="prog-pct">0 %</span></div>`
+    + `<ol class="prog-steps">${steps.map(s => `<li><span class="dot" aria-hidden="true"></span>${esc(s.label)}</li>`).join('')}</ol>`
+    + `</div>`;
+  document.body.appendChild(overlay);
+
+  const total = steps.reduce((sum, s) => sum + s.weight, 0);
+  const track = overlay.querySelector('.prog-track');
+  const fill = overlay.querySelector('.prog-fill');
+  const pctText = overlay.querySelector('.prog-pct');
+  const nowText = overlay.querySelector('.prog-now');
+  const items = [...overlay.querySelectorAll('.prog-steps li')];
+  let current = 0;
+  let stepStart = Date.now();
+  let uploaded = 0;
+  let shown = 0;
+  let lastLabel = '';
+  let finished = false;
+
+  function paint(percent) {
+    shown = Math.max(shown, Math.min(100, percent)); // never goes backwards
+    const rounded = Math.round(shown);
+    fill.style.width = shown + '%';
+    pctText.textContent = rounded + ' %';
+    track.setAttribute('aria-valuenow', String(rounded));
+    items.forEach((li, i) => {
+      li.className = finished || i < current ? 'done' : i === current ? 'now' : '';
+      li.querySelector('.dot').textContent = finished || i < current ? '✓' : '';
+    });
+    const label = finished ? 'Ferdig' : steps[current].label;
+    if (label !== lastLabel) { nowText.textContent = label; lastLabel = label; }
+  }
+
+  function tick() {
+    const step = steps[current];
+    const elapsed = Date.now() - stepStart;
+    if (!step.upload && current < steps.length - 1 && elapsed > step.ms * 1.7) {
+      current++;
+      stepStart = Date.now();
+      return tick();
+    }
+    const part = step.upload ? uploaded : Math.min(0.95, 1 - Math.exp(-elapsed / step.ms));
+    const before = steps.slice(0, current).reduce((sum, s) => sum + s.weight, 0);
+    // stay under 97 % until the answer is in
+    paint(Math.min(97, (before + step.weight * part) / total * 100));
+  }
+
+  const timer = setInterval(tick, 150);
+  const reveal = setTimeout(() => { overlay.hidden = false; tick(); }, 250);
+
+  function stop() {
+    clearInterval(timer);
+    clearTimeout(reveal);
+  }
+
+  return {
+    /** The real share of the file sent so far (0 to 1). Moves on to the next step when all of it is sent. */
+    upload(fraction) {
+      if (!steps[current].upload) return;
+      uploaded = Math.min(1, fraction);
+      if (uploaded >= 1 && current < steps.length - 1) {
+        current++;
+        stepStart = Date.now();
+      }
+    },
+    /** The answer is in: fill the bar, then take the card away. Resolves when it is gone. */
+    finish() {
+      stop();
+      if (overlay.hidden) { overlay.remove(); return Promise.resolve(); }
+      finished = true;
+      paint(100);
+      return new Promise(resolve => setTimeout(() => { overlay.remove(); resolve(); }, 380));
+    },
+    /** Something went wrong: take the card away at once. */
+    close() {
+      stop();
+      overlay.remove();
+    }
+  };
+}
+
+/** POST with the real upload progress (fetch cannot report it). Same result shape as callApi. */
+function postWithProgress(url, form, onUpload, timeoutMs) {
+  return new Promise(resolve => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url);
+    xhr.timeout = timeoutMs;
+    xhr.upload.onprogress = e => { if (e.lengthComputable && e.total > 0) onUpload(e.loaded / e.total); };
+    xhr.upload.onload = () => onUpload(1);
+    xhr.onload = () => {
+      let data = null;
+      try { data = JSON.parse(xhr.responseText); } catch (e) { data = null; }
+      resolve({ ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status, data });
+    };
+    xhr.onerror = xhr.ontimeout = xhr.onabort = () => resolve({ ok: false, status: 0, data: null });
+    xhr.send(form);
+  });
 }
 
 async function callApi(url, options, timeoutMs = 90000) {
@@ -126,12 +234,22 @@ async function uploadPayslip(file, password) {
     go(1);
     return;
   }
-  setBusy(isPdf ? 'Leser lønnsslippen …' : 'Leser bildet av lønnsslippen. Det kan ta et halvt minutt …');
+  const progress = isPdf
+    ? showProgress('Leser lønnsslippen', 'Filen leses på tjenesten og lagres ikke.', [
+      { label: 'Laster opp filen', weight: 10, upload: true },
+      { label: 'Leser teksten i PDF-en', weight: 20, ms: 1200 },
+      { label: 'Finner stilling, lønn og ansiennitet', weight: 30, ms: 1500 },
+      { label: 'Sjekker verdiene en gang til', weight: 40, ms: 6000 }])
+    : showProgress('Leser bildet av lønnsslippen', 'Dette kan ta opptil et halvt minutt. Bildet lagres ikke.', [
+      { label: 'Laster opp bildet', weight: 10, upload: true },
+      { label: 'Leser teksten i bildet', weight: 50, ms: 15000 },
+      { label: 'Finner stilling, lønn og ansiennitet', weight: 10, ms: 1500 },
+      { label: 'Sjekker verdiene en gang til', weight: 30, ms: 8000 }]);
   const form = new FormData();
   form.append('file', file);
   if (password) form.append('password', password);
-  const res = await callApi('/api/payslips/parse', { method: 'POST', body: form }, 150000);
-  clearBusy();
+  const res = await postWithProgress('/api/payslips/parse', form, f => progress.upload(f), 150000);
+  if (res.ok) await progress.finish(); else progress.close();
   if (res.status === 400 && /password protected|password is wrong/i.test(String(res.data?.detail || ''))) {
     askPayslipPassword(file, /password is wrong/i.test(String(res.data.detail)));
     return;
@@ -537,13 +655,19 @@ function buildEstimate() {
 
 async function submitEstimate() {
   const body = buildEstimate();
-  setBusy('Beregner anslaget …');
+  // The steps follow what the server does, in order. With no agreement chosen it first picks one from the employer.
+  const progress = showProgress('Beregner anslaget', 'Tallene regnes ut i kode, ikke av en KI-modell.', [
+    { label: 'Sender opplysningene', weight: 10, ms: 400 },
+    ...(body.agreementId ? [] : [{ label: 'Finner riktig tariffavtale', weight: 25, ms: 3000 }]),
+    { label: 'Teller ansiennitet måned for måned', weight: 25, ms: 700 },
+    { label: 'Slår opp laveste lønnstrinn i avtalen', weight: 20, ms: 700 },
+    { label: 'Sammenligner med lønnen din', weight: 20, ms: 900 }]);
   const res = await callApi('/api/estimates', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
-  clearBusy();
+  if (res.ok) await progress.finish(); else progress.close();
   if (res.ok && res.data) {
     intake.result = toResult(res.data);
   } else if (res.status === 422 && res.data?.availableAgreements) {
