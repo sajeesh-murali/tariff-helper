@@ -42,8 +42,11 @@ public class PayslipRuleReader {
     /**
      * @param notPrinted fields that the payslip itself leaves out or marks as not given (for example 0 %)
      * @param usedLines  the numbers of the lines the values were read from, so the excerpt for the model can include them
+     * @param derived    form fields whose value was calculated in code from other printed values, not copied (the
+     *                   annual salary worked out from a monthly pay line and the position percentage)
      */
-    public record Reading(PayslipFields fields, Map<String, String> notPrinted, java.util.Set<Integer> usedLines) {
+    public record Reading(PayslipFields fields, Map<String, String> notPrinted, java.util.Set<Integer> usedLines,
+                          java.util.Set<String> derived) {
     }
 
     /**
@@ -195,7 +198,7 @@ public class PayslipRuleReader {
 
     public Reading read(String text) {
         if (text == null || text.isBlank()) {
-            return new Reading(PayslipFields.empty(), Map.of(), java.util.Set.of());
+            return new Reading(PayslipFields.empty(), Map.of(), java.util.Set.of(), java.util.Set.of());
         }
         List<Line> lines = new ArrayList<>();
         for (String raw : text.split("\\R")) {
@@ -253,12 +256,20 @@ public class PayslipRuleReader {
         if (salary == null && !unclear.contains(Field.SALARY_PLAIN)) {
             salary = plainSalary(best(found, Field.SALARY_PLAIN), percent, lines);
         }
+        java.util.Set<String> derived = new java.util.HashSet<>();
+        if (salary == null && percent != null && !unclear.contains(Field.SALARY) && !unclear.contains(Field.PERCENT)
+                && !unclear.contains(Field.SALARY_PLAIN)) {
+            salary = fromMonthlyPay(lines, markers, percent);
+            if (salary != null) {
+                derived.add("annualSalaryFullTime");
+            }
+        }
         String employer = best(found, Field.EMPLOYER);
         if (employer == null) {
             employer = letterhead(lines, used);
         }
         PayslipFields fields = new PayslipFields(code, intOrNull(trinn), yearMonth(date),
-                employer, title, intOrNull(percent), amountOrNull(salary));
+                employer, title, wholePercent(percent), amountOrNull(salary));
         if (fields.positionPercent() != null) {
             notPrinted.remove("positionPercent");
         }
@@ -268,7 +279,7 @@ public class PayslipRuleReader {
         if (fields.positionPercent() == null && hourlyPay(text)) {
             notPrinted.put("positionPercent", NOT_PRINTED);
         }
-        return new Reading(fields, notPrinted, used);
+        return new Reading(fields, notPrinted, used, derived);
     }
 
     /** Hourly pay: there is no yearly salary or position percentage to find. */
@@ -416,20 +427,19 @@ public class PayslipRuleReader {
         if (printed == null || percent == null) {
             return null;
         }
-        int share = Integer.parseInt(percent);
-        if (share == 100) {
+        BigDecimal share = new BigDecimal(percent);
+        if (share.compareTo(BigDecimal.valueOf(100)) == 0) {
             return printed;
         }
-        BigDecimal expected = new BigDecimal(printed).multiply(BigDecimal.valueOf(share))
+        BigDecimal expected = new BigDecimal(printed).multiply(share)
                 .divide(BigDecimal.valueOf(1200), 2, RoundingMode.HALF_UP);
         for (Line line : lines) {
-            String plain = plain(line.raw());
-            if (!plain.contains("manedslonn") && !plain.contains("fastlonn")) {
+            if (!isMonthlyPayLine(line)) {
                 continue;
             }
             Matcher matcher = MONTHLY_AMOUNT.matcher(line.raw());
             while (matcher.find()) {
-                BigDecimal amount = new BigDecimal(matcher.group().replaceAll("[ .\\u00a0]", "").replace(',', '.'));
+                BigDecimal amount = amountOf(matcher.group());
                 if (amount.subtract(expected).abs().compareTo(BigDecimal.ONE) <= 0) {
                     return printed;
                 }
@@ -438,7 +448,63 @@ public class PayslipRuleReader {
         return null;
     }
 
-    private static final Pattern MONTHLY_AMOUNT = Pattern.compile("\\d{1,3}(?:[ .\\u00a0]\\d{3})*,\\d{1,2}|\\d+,\\d{1,2}");
+    private static final Pattern MONTHLY_AMOUNT = Pattern.compile(
+            "\\d{1,3}(?:[ .\\u00a0]\\d{3})*,\\d{1,2}|\\d{1,3}(?:[ \\u00a0]\\d{3})+(?!\\d)|\\d+,\\d{1,2}");
+    /** A monthly pay line about something else (supplement, deduction, overtime) is not the base monthly pay. */
+    private static final List<String> NOT_BASE_PAY = List.of("tillegg", "trekk", "feriepenger", "overtid",
+            "etterbetaling", "korrigering", "timelonn");
+    private static final BigDecimal MIN_MONTHLY = BigDecimal.valueOf(1_000);
+
+    private static BigDecimal amountOf(String text) {
+        return new BigDecimal(text.replaceAll("[ .\\u00a0]", "").replace(',', '.'));
+    }
+
+    private static boolean isMonthlyPayLine(Line line) {
+        String plain = plain(line.raw());
+        return (plain.contains("manedslonn") || plain.contains("fastlonn"))
+                && NOT_BASE_PAY.stream().noneMatch(plain::contains);
+    }
+
+    /**
+     * The annual salary in a 100 % position, worked out from the base monthly pay line: monthly x 12 / (percent / 100),
+     * rounded to whole kroner. The code calculates, never a model. It is only done when exactly one monthly amount is
+     * printed (a line with two different amounts, or two lines that disagree, could be this month and year to date, or
+     * two positions) and the position percentage is known; the result is marked as calculated so the person checks it.
+     */
+    private static String fromMonthlyPay(List<Line> lines, List<Marker> markers, String percent) {
+        BigDecimal share = new BigDecimal(percent);
+        if (share.signum() <= 0) {
+            return null;
+        }
+        List<Integer> monthlyLines = new ArrayList<>();
+        for (int i = 0; i < lines.size(); i++) {
+            if (isMonthlyPayLine(lines.get(i))) {
+                monthlyLines.add(i);
+            }
+        }
+        java.util.Set<BigDecimal> amounts = new java.util.TreeSet<>();
+        for (int i : pick(monthlyLines, Integer::intValue, markers)) {
+            Matcher matcher = MONTHLY_AMOUNT.matcher(lines.get(i).raw());
+            java.util.Set<BigDecimal> onLine = new java.util.TreeSet<>();
+            while (matcher.find()) {
+                BigDecimal amount = amountOf(matcher.group());
+                if (amount.compareTo(MIN_MONTHLY) >= 0) {
+                    onLine.add(amount);
+                }
+            }
+            if (onLine.size() > 1) {
+                return null;
+            }
+            amounts.addAll(onLine);
+        }
+        if (amounts.size() != 1) {
+            return null;
+        }
+        BigDecimal yearly = amounts.iterator().next().multiply(BigDecimal.valueOf(1200))
+                .divide(share, 0, RoundingMode.HALF_UP);
+        return yearly.compareTo(BigDecimal.valueOf(10_000)) >= 0 && yearly.compareTo(BigDecimal.valueOf(MAX_SALARY)) <= 0
+                ? yearly.toPlainString() : null;
+    }
 
     private static int nextHitStart(Line line, Hit hit) {
         for (Hit other : line.hits()) {
@@ -796,7 +862,7 @@ public class PayslipRuleReader {
             if (share.matches()) {
                 BigDecimal whole = new BigDecimal(share.group(1) + "." + share.group(2)).movePointRight(2);
                 int rounded = whole.setScale(0, RoundingMode.HALF_UP).intValue();
-                return rounded == 0 ? "0" : rounded >= 5 && rounded <= 100 ? String.valueOf(rounded) : null;
+                return rounded == 0 ? "0" : rounded >= 5 && rounded <= 100 ? exact(whole) : null;
             }
         }
         Matcher matcher = PERCENT.matcher(text);
@@ -812,7 +878,16 @@ public class PayslipRuleReader {
         }
         int rounded = number.setScale(0, RoundingMode.HALF_UP).intValue();
         // A share under 5 % is not a position; "0,5" without a title that says fraction is more likely a mistake.
-        return rounded >= 5 ? String.valueOf(rounded) : null;
+        return rounded >= 5 ? exact(number) : null;
+    }
+
+    /** The percentage as text with its decimals ("87.5", "100"); the form takes the rounded whole number. */
+    private static String exact(BigDecimal number) {
+        return number.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString();
+    }
+
+    private static Integer wholePercent(String percent) {
+        return percent == null ? null : new BigDecimal(percent).setScale(0, RoundingMode.HALF_UP).intValue();
     }
 
     private static String trinn(String raw) {

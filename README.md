@@ -25,6 +25,12 @@ is worked out from the payslip.
   whether a value is confirmed by both, differs (the person is asked to check it), or came from one reading only, or why it
   is empty (`fieldStatus`), and the page shows this. `missing` asks the AI only for what the rules did not find; `off` sends nothing.
 - The code calculates the person's current salary at their own percentage. The AI does not.
+- If no annual salary is printed but a base monthly pay line is (Månedslønn, Fastlønn) and the position percentage is
+  known, the code works out the full-time annual salary: monthly pay x 12 / (percentage / 100), in whole kroner, using the
+  exact percentage (87,5 %, not 88 %). The status is then `derived` and the page asks the person to check it. It is not
+  done when the line has two different amounts, when two monthly lines disagree, when the line is a supplement,
+  deduction, overtime or hourly pay, or when there are several positions and no single main one. A printed annual salary
+  always wins, and so does one the AI read as printed.
 - The agreement is suggested from the employer name (see below). The person only checks the values and answers the
   work-history questions.
 

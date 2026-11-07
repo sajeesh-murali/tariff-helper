@@ -31,12 +31,15 @@ public class PayslipService {
     public static final String CONFIRMED = "confirmed";
     /** Both readings found a value and they differ; the rules' value is shown and the person is asked to check. */
     public static final String DISAGREE = "disagree";
+    /** The rules calculated the value from other printed values (annual salary from the monthly pay); not copied. */
+    public static final String DERIVED = "derived";
 
     /**
      * @param suggestion  the suggested agreement, or {@link SuggestResponse#none()}; agreement is null when none
      * @param fieldStatus for each form value: "confirmed" (rules and model agree), "disagree" (they differ; the rules'
      *                    value is used), "rules" (only the rules found it), "ai" (only the model found it, and the
-     *                    value was checked), "notPrinted" (the payslip leaves it out) or "notFound"
+     *                    value was checked), "derived" (calculated in code from the monthly pay and the position
+     *                    percentage), "notPrinted" (the payslip leaves it out) or "notFound"
      */
     public record Result(PayslipFields fields, SuggestResponse suggestion, Agreement agreement,
                          Map<String, String> fieldStatus) {
@@ -72,18 +75,25 @@ public class PayslipService {
         // 1. The rules in code read the whole text on this server; nothing leaves it.
         PayslipRuleReader.Reading reading = ruleReader.read(text);
         PayslipFields fromRules = reading.fields();
+        boolean derivedSalary = reading.derived().contains("annualSalaryFullTime");
         // 2. The model reads only the small redacted excerpt: always, or only when the rules missed something.
         String excerpt = redactor.excerpt(text, reading.usedLines());
         boolean ask = !excerpt.isBlank() && switch (aiMode) {
             case ALWAYS -> true;
-            case MISSING -> fromRules.foundCount() < PayslipFields.FIELD_NAMES.size();
+            case MISSING -> fromRules.foundCount() - (derivedSalary ? 1 : 0) < PayslipFields.FIELD_NAMES.size();
             case OFF -> false;
         };
         PayslipFields answer = ask ? extractor.extract(excerpt) : null;
         PayslipFields fromModel = answer == null ? PayslipFields.empty() : answer;
-        // 3. Compare the two readings. A value the rules found is never replaced; the model fills the gaps.
+        // 3. Compare the two readings. A value the rules found is never replaced; the model fills the gaps. A salary
+        // the rules only calculated gives way to a salary the model read as printed.
+        if (derivedSalary && fromModel.has("annualSalaryFullTime")) {
+            fromRules = fromRules.withoutAnnualSalary();
+            derivedSalary = false;
+        }
         PayslipFields fields = fromRules.fillGapsFrom(fromModel);
-        Map<String, String> status = compare(fromRules, fromModel, reading.notPrinted());
+        Map<String, String> status = compare(fromRules, fromModel, reading.notPrinted(),
+                derivedSalary ? java.util.Set.of("annualSalaryFullTime") : java.util.Set.of());
         log.info("Payslip text read: textChars={}, excerptLines={}, foundByRules={}, foundInTotal={}, modelAsked={}, "
                         + "confirmed={}, disagree={}", text.length(), excerpt.isBlank() ? 0 : excerpt.lines().count(),
                 fromRules.foundCount(), fields.foundCount(), ask, count(status, CONFIRMED), count(status, DISAGREE));
@@ -97,7 +107,7 @@ public class PayslipService {
     }
 
     private static Map<String, String> compare(PayslipFields byRules, PayslipFields byModel,
-                                               Map<String, String> notPrinted) {
+                                               Map<String, String> notPrinted, java.util.Set<String> derived) {
         Map<String, String> status = new LinkedHashMap<>();
         for (String field : PayslipFields.FIELD_NAMES) {
             boolean rules = byRules.has(field);
@@ -105,7 +115,7 @@ public class PayslipService {
             if (rules && model) {
                 status.put(field, same(byRules.valueOf(field), byModel.valueOf(field)) ? CONFIRMED : DISAGREE);
             } else if (rules) {
-                status.put(field, "rules");
+                status.put(field, derived.contains(field) ? DERIVED : "rules");
             } else if (model) {
                 status.put(field, "ai");
             } else {
