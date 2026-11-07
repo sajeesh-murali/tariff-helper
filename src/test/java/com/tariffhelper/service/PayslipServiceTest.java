@@ -159,43 +159,6 @@ class PayslipServiceTest {
         assertThat(PayslipService.same(YearMonth.of(2015, 8), YearMonth.of(2015, 9))).isFalse();
     }
 
-    private static final String MONTHLY_ONLY = String.join("\n", "Arbeidsgiver: Oslo kommune",
-            "Stilling: Sykepleier", "Stillingsprosent: 80", "1010 Månedslønn   37 333,33");
-
-    @Test
-    void aSalaryCalculatedFromTheMonthlyPayIsReportedAsDerivedNotAsPrinted() {
-        when(extractor.extract(anyString())).thenReturn(PayslipFields.empty());
-
-        PayslipService.Result result = parse(AiMode.ALWAYS, MONTHLY_ONLY);
-
-        assertThat(result.fields().annualSalaryFullTime()).isEqualByComparingTo(BigDecimal.valueOf(560000));
-        assertThat(result.fieldStatus()).containsEntry("annualSalaryFullTime", PayslipService.DERIVED)
-                .containsEntry("positionPercent", "rules");
-    }
-
-    @Test
-    void aSalaryTheModelReadAsPrintedBeatsOneThatWasOnlyCalculated() {
-        when(extractor.extract(anyString())).thenReturn(new PayslipFields(null, null, null, null, null, null,
-                BigDecimal.valueOf(565000)));
-
-        PayslipService.Result result = parse(AiMode.ALWAYS, MONTHLY_ONLY);
-
-        assertThat(result.fields().annualSalaryFullTime()).isEqualByComparingTo(BigDecimal.valueOf(565000));
-        assertThat(result.fieldStatus()).containsEntry("annualSalaryFullTime", "ai");
-    }
-
-    @Test
-    void aCalculatedSalaryDoesNotCountAsFoundWhenDecidingWhetherToAskTheModel() {
-        when(extractor.extract(anyString())).thenReturn(PayslipFields.empty());
-        // the rules find every value, but one of them (the salary) is only calculated: the model is still asked
-        String text = String.join("\n", TestPdf.SAMPLE_PAYSLIP_LINES).replace("Årslønn i 100 % stilling før skatt 612 300,00",
-                "1010 Månedslønn   40 800,00");
-
-        parse(AiMode.MISSING, text);
-
-        verify(extractor, times(1)).extract(anyString());
-    }
-
     @Test
     void theStatusListCoversEveryFieldInOrder() {
         when(extractor.extract(anyString())).thenReturn(PayslipFields.empty());

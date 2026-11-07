@@ -14,8 +14,7 @@ import java.time.YearMonth;
  * application from the printed full-time salary and the position percentage; it is what the estimate form asks for.
  *
  * @param agreement   the suggested agreement, or null when none could be chosen (the person picks one from the list)
- * @param fieldStatus for each value: "rules", "ai", "derived" (calculated in code from the monthly pay and the position
- *                    percentage, so the person should check it), "notPrinted" (the payslip leaves it out) or "notFound"; it lets
+ * @param fieldStatus for each value: "rules", "ai", "notPrinted" (the payslip leaves it out) or "notFound"; it lets
  *                    the page say why a field is empty
  */
 public record PayslipResponse(String employerName, String jobTitle, Integer positionPercent,

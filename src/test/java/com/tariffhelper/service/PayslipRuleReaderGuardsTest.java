@@ -59,54 +59,9 @@ class PayslipRuleReaderGuardsTest {
                 .annualSalaryFullTime()).isEqualByComparingTo(BigDecimal.valueOf(560000));
         // 80 % and nothing that confirms it: it could be the person's own salary, so it stays empty
         assertThat(read("Stillingsprosent 80", "Årslønn 560 000,00").annualSalaryFullTime()).isNull();
-        // the person's own annual salary is not the full-time figure and is not scaled up
+        // the figure is never calculated: a salary that is only implied by the monthly pay is not made up
+        assertThat(read("Stillingsprosent 80", "1010 Månedslønn   37 333,33").annualSalaryFullTime()).isNull();
         assertThat(read("Stillingsprosent 80", "Årslønn i stilling 448 000,00").annualSalaryFullTime()).isNull();
-    }
-
-    @Test
-    void theFullTimeSalaryIsCalculatedFromTheMonthlyPayWhenNothingElseIsPrinted() {
-        // monthly pay x 12 / (percent / 100), whole kroner
-        var reading = reader.read(String.join("\n", "Stillingsprosent 80", "1010 Månedslønn   37 333,33"));
-        assertThat(reading.fields().annualSalaryFullTime()).isEqualByComparingTo(BigDecimal.valueOf(560000));
-        assertThat(reading.derived()).containsExactly("annualSalaryFullTime");
-        assertThat(read("Stilling% 100", "Fastlønn (månedlig)   41 466,67").annualSalaryFullTime())
-                .isEqualByComparingTo(BigDecimal.valueOf(497600));
-        // the exact percentage is used, not the rounded one: 87,5 % and not 88 %
-        assertThat(read("St-% 87,50", "1100 Månedslønn   32 051,73").annualSalaryFullTime())
-                .isEqualByComparingTo(BigDecimal.valueOf(439567)); // 32 051,73 x 12 / 0,875 = 439 566,58
-        assertThat(read("St-% 87,50", "1100 Månedslønn   32 051,73").positionPercent()).isEqualTo(88);
-    }
-
-    @Test
-    void aPrintedAnnualSalaryIsNeverReplacedByACalculatedOne() {
-        var reading = reader.read(String.join("\n", "Stillingsprosent 100", "Årslønn 100 %   560 000,00",
-                "1010 Månedslønn   40 000,00"));
-        assertThat(reading.fields().annualSalaryFullTime()).isEqualByComparingTo(BigDecimal.valueOf(560000));
-        assertThat(reading.derived()).isEmpty();
-    }
-
-    @Test
-    void theMonthlyPayIsNotCalculatedFromWhenItIsUnclearWhichAmountOrPositionItIs() {
-        // no position percentage: the share of a full position is unknown
-        assertThat(read("1010 Månedslønn   37 333,33").annualSalaryFullTime()).isNull();
-        // a line with two different amounts (this month and year to date, say)
-        assertThat(read("Stillingsprosent 100", "1100 Månedslønn   34 983,33   32 051,73").annualSalaryFullTime())
-                .isNull();
-        // two monthly lines that disagree
-        assertThat(read("Stillingsprosent 100", "1010 Månedslønn   37 333,33", "1020 Fastlønn   30 000,00")
-                .annualSalaryFullTime()).isNull();
-        // supplements, deductions, overtime and hourly pay are not the base monthly pay
-        assertThat(read("Stillingsprosent 100", "1100 Fast tillegg individuelt   400,00", "Månedslønn trekk   2 500,00",
-                "2000 Timelønn   1 819,29").annualSalaryFullTime()).isNull();
-        // a small number on a monthly line (hours, quantity) is not a monthly pay
-        assertThat(read("Stillingsprosent 100", "1000 Månedslønn   1,00").annualSalaryFullTime()).isNull();
-        // only the main position's monthly line counts, and with two main positions nothing does
-        assertThat(read("Tilleggsstilling", "Stillingsprosent 20,00", "1010 Månedslønn   9 000,00",
-                "Hovedstilling", "Stillingsprosent 60,00", "1010 Månedslønn   26 500,00").annualSalaryFullTime())
-                .isEqualByComparingTo(BigDecimal.valueOf(530000));
-        assertThat(read("Hovedstilling", "Stillingsprosent 20,00", "1010 Månedslønn   9 000,00",
-                "Hovedstilling", "Stillingsprosent 60,00", "1010 Månedslønn   26 500,00").annualSalaryFullTime())
-                .isNull();
     }
 
     @Test

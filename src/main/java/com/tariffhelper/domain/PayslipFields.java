@@ -9,8 +9,7 @@ import java.time.YearMonth;
  * it was not found or did not pass the checks. They are only suggestions for the person to confirm; the estimate
  * re-validates whatever is submitted.
  *
- * @param annualSalaryFullTime the "annual salary in a 100 % position before tax", whole NOK: as printed, or, when
- *                             only the monthly pay is printed, calculated in code (see PayslipRuleReader)
+ * @param annualSalaryFullTime the "annual salary in a 100 % position before tax" exactly as printed, whole NOK
  */
 public record PayslipFields(String stillingskode, Integer lonnstrinn, YearMonth ansiennitetsdato,
                             String employerName, String jobTitle, Integer positionPercent,
@@ -27,12 +26,6 @@ public record PayslipFields(String stillingskode, Integer lonnstrinn, YearMonth 
         }
         return annualSalaryFullTime.multiply(BigDecimal.valueOf(positionPercent))
                 .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
-    }
-
-    /** The same values without the annual salary (used when a calculated salary gives way to a printed one). */
-    public PayslipFields withoutAnnualSalary() {
-        return new PayslipFields(stillingskode, lonnstrinn, ansiennitetsdato, employerName, jobTitle, positionPercent,
-                null);
     }
 
     /** Every value that is missing here is taken from the other reading; a value found here is never replaced. */

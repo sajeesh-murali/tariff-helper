@@ -24,12 +24,12 @@
    "employerName": "Oslo kommune",
    "jobTitle": "Spesialsykepleier",
    "positionPercent": 100,
-   "annualSalaryFullTime": 697350,
+   "annualSalaryFullTime": null,
    "stillingskode": null,
    "lonnstrinn": 52,
    "ansiennitetsdato": "2014-06"
   },
-  "notes": "Oslo prints the code as 7 digits (0059000 ~ stillingskode 59?). Mapping 0059000 -> 59 is NOT verified, so the code stays null. No annual salary is printed, so it is calculated from the monthly pay line: 58 112,50 x 12 / 100 % = 697 350 (reported as derived)."
+  "notes": "Oslo prints the code as 7 digits (0059000 ~ stillingskode 59?). Mapping 0059000 -> 59 is NOT verified, so the safe answer is null. No årslønn printed."
  },
  {
   "id": "s03-trondheim-table-below",
@@ -88,12 +88,12 @@
    "employerName": "Helse Testfjord HF",
    "jobTitle": "Helsefagarbeider",
    "positionPercent": 100,
-   "annualSalaryFullTime": 468500,
+   "annualSalaryFullTime": null,
    "stillingskode": null,
    "lonnstrinn": null,
    "ansiennitetsdato": "2012-09"
   },
-  "notes": "Basislonn includes fixed individual tillegg (Helse Stavanger guide), so it is not used. No annual salary is printed, so it is calculated from the Manedslonn line: 39 041,67 x 12 / 100 % = 468 500 (reported as derived)."
+  "notes": "HARD: Basislønn includes fixed individual tillegg (Helse Stavanger guide), so it is not the tariff årslønn. Safe answer: salary null."
  },
  {
   "id": "s07-pbl-kindergarten-years",
@@ -120,12 +120,12 @@
    "employerName": "Stiftelsen Eksempelhjemmet",
    "jobTitle": "Vernepleier",
    "positionPercent": 60,
-   "annualSalaryFullTime": 530000,
+   "annualSalaryFullTime": null,
    "stillingskode": null,
    "lonnstrinn": null,
    "ansiennitetsdato": "2020-01"
   },
-  "notes": "Only the monthly pay is printed. Calculated by the code, not a model: 26 500 x 12 / 60 % = 530 000 (reported as derived, so the person checks it)."
+  "notes": "HARD: only monthly pay is printed. Do not derive årslønn (26 500 x 12 / 0,6 would be arithmetic on an unconfirmed basis). Salary null."
  },
  {
   "id": "s09-agency-hourly",
