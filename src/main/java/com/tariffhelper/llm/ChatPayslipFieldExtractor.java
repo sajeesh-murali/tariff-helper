@@ -36,7 +36,10 @@ public class ChatPayslipFieldExtractor implements PayslipFieldExtractor {
     private static final Pattern CODE_FENCE = Pattern.compile("^```(?:json)?\\s*(.*?)\\s*```$", Pattern.DOTALL);
     private static final Pattern STILLINGSKODE = Pattern.compile("^\\d{1,6}$");
     private static final Pattern YEAR_MONTH = Pattern.compile("^\\d{4}-\\d{2}$");
-    private static final Pattern FORM_TEXT = Pattern.compile(FormText.REGEX);
+    private static final Pattern ALT_WORD = Pattern.compile("(?i)\\balt\\b");
+    // "026 - 8": pay frame (2 to 4 digits), dash, alternativ (1 or 2 digits). Group 2 is the alternativ.
+    private static final Pattern RAMME_ALT = Pattern.compile("(?<![\\d.,])(\\d{2,4})\\s*[-–]\\s*(\\d{1,2})(?![\\d.,])");
+    private static final Pattern FORM_TEXT =Pattern.compile(FormText.REGEX);
     // An amount as printed on a payslip: 612 300,00 / 612.300,00 / 612300. Group 1 is the whole-NOK part.
     private static final Pattern AMOUNT = Pattern.compile(
             "(?<![\\d,])(\\d{1,3}(?:[ .\\u00a0]\\d{3})+|\\d+)(?:,\\d{1,2})?(?!\\d)");
@@ -105,7 +108,39 @@ public class ChatPayslipFieldExtractor implements PayslipFieldExtractor {
     }
 
     private static Integer lonnstrinn(JsonNode node, String excerpt) {
-        return boundedInt("lonnstrinn", node, excerpt);
+        Integer step = boundedInt("lonnstrinn", node, excerpt);
+        if (step != null && isOnlyTheAlternativ(step, excerpt)) {
+            return skipped("lonnstrinn");
+        }
+        return step;
+    }
+
+    /**
+     * Oslo payslips print the pay frame and its alternative as "026 - 8" under "L-ramme - Alt", next to the step
+     * under "Ltr". When text recognition loses the step, the model may copy the alternative instead. A value is
+     * refused when it is the alternativ of such a pair and is not printed a second time on the same line.
+     */
+    private static boolean isOnlyTheAlternativ(int step, String excerpt) {
+        if (!ALT_WORD.matcher(excerpt).find()) {
+            return false;
+        }
+        Pattern number = Pattern.compile("(?<![\\d.,])" + step + "(?![\\d.,])");
+        for (String line : excerpt.split("\\R")) {
+            Matcher pair = RAMME_ALT.matcher(line);
+            while (pair.find()) {
+                if (Integer.parseInt(pair.group(2)) == step) {
+                    int printed = 0;
+                    Matcher same = number.matcher(line);
+                    while (same.find()) {
+                        printed++;
+                    }
+                    if (printed <= 1) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private static Integer positionPercent(JsonNode node, String excerpt) {

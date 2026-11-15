@@ -160,6 +160,30 @@ class ChatPayslipFieldExtractorTest {
         assertThat(fields.employerName()).startsWith("Oslo kommune");
     }
 
+    private static final String OSLO_HEADER = "Stilling Stillingskode - Tittel St-% Ansiennitet L-ramme - Alt Ltr Orgenhet\n";
+
+    @Test
+    void theAlternativIsNotTakenAsTheLonnstrinnWhenTheStepWasLost() {
+        // Text recognition dropped the "31" under Ltr, so only "026 - 8" is left. The model must not answer 8.
+        String lost = OSLO_HEADER + "S160076 0058000 - Sykepleier 01.12.2024 026 - 8 Hjemmetjeneste";
+        assertThat(parse("{\"lonnstrinn\":8}", lost).lonnstrinn()).isNull();
+    }
+
+    @Test
+    void theRealStepIsKeptNextToTheAlternativ() {
+        String whole = OSLO_HEADER + "S160076 0058000 - Sykepleier 0 01.12.2024 026 - 8 31 Hjemmetjeneste";
+        assertThat(parse("{\"lonnstrinn\":31}", whole).lonnstrinn()).isEqualTo(31);
+        // The step may equal the alternativ: it is then printed twice on the line and is kept.
+        String same = OSLO_HEADER + "S160076 0058000 - Sykepleier 0 01.12.2024 026 - 8 8 Hjemmetjeneste";
+        assertThat(parse("{\"lonnstrinn\":8}", same).lonnstrinn()).isEqualTo(8);
+    }
+
+    @Test
+    void aStepIsNotRefusedOnPayslipsWithoutAnAlternativ() {
+        assertThat(parse("{\"lonnstrinn\":8}", "Lonnstrinn 8 Stillingskode 7936 periode 2026-8").lonnstrinn())
+                .isEqualTo(8);
+    }
+
     @Test
     void outOfRangeOrMalformedNumbersAreDropped() {
         String excerpt = "Stilling 7936 trinn 101 0 prosent 101 0 lonn 5000001 612300,50 ansiennitet 08.2999 13.2015 1.2015";
