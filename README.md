@@ -207,7 +207,10 @@ curl -X POST http://localhost:8080/api/estimates \
 - Payslip values (all optional): `stillingskode` (up to 6 digits), `lonnstrinn` (1 to 100),
   `ansiennitetsdato` (`yyyy-MM`, between 1950-01 and the current month).
 - `positionPercent` and `currentAnnualSalary`: the person's **current** job. The salary is what they actually earn per
-  year at that percentage; the app converts it to full time.
+  year at that percentage; the app converts it to full time. Both are optional (`positionPercent` 0 to 100). For
+  someone without a fixed position (for example a tilkallingsvikar at 0%) or without a known salary, the response has
+  no `currentFullTimeSalary` and no `differenceFromCurrent`; `estimatedMinimumSalary` is then the agreement's
+  full-time pay for the counted seniority, and a caveat says it is not what the person earns.
 - Each entry in `experiences`:
   - `kind`: `public_service`, `private_service`, `self_employed`, `care_work`, `home_work`, `military_service`,
     `au_pair` (earns nothing: the rules we modelled do not credit it)

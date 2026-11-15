@@ -393,8 +393,8 @@ function intakeConfirm() {
     + `<div class="fieldgrid">`
     + field('employer', 'Arbeidsgiver', 'text', 'maxlength="100"', true)
     + field('job', 'Stilling', 'text', 'maxlength="60"', true)
-    + field('salary', 'Årslønn i 100 % stilling, før skatt', 'number', 'min="1" max="5000000" step="any"', true)
-    + field('percent', 'Stillingsprosent', 'number', 'min="1" max="100" step="1"', true)
+    + field('salary', 'Årslønn i 100 % stilling, før skatt (kan stå tom hvis stillingsprosent er 0)', 'number', 'min="1" max="5000000" step="any"')
+    + field('percent', 'Stillingsprosent (0 hvis du er tilkallingsvikar uten fast stilling)', 'number', 'min="0" max="100" step="1"', true)
     + agreementSelect()
     + jobCategorySelect()
     + field('ansiennitetsdato', 'Ansiennitetsdato på lønnsslippen (valgfritt)', 'month', `min="1950-01" max="${CUR_YM}"`)
@@ -425,9 +425,9 @@ function confirmIntake() {
     intake.error = 'Fyll inn stilling.';
   } else if (!intake.jobCategory && sent(intake.job) && !FORM_TEXT.test(sent(intake.job))) {
     intake.error = 'Stilling kan bare inneholde bokstaver, tall, mellomrom og . , & ( ) / \' -';
-  } else if (!Number.isInteger(pct) || pct < 1 || pct > 100) {
-    intake.error = 'Stillingsprosent må være et heltall mellom 1 og 100.';
-  } else if (intake.salary === '' || !Number.isFinite(salary) || salary <= 0 || salary > 5000000) {
+  } else if (String(intake.percent).trim() === '' || !Number.isInteger(pct) || pct < 0 || pct > 100) {
+    intake.error = 'Stillingsprosent må være et heltall mellom 0 og 100.';
+  } else if (pct > 0 && (intake.salary === '' || !Number.isFinite(salary) || salary <= 0 || salary > 5000000)) {
     intake.error = 'Oppgi årslønn i 100 % stilling (et positivt beløp).';
   } else if (intake.ansiennitetsdato && !(validMonth(intake.ansiennitetsdato) && intake.ansiennitetsdato >= '1950-01')) {
     intake.error = 'Ansiennitetsdato må være en måned mellom januar 1950 og nå.';
@@ -605,11 +605,9 @@ function submitScreening() {
 function buildEstimate() {
   const s = S();
   const pct = Number(intake.percent);
-  const body = {
-    positionPercent: pct,
-    currentAnnualSalary: Math.round(Number(intake.salary) * pct / 100),
-    experiences: []
-  };
+  const body = { positionPercent: pct, experiences: [] };
+  // Without a fixed position (0%) there is no salary to compare with; the server then shows the full-time pay only.
+  if (pct > 0) body.currentAnnualSalary = Math.round(Number(intake.salary) * pct / 100);
   if (intake.agreementId) {
     body.agreementId = intake.agreementId;
   } else {
@@ -682,6 +680,7 @@ async function submitEstimate() {
 }
 
 function toResult(data) {
+  if (!data.differenceFromCurrent) return { kind: 'reference', monthly: 0, api: data };
   const pct = Number(intake.percent) / 100;
   const min = Number(data.differenceFromCurrent.min);
   const max = Number(data.differenceFromCurrent.max);
@@ -727,8 +726,29 @@ function statusIcon(monthly) {
     + `<circle class="dot" cx="46" cy="29" r="3.5"/>${STATUS_ICONS[tier]}</svg>`;
 }
 
+/** No fixed position or salary: show the agreement's full-time pay for the counted seniority, no comparison. */
+function referenceCard(d) {
+  const counted = fmtYears(d.countedYears);
+  const upTo = Number(d.countedYearsIfAllAccepted) > Number(d.countedYears)
+    ? ` (opptil ${fmtYears(d.countedYearsIfAllAccepted)} hvis alt usikkert godtas)` : '';
+  const conf = d.confidence || { level: 'low', reasons: [] };
+  return `<span class="badge">Årslønn etter avtalen</span><h1>Slik ser årslønnen din<br>ut i full stilling.</h1>`
+    + `<p class="lead">Med <b>${counted}</b> ansiennitet${upTo} er minstelønnen etter avtalen `
+    + `<b>${fmtRange(d.estimatedMinimumSalary)}</b> per år før skatt, regnet for en 100 % stilling.</p>`
+    + `<p class="small">Du har ikke fast stillingsprosent, så vi sammenligner ikke med lønnen din. `
+    + `Det du faktisk får utbetalt avhenger av hvor mye du jobber.</p>`
+    + `<p class="small">Hvor sikkert er anslaget? <b>${esc(LEVELS[conf.level] || conf.level)}</b></p>`
+    + `<div class="card"><h2>Dette bygger anslaget på</h2><ul class="small">`
+    + `<li>Tariffavtale: ${esc(d.agreementApplied)} (satser fra ${esc(d.rulesValidFrom)})</li>`
+    + `<li>Stilling: ${esc(d.jobCategory)}</li>`
+    + `<li>Dette er minstelønn etter tariffavtalen. Arbeidsgiveren din kan betale mer.</li>`
+    + `<li>Anslaget bygger på opplysningene du ga. Arbeidsgiveren din avgjør hva som godkjennes, og alle perioder må dokumenteres.</li>`
+    + `</ul></div><p class="small">${esc(d.disclaimer)}</p>`;
+}
+
 function resultCard(r) {
   const d = r.api;
+  if (r.kind === 'reference') return referenceCard(d);
   const pct = Number(intake.percent) / 100;
   const diffMin = Number(d.differenceFromCurrent.min);
   const diffMax = Number(d.differenceFromCurrent.max);

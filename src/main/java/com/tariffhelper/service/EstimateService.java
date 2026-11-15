@@ -45,6 +45,11 @@ public class EstimateService {
             + "så dette er et foreløpig anslag. Nøyaktige start- og sluttdatoer, og dokumentasjon for hver periode, "
             + "trengs før du ber arbeidsgiveren din om å gjennomgå ansienniteten din.";
 
+    static final String NO_POSITION_CAVEAT = "Du har ikke oppgitt fast stillingsprosent eller årslønn (for eksempel som "
+            + "tilkallingsvikar). Derfor viser vi bare årslønnen etter avtalen i en 100 % stilling for ansienniteten "
+            + "vi mener du har, uten sammenligning med lønnen din. Dette er ikke det du faktisk tjener. "
+            + "Hva du får utbetalt avhenger av hvor mye du jobber.";
+
     private static final YearMonth EARLIEST_START = YearMonth.of(1950, 1);
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
 
@@ -103,12 +108,19 @@ public class EstimateService {
         SalaryRange minimum = salaryEstimator.rangeFor(ladder, seniority);
 
         // Pay is compared at 100%: a 50% position earns half of the full-time figure.
-        BigDecimal currentFullTime = request.currentAnnualSalary()
-                .multiply(HUNDRED)
-                .divide(BigDecimal.valueOf(request.positionPercent()), 0, RoundingMode.HALF_UP);
-        SalaryRange difference = new SalaryRange(
-                minimum.min().subtract(currentFullTime),
-                minimum.max().subtract(currentFullTime));
+        // Without a fixed position (0% or missing) or without a salary there is nothing to compare with.
+        boolean comparable = request.positionPercent() != null && request.positionPercent() > 0
+                && request.currentAnnualSalary() != null;
+        BigDecimal currentFullTime = null;
+        SalaryRange difference = null;
+        if (comparable) {
+            currentFullTime = request.currentAnnualSalary()
+                    .multiply(HUNDRED)
+                    .divide(BigDecimal.valueOf(request.positionPercent()), 0, RoundingMode.HALF_UP);
+            difference = new SalaryRange(
+                    minimum.min().subtract(currentFullTime),
+                    minimum.max().subtract(currentFullTime));
+        }
 
         CreditedSeniority credited = creditedCalculator.calculate(
                 ladder, request.lonnstrinn(), request.ansiennitetsdato(), YearMonth.now());
@@ -120,6 +132,9 @@ public class EstimateService {
                 : null;
 
         List<String> caveats = new ArrayList<>();
+        if (!comparable) {
+            caveats.add(NO_POSITION_CAVEAT);
+        }
         if (job.note() != null && !job.note().isBlank()) {
             caveats.add(job.note().trim());
         }

@@ -12,6 +12,8 @@ import java.util.List;
  * All salary figures are annual, for a full-time (100%) position.
  * The ranges run from "only what counts" (min) to "if the employer accepts everything uncertain" (max).
  *
+ * @param currentFullTimeSalary  null when the person gave no fixed position percentage or no salary
+ * @param differenceFromCurrent  null in the same case: there is nothing to compare with
  * @param agreementSuggestion present only when the agreement was not given in the request
  * @param confidence          calculated in code, never by the LLM; a label with reasons, not a probability
  * @param creditedVsCounted   present only when payslip values allowed a comparison, otherwise null

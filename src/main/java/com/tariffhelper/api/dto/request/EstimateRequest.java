@@ -18,6 +18,8 @@ import java.util.List;
  *
  * positionPercent and currentAnnualSalary describe the person's CURRENT job: the salary is what they
  * actually earn per year at that percentage. The application converts it to a full-time figure.
+ * Both are optional. A person without a fixed position (for example a tilkallingsvikar, 0% or no percentage) or
+ * without a known salary gets the agreement's full-time pay for the counted seniority, with no comparison.
  *
  * agreementId and jobCategory are optional: without agreementId the agreement is suggested from
  * employerName; without jobCategory it is derived from stillingskode or jobTitle.
@@ -28,8 +30,8 @@ import java.util.List;
 public record EstimateRequest(
         @Size(max = 40) String agreementId,
         @Size(max = 60) String jobCategory,
-        @NotNull @Min(1) @Max(100) Integer positionPercent,
-        @NotNull @Positive @Max(5_000_000) BigDecimal currentAnnualSalary,
+        @Min(0) @Max(100) Integer positionPercent,
+        @Positive @Max(5_000_000) BigDecimal currentAnnualSalary,
         @NotNull @Size(max = 30) List<@Valid @NotNull ExperienceDto> experiences,
         @Size(min = 2, max = 100) @Pattern(regexp = FormText.REGEX, message = FormText.MESSAGE) String employerName,
         @Size(max = 60) @Pattern(regexp = FormText.REGEX, message = FormText.MESSAGE) String jobTitle,

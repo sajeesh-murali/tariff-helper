@@ -144,6 +144,61 @@ class EstimateApiIntegrationTest {
                 .andExpect(jsonPath("$.differenceFromCurrent.min").value(-54600));
     }
 
+    // ---- no fixed position (for example a tilkallingsvikar) ----
+
+    private static String noPosition(String agreementId, String fields) {
+        return "{\"agreementId\":\"" + agreementId + "\",\"jobCategory\":\"nurse\"" + fields
+                + ",\"experiences\":[" + experience("private_service", null, "2010-01", "2021-12") + "]}";
+    }
+
+    @Test
+    void zeroPercentGivesFullTimePayWithoutComparison() throws Exception {
+        // 12 years counted in Oslo -> 614 600 at 100%. No salary and 0% means nothing to compare with.
+        postEstimate(noPosition("oslo-kommune", ",\"positionPercent\":0"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.countedYears").value(12.0))
+                .andExpect(jsonPath("$.estimatedMinimumSalary.min").value(614600))
+                .andExpect(jsonPath("$.estimatedMinimumSalary.max").value(614600))
+                .andExpect(jsonPath("$.currentFullTimeSalary").doesNotExist())
+                .andExpect(jsonPath("$.differenceFromCurrent").doesNotExist())
+                .andExpect(jsonPath("$.caveats[0]", containsString("ikke oppgitt fast stillingsprosent")));
+    }
+
+    @Test
+    void zeroPercentIgnoresASalaryInsteadOfDividingByZero() throws Exception {
+        postEstimate(noPosition("oslo-kommune", ",\"positionPercent\":0,\"currentAnnualSalary\":300000"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estimatedMinimumSalary.min").value(614600))
+                .andExpect(jsonPath("$.differenceFromCurrent").doesNotExist());
+    }
+
+    @Test
+    void missingPercentAndSalaryWorkForAnyAgreement() throws Exception {
+        // KS nurse, 12 years of public service -> 10-year step = 620 800 at 100%.
+        postEstimate("{\"agreementId\":\"ks-hta\",\"jobCategory\":\"nurse\",\"experiences\":["
+                + experience("public_service", null, "2010-01", "2021-12") + "]}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estimatedMinimumSalary.min").value(620800))
+                .andExpect(jsonPath("$.currentFullTimeSalary").doesNotExist())
+                .andExpect(jsonPath("$.differenceFromCurrent").doesNotExist());
+    }
+
+    @Test
+    void percentWithoutSalaryHasNothingToCompare() throws Exception {
+        postEstimate(noPosition("oslo-kommune", ",\"positionPercent\":80"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.differenceFromCurrent").doesNotExist());
+    }
+
+    @Test
+    void negativeOrTooHighPercentIsStillRejected() throws Exception {
+        postEstimate(noPosition("oslo-kommune", ",\"positionPercent\":-1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.positionPercent").exists());
+        postEstimate(noPosition("oslo-kommune", ",\"positionPercent\":101"))
+                .andExpect(status().isBadRequest());
+    }
+
     // ---- Oslo kommune ----
 
     @Test
