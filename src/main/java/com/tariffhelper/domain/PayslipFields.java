@@ -28,6 +28,12 @@ public record PayslipFields(String stillingskode, Integer lonnstrinn, YearMonth 
                 .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
     }
 
+    /** The same values without the lønnstrinn (it was refused, for example because it is only the alternativ). */
+    public PayslipFields withoutLonnstrinn() {
+        return new PayslipFields(stillingskode, null, ansiennitetsdato, employerName, jobTitle, positionPercent,
+                annualSalaryFullTime);
+    }
+
     /** Every value that is missing here is taken from the other reading; a value found here is never replaced. */
     public PayslipFields fillGapsFrom(PayslipFields other) {
         return new PayslipFields(

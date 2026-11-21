@@ -4,6 +4,7 @@ import com.tariffhelper.agreement.AgreementRepository;
 import com.tariffhelper.api.dto.response.SuggestResponse;
 import com.tariffhelper.domain.Agreement;
 import com.tariffhelper.domain.PayslipFields;
+import com.tariffhelper.llm.AlternativPair;
 import com.tariffhelper.llm.PayslipFieldExtractor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,7 +72,7 @@ public class PayslipService {
         String text = reader.read(file, password);
         // 1. The rules in code read the whole text on this server; nothing leaves it.
         PayslipRuleReader.Reading reading = ruleReader.read(text);
-        PayslipFields fromRules = reading.fields();
+        PayslipFields fromRules = withoutAlternativ(reading.fields(), text);
         // 2. The model reads only the small redacted excerpt: always, or only when the rules missed something.
         String excerpt = redactor.excerpt(text, reading.usedLines());
         boolean ask = !excerpt.isBlank() && switch (aiMode) {
@@ -80,7 +81,7 @@ public class PayslipService {
             case OFF -> false;
         };
         PayslipFields answer = ask ? extractor.extract(excerpt) : null;
-        PayslipFields fromModel = answer == null ? PayslipFields.empty() : answer;
+        PayslipFields fromModel = answer == null ? PayslipFields.empty() : withoutAlternativ(answer, text);
         // 3. Compare the two readings. A value the rules found is never replaced; the model fills the gaps.
         PayslipFields fields = fromRules.fillGapsFrom(fromModel);
         Map<String, String> status = compare(fromRules, fromModel, reading.notPrinted());
@@ -94,6 +95,16 @@ public class PayslipService {
         Agreement agreement = suggestion.suggestions().stream().findFirst()
                 .flatMap(top -> agreements.findById(top.agreementId())).orElse(null);
         return new Result(fields, suggestion, agreement, status);
+    }
+
+    /**
+     * A lønnstrinn that is only the alternativ of an Oslo "L-ramme - Alt" pair (the real step was lost in the text) is
+     * dropped, whether the rules or the model read it. The person then fills it in; a wrong step would give a wrong
+     * "registered seniority".
+     */
+    private static PayslipFields withoutAlternativ(PayslipFields fields, String text) {
+        return fields.lonnstrinn() != null && AlternativPair.isOnlyTheAlternativ(fields.lonnstrinn(), text)
+                ? fields.withoutLonnstrinn() : fields;
     }
 
     private static Map<String, String> compare(PayslipFields byRules, PayslipFields byModel,

@@ -167,4 +167,28 @@ class PayslipServiceTest {
 
         assertThat(List.copyOf(status.keySet())).isEqualTo(PayslipFields.FIELD_NAMES);
     }
+
+    private static final String OSLO_HEADER = "Oslo kommune\nStilling Stillingskode - Tittel St-% Ansiennitet L-ramme - Alt Ltr Orgenhet\n";
+
+    @Test
+    void theAlternativIsNotKeptAsTheLonnstrinnWhateverReadIt() {
+        // The step under Ltr was lost in the text, so only "026 - 8" is left. Neither the rules nor the model may
+        // pass the 8 on as the lønnstrinn; the person fills it in.
+        String lost = OSLO_HEADER + "S160076 0058000 - Sykepleier 0 01.12.2024 026 - 8 Hjemmetjeneste";
+        when(extractor.extract(anyString())).thenReturn(new PayslipFields(null, 8, null, null, null, null, null));
+
+        PayslipService.Result result = parse(AiMode.ALWAYS, lost);
+
+        assertThat(result.fields().lonnstrinn()).isNull();
+        assertThat(result.fieldStatus().get("lonnstrinn")).isEqualTo("notFound");
+        assertThat(result.fields().ansiennitetsdato()).isEqualTo(YearMonth.of(2024, 12));
+    }
+
+    @Test
+    void theRealStepNextToTheAlternativIsKept() {
+        String whole = OSLO_HEADER + "S160076 0058000 - Sykepleier 0 01.12.2024 026 - 8 31 Hjemmetjeneste";
+        when(extractor.extract(anyString())).thenReturn(new PayslipFields(null, 31, null, null, null, null, null));
+
+        assertThat(parse(AiMode.ALWAYS, whole).fields().lonnstrinn()).isEqualTo(31);
+    }
 }
