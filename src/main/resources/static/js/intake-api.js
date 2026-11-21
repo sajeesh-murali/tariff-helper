@@ -257,7 +257,7 @@ async function uploadPayslip(file, password) {
   if (res.ok && res.data && !PAYSLIP_FIELDS.some(k => res.data[k] != null)) {
     intake.manual = true;
     intake.error = isPdf
-      ? 'Vi fant ingen opplysninger i lønnsslippen. Fyll inn selv.'
+      ? 'Vi leste lønnsslippen, men fant ikke stilling, lønn eller ansiennitet på den. Mange lønnsslipper viser ikke dette. Fyll inn selv.'
       : 'Vi fant ingen opplysninger i bildet. Ta bildet rett ovenfra med godt lys og hele siden med, eller fyll inn selv.';
   } else if (res.ok && res.data) {
     applyPayslip(res.data);

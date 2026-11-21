@@ -116,6 +116,22 @@ class PayslipRuleReaderGuardsTest {
     }
 
     @Test
+    void aCompanyNameOnALineWithOtherColumnsIsTheEmployer() {
+        // a PDF text layer joins the letterhead columns: "Lønnsslipp  Foo AS  Epost: ..."
+        assertThat(read("Lønnsslipp  Eksempelbyrå AS  Epost: post@example.test", "Lønnsmottaker  Oppsummering",
+                "Fastlønn 68.275,00").employerName()).isEqualTo("Eksempelbyrå AS");
+        // a payroll bureau in that spot is still not the employer, and "as" in a sentence is not a company form
+        assertThat(read("Lønnsslipp  Fjordlys Regnskap AS  Epost: post@example.test").employerName()).isNull();
+        assertThat(read("Lønnsslipp  Dette er as bra  Epost: post@example.test").employerName()).isNull();
+        // nothing else is made up from such a payslip
+        PayslipFields fields = reader.read("Lønnsslipp  Eksempelbyrå AS  Epost: post@example.test\n"
+                + "Prosenttrekk 80 %\nFastlønn 68.275,00\nFra 11. forrige måned til og med 10. 100% av fulltid").fields();
+        assertThat(fields.positionPercent()).isNull();
+        assertThat(fields.annualSalaryFullTime()).isNull();
+        assertThat(fields.jobTitle()).isNull();
+    }
+
+    @Test
     void aTitleWithTwoRecognitionMistakesIsStillFound() {
         assertThat(read("Stlllngsprosent   8O,OO %").positionPercent()).isEqualTo(80);
         // the value must not be swallowed by the title: a title followed by a number is not another title

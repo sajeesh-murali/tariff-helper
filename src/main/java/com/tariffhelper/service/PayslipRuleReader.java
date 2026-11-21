@@ -989,6 +989,7 @@ public class PayslipRuleReader {
             if (text.isEmpty()) {
                 continue;
             }
+            String wholeLine = text;
             text = GAP.split(text)[0]; // a screenshot can put stray marks beside the name
             if (++checked > 12) {
                 break;
@@ -1005,9 +1006,35 @@ public class PayslipRuleReader {
                 }
                 return name;
             }
+            if (checked <= 3) {
+                // A PDF text layer can put the letterhead on one line with other columns ("Lønnsslipp  Foo AS  Epost: ...").
+                String name = companyInLine(wholeLine);
+                if (name != null) {
+                    used.add(lineIndex);
+                    return name;
+                }
+            }
         }
         return null;
     }
+
+    /** "Name AS" (words joined by single spaces) somewhere in a line that also holds other columns, or null. */
+    private static String companyInLine(String line) {
+        Matcher matcher = COMPANY_IN_LINE.matcher(line);
+        while (matcher.find()) {
+            String name = matcher.group(1);
+            if (name.chars().noneMatch(Character::isDigit) && !isPayrollProvider(name)) {
+                String valid = validText(name, Limits.EMPLOYER, false);
+                if (valid != null) {
+                    return valid;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static final Pattern COMPANY_IN_LINE = Pattern.compile(
+            "(?<!\\S)((?:[\\p{L}.&'-]+ ){0,3}[\\p{L}.&'-]+ (?:AS|SA))(?!\\S)");
 
     /** A line that starts with one of our titles or stop titles is a labelled value, not a letterhead. */
     private static boolean startsWithTitle(Line line) {
