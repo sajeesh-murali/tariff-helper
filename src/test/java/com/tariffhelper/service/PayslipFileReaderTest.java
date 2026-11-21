@@ -156,4 +156,64 @@ class PayslipFileReaderTest {
                 .isInstanceOf(InvalidRequestException.class)
                 .hasMessageContaining("No text was found");
     }
+
+    private static final String HEADER = "Stilling Stillingskode - Tittel Ansiennitet L-ramme - Alt Ltr Orgenhet\n";
+    private static final String STEP_LOST = HEADER + "S160076 0058000 - Sykepleier 01.12.2024 026 - 8 Hjemmetjeneste\n";
+    private static final String STEP_KEPT = HEADER + "S160076 0058000 - Sykepleier 01.12.2024 026 - 8 31 Hjemmetjeneste\n";
+
+    /** An engine whose ordinary reading and column-mode reading give different text. */
+    private OcrEngine twoReadings(String ordinary, String columns, List<String> modes) {
+        return new OcrEngine() {
+            @Override
+            public String recognize(byte[] png) {
+                modes.add("ordinary");
+                return ordinary;
+            }
+
+            @Override
+            public String recognizeAsColumns(byte[] png) {
+                modes.add("columns");
+                return columns;
+            }
+        };
+    }
+
+    @Test
+    void aLostLtrStepMakesTheReaderReadThePictureAgainAndKeepTheReadingWithTheStep() {
+        List<String> modes = new ArrayList<>();
+
+        String text = readerWith(twoReadings(STEP_LOST, STEP_KEPT, modes)).read(TestImages.png(1200, 800));
+
+        assertThat(modes).containsExactly("ordinary", "columns");
+        assertThat(text).contains("026 - 8 31");
+    }
+
+    @Test
+    void theFirstReadingStaysWhenTheSecondOneDoesNotHaveTheStepEitherOrFails() {
+        List<String> modes = new ArrayList<>();
+        assertThat(readerWith(twoReadings(STEP_LOST, STEP_LOST, modes)).read(TestImages.png(1200, 800)))
+                .doesNotContain("026 - 8 31").contains("026 - 8 Hjemmetjeneste");
+
+        OcrEngine failingSecond = new OcrEngine() {
+            @Override
+            public String recognize(byte[] png) {
+                return STEP_LOST;
+            }
+
+            @Override
+            public String recognizeAsColumns(byte[] png) {
+                throw new InvalidRequestException("The picture could not be read.");
+            }
+        };
+        assertThat(readerWith(failingSecond).read(TestImages.png(1200, 800))).contains("026 - 8 Hjemmetjeneste");
+    }
+
+    @Test
+    void thePictureIsReadOnlyOnceWhenTheStepIsThere() {
+        List<String> modes = new ArrayList<>();
+
+        readerWith(twoReadings(STEP_KEPT, STEP_LOST, modes)).read(TestImages.png(1200, 800));
+
+        assertThat(modes).containsExactly("ordinary");
+    }
 }

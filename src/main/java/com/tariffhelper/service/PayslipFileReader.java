@@ -1,6 +1,7 @@
 package com.tariffhelper.service;
 
 import com.tariffhelper.api.ApiExceptions.InvalidRequestException;
+import com.tariffhelper.llm.AlternativPair;
 import com.tariffhelper.ocr.HeicConverter;
 import com.tariffhelper.ocr.OcrEngine;
 import com.tariffhelper.ocr.OcrProperties;
@@ -54,6 +55,22 @@ public class PayslipFileReader {
             text.append(ocr.recognize(picture)).append('\n');
         }
         String all = OcrTextCleaner.clean(text.toString());
+        if (AlternativPair.stepLost(all)) {
+            // The Ltr step of an Oslo payslip was lost: read the pictures once more in another page mode, and keep
+            // that reading only when it has the step.
+            try {
+                StringBuilder again = new StringBuilder();
+                for (byte[] picture : pictures) {
+                    again.append(ocr.recognizeAsColumns(picture)).append('\n');
+                }
+                String second = OcrTextCleaner.clean(again.toString());
+                if (!AlternativPair.stepLost(second)) {
+                    all = second;
+                }
+            } catch (InvalidRequestException e) {
+                // the second reading is only a help; the first one stays
+            }
+        }
         return all.length() <= MAX_CHARS ? all : all.substring(0, MAX_CHARS);
     }
 }

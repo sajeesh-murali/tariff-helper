@@ -42,8 +42,22 @@ public class TesseractOcrEngine implements OcrEngine {
         this.props = props;
     }
 
+    /** Tesseract's page mode 6: one uniform block of text. The ordinary reading. */
+    private static final int BLOCK_MODE = 6;
+    /** Page mode 4: one column of text of variable sizes. Used for a second reading. */
+    private static final int COLUMN_MODE = 4;
+
     @Override
     public String recognize(byte[] png) {
+        return recognize(png, BLOCK_MODE);
+    }
+
+    @Override
+    public String recognizeAsColumns(byte[] png) {
+        return recognize(png, COLUMN_MODE);
+    }
+
+    private String recognize(byte[] png, int pageMode) {
         if (!props.enabled()) {
             throw unavailable();
         }
@@ -53,7 +67,7 @@ public class TesseractOcrEngine implements OcrEngine {
             if (!acquired) {
                 throw new InvalidRequestException("The server is busy reading other pictures. Try again in a minute.");
             }
-            return run(png);
+            return run(png, pageMode);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new InvalidRequestException("The picture could not be read.");
@@ -64,12 +78,12 @@ public class TesseractOcrEngine implements OcrEngine {
         }
     }
 
-    private String run(byte[] png) throws InterruptedException {
+    private String run(byte[] png, int pageMode) throws InterruptedException {
         Process process;
         try {
             // The pictures are prepared at about 300 DPI, which is also what Tesseract is told. Keeping the spaces
             // between words keeps the columns of a payslip table apart.
-            process = command().start();
+            process = command(pageMode).start();
         } catch (IOException e) {
             log.warn("OCR program could not be started: {}", e.getClass().getSimpleName());
             throw unavailable();
@@ -116,8 +130,12 @@ public class TesseractOcrEngine implements OcrEngine {
      * those threads fight over the CPU and one picture takes several times longer, so it is told to use one.
      */
     ProcessBuilder command() {
+        return command(BLOCK_MODE);
+    }
+
+    private ProcessBuilder command(int pageMode) {
         ProcessBuilder builder = new ProcessBuilder(props.command(), "stdin", "stdout", "-l", props.languages(),
-                "--psm", "6", "--dpi", "300", "-c", "preserve_interword_spaces=1");
+                "--psm", String.valueOf(pageMode), "--dpi", "300", "-c", "preserve_interword_spaces=1");
         builder.environment().put("OMP_THREAD_LIMIT", "1");
         return builder;
     }

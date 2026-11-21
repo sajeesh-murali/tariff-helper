@@ -17,7 +17,27 @@ public final class AlternativPair {
     /** "026 - 8": pay frame (2 to 4 digits), dash, alternativ (1 or 2 digits). Group 2 is the alternativ. */
     private static final Pattern RAMME_ALT = Pattern.compile("(?<![\\d.,])(\\d{2,4})\\s*[-–]\\s*(\\d{1,2})(?![\\d.,])");
 
+    /** A small whole number (a step) on its own. */
+    private static final Pattern SMALL_NUMBER = Pattern.compile("(?<![\\d.,])\\d{1,3}(?![\\d.,])");
+
     private AlternativPair() {
+    }
+
+    /**
+     * True when the text has a "L-ramme - Alt" pair row where nothing follows the alternativ but words: the step under
+     * "Ltr" was lost in the text recognition. Only a hint to read the picture a second time; nothing is taken from it.
+     */
+    public static boolean stepLost(String text) {
+        if (text == null || !PAIR_TITLE.matcher(text).find()) {
+            return false;
+        }
+        for (String line : text.split("\\R")) {
+            Matcher pair = RAMME_ALT.matcher(line);
+            if (pair.find() && !SMALL_NUMBER.matcher(line.substring(pair.end())).find()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

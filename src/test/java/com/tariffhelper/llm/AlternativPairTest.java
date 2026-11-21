@@ -34,4 +34,16 @@ class AlternativPairTest {
         assertThat(AlternativPair.isOnlyTheAlternativ(8, "Lonnstrinn 8 Stillingskode 7936 periode 2026-8")).isFalse();
         assertThat(AlternativPair.isOnlyTheAlternativ(8, null)).isFalse();
     }
+
+    @Test
+    void aPairRowWithNothingButWordsAfterTheAlternativMeansTheStepWasLost() {
+        assertThat(AlternativPair.stepLost(HEADER + "S160076 0058000 - Sykepleier 01.12.2024 026 - 8 Hjemmetjeneste Roa"))
+                .isTrue();
+        assertThat(AlternativPair.stepLost(HEADER + "S160076 0058000 - Sykepleier 0 01.12.2024 026 - 8 31 Hjemmetjeneste"))
+                .isFalse();
+        // without the pair's title, or without a pair, nothing is flagged
+        assertThat(AlternativPair.stepLost("Sykepleier 01.12.2024 026 - 8 Hjemmetjeneste")).isFalse();
+        assertThat(AlternativPair.stepLost(HEADER + "Timelonn - 01.08.2026 7,50 328,39")).isFalse();
+        assertThat(AlternativPair.stepLost(null)).isFalse();
+    }
 }

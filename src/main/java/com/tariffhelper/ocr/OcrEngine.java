@@ -10,4 +10,12 @@ public interface OcrEngine {
      *                                                                     never contains anything from the picture
      */
     String recognize(byte[] png);
+
+    /**
+     * A second reading of the same picture in Tesseract's "one column of text" page mode. It can keep narrow table
+     * columns that the default mode drops (the Ltr step on an Oslo payslip). The default is the ordinary reading.
+     */
+    default String recognizeAsColumns(byte[] png) {
+        return recognize(png);
+    }
 }
