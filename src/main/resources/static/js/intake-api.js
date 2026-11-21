@@ -450,7 +450,7 @@ function confirmIntake() {
  */
 
 function freshScreen() {
-  const time = () => ({ y: '', m: '', approx: false });
+  const time = () => ({ y: '', m: '', approx: true });
   return {
     norway: { ...time(), own: false, ownY: '', ownM: '' },
     abroad: { ...time(), own: false, ownY: '', ownM: '' },
@@ -491,11 +491,6 @@ function timeFields(key, yField = 'y', mField = 'm') {
     + `<input id="${id}-m" type="number" min="0" max="11" step="1" value="${esc(a[mField])}" oninput="scr('${key}','${mField}',this.value)"></div></div>`;
 }
 
-function approxBox(key) {
-  return `<label class="checkline"><input type="checkbox" ${S()[key].approx ? 'checked' : ''} `
-    + `onchange="scr('${key}','approx',this.checked)">Dette er et anslag</label>`;
-}
-
 function yesNo(key, label) {
   const a = S()[key];
   return `<div class="answer-buttons" role="group" aria-label="${esc(label)}">`
@@ -519,24 +514,24 @@ function intakeHistory() {
   const s = S();
   const q1 = qCard(1, 'Hvor lenge har du jobbet i Norge til sammen?',
     `<p class="small">Ta med nåværende jobb, tidligere jobber, deltidsjobber og arbeid i eget firma. Ikke ta med au pair eller verneplikt.</p>`
-    + timeFields('norway') + approxBox('norway') + ownFirmFields('norway'));
+    + timeFields('norway') + ownFirmFields('norway'));
   const q2 = qCard(2, 'Hvor lenge har du jobbet i andre land enn Norge?',
     `<p class="small">Ikke ta med au pair eller verneplikt.</p>`
-    + timeFields('abroad') + approxBox('abroad') + ownFirmFields('abroad'));
+    + timeFields('abroad') + ownFirmFields('abroad'));
   const q3 = qCard(3, 'Har du jobbet som au pair?', yesNo('aupair', 'Har du jobbet som au pair?')
-    + (s.aupair.has === 'yes' ? timeFields('aupair') + approxBox('aupair') : ''));
+    + (s.aupair.has === 'yes' ? timeFields('aupair') : ''));
   const q4 = qCard(4, 'Har du avtjent verneplikt i Norge eller et annet land?', yesNo('military', 'Har du avtjent verneplikt?')
     + (s.military.has === 'yes'
       ? timeFields('military')
         + `<label for="scr-military-country">Land</label><select id="scr-military-country" onchange="scr('military','country',this.value)">`
         + `<option value="NO" ${s.military.country === 'NO' ? 'selected' : ''}>Norge</option>`
-        + `<option value="" ${s.military.country === '' ? 'selected' : ''}>Annet land</option></select>` + approxBox('military')
+        + `<option value="" ${s.military.country === '' ? 'selected' : ''}>Annet land</option></select>`
       : ''));
   const q5 = qCard(5, 'Har du barn?', yesNo('children', 'Har du barn?')
     + (s.children.has === 'yes'
       ? `<label for="scr-children-count">Hvor mange barn?</label><input id="scr-children-count" type="number" min="1" max="20" step="1" `
         + `value="${esc(s.children.count)}" oninput="scr('children','count',this.value)">`
-        + `<p>Hvor lenge har du samlet vært hjemme med omsorg for barn?</p>` + timeFields('children') + approxBox('children')
+        + `<p>Hvor lenge har du samlet vært hjemme med omsorg for barn?</p>` + timeFields('children')
         + `<p class="small">Antall barn alene gir ikke ansiennitet. Vi trenger hvor lenge du var hjemme med omsorg.</p>`
       : ''));
   const q6 = qCard(6, 'Har du hatt andre perioder med arbeid eller omsorg i hjemmet?',
@@ -545,7 +540,7 @@ function intakeHistory() {
       ? `<label for="scr-other-type">Hva slags periode?</label><select id="scr-other-type" onchange="scr('otherHome','type',this.value)">`
         + `<option value="care_work" ${s.otherHome.type === 'care_work' ? 'selected' : ''}>Omsorg (barn, eldre eller syke)</option>`
         + `<option value="home_work" ${s.otherHome.type === 'home_work' ? 'selected' : ''}>Arbeid i hjemmet</option></select>`
-        + timeFields('otherHome') + approxBox('otherHome')
+        + timeFields('otherHome')
       : ''));
   const overlap = `<div class="card question-card"><h2>Har noen av periodene du har oppgitt vært samtidig?</h2>`
     + `<p class="small">Ellers risikerer vi å summere jobb, au pair og omsorg for samme tidsrom.</p>`
@@ -553,7 +548,7 @@ function intakeHistory() {
     + [['', 'Velg'], ['no', 'Nei'], ['yes', 'Ja'], ['unsure', 'Usikker']].map(([v, t]) =>
       `<option value="${v}" ${s.overlap === v ? 'selected' : ''}>${t}</option>`).join('') + `</select></div>`;
   return intakeProgress(2) + `<section class="intake-work">${title('Arbeid og erfaring', 'Hvilken erfaring har du?',
-    'Oppgi omtrent hvor lenge hver erfaring varte. Deltidsarbeid oppgir du som tiden du var ansatt, ikke omregnet til heltidsarbeid. '
+    'Et grovt anslag er nok. Du trenger ikke vite eksakt hvor lenge hver erfaring varte.Deltidsarbeid oppgir du som tiden du var ansatt, ikke omregnet til heltidsarbeid. '
     + 'Har du hatt flere jobber samtidig, teller du perioden én gang. Du trenger ikke finne frem attester nå.')}`
     + q1 + q2 + q3 + q4 + q5 + q6 + overlap + intakeError()
     + `<div class="actions"><button class="btn" onclick="submitScreening()">Se resultatet</button>`
