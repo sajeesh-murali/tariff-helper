@@ -812,7 +812,7 @@ function resultCard(r) {
 
 // Where the booking opens. The button always works with this link; the server (BOOKING_URL) can replace it, and
 // only an explicit empty setting on the server hides the button.
-const DEFAULT_BOOKING_URL = 'https://calendly.com/larshaakon/gjennomgang-premium-profil-timebestilling-f-clone';
+const DEFAULT_BOOKING_URL = 'https://calendly.com/larshaakon/gjennomgang-ansiennitet';
 let bookingUrl = DEFAULT_BOOKING_URL;
 
 function loadConfig() {
