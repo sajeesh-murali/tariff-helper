@@ -12,6 +12,8 @@
 
 const MAX_PAYSLIP_PDF_BYTES = 2 * 1024 * 1024;
 const MAX_PAYSLIP_IMAGE_BYTES = 8 * 1024 * 1024;
+/** Time at home with care for children, per child, when the person does not give it (3 years for one child, 6 for two). */
+const CARE_YEARS_PER_CHILD = 3;
 const PAYSLIP_FIELDS = ['employerName', 'jobTitle', 'positionPercent', 'annualSalaryFullTime', 'stillingskode',
   'lonnstrinn', 'ansiennitetsdato'];
 const FORM_TEXT = /^[\p{L}\p{N} .,&()/'-]+$/u;
@@ -531,8 +533,8 @@ function intakeHistory() {
     + (s.children.has === 'yes'
       ? `<label for="scr-children-count">Hvor mange barn?</label><input id="scr-children-count" type="number" min="1" max="20" step="1" `
         + `value="${esc(s.children.count)}" oninput="scr('children','count',this.value)">`
-        + `<p>Hvor lenge har du samlet vært hjemme med omsorg for barn?</p>` + timeFields('children')
-        + `<p class="small">Antall barn alene gir ikke ansiennitet. Vi trenger hvor lenge du var hjemme med omsorg.</p>`
+        + `<p class="small">Du trenger ikke oppgi tid. Vi regner med 3 år hjemme med omsorg per barn: 3 år for ett barn, 6 år for to barn, og så videre.</p>`
+        + `<p class="small">Hva som faktisk teller som ansiennitet avhenger av avtalen, og arbeidsgiveren avgjør.</p>`
       : ''));
   const q6 = qCard(6, 'Har du hatt andre perioder med arbeid eller omsorg i hjemmet?',
     `<p class="small">Ikke ta med tiden du allerede har oppgitt for omsorg for barn.</p>` + yesNo('otherHome', 'Andre perioder i hjemmet?')
@@ -577,7 +579,7 @@ function screeningError() {
   for (const [key, n] of [['aupair', 3], ['military', 4], ['children', 5], ['otherHome', 6]]) {
     const a = s[key];
     if (a.has === '') return `Spørsmål ${n}: svar ja eller nei.`;
-    if (a.has === 'yes') {
+    if (a.has === 'yes' && key !== 'children') { // the time for children is 3 years per child, not typed in
       const t = timeValue(a);
       if (!t) return `Spørsmål ${n}: oppgi år (0–60) og måneder (0–11) som hele tall.`;
       if (t.total === 0) return `Spørsmål ${n}: oppgi hvor lenge, eller svar nei.`;
@@ -634,7 +636,7 @@ function buildEstimate() {
     if (s.military.country) screening.militaryService.country = s.military.country;
   }
   if (s.children.has === 'yes') {
-    screening.childCare = { children: Number(s.children.count), duration: dur(timeValue(s.children)),
+    screening.childCare = { children: Number(s.children.count), duration: { years: Number(s.children.count) * CARE_YEARS_PER_CHILD, months: 0 },
       approximate: s.children.approx };
   }
   if (s.otherHome.has === 'yes') {
