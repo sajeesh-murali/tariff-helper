@@ -366,6 +366,7 @@ function fieldHint(k) {
   if (status === 'confirmed') return '<span class="small">Funnet og bekreftet to ganger</span>';
   if (status === 'disagree') return '<span class="small"><b>Sjekk denne:</b> vi leste den ulikt to ganger. Se lønnsslippen.</span>';
   if (status === 'rules' || status === 'ai') return '<span class="small">Funnet på lønnsslippen</span>';
+  if (status === 'table') return '<span class="small">Hentet fra Oslo kommunes lønnstabell ut fra lønnstrinnet, siden lønnsslippen ikke har årslønn. Sjekk at det stemmer.</span>';
   if (status === 'notPrinted') return '<span class="small">Står ikke på denne lønnsslippen. Fyll inn selv.</span>';
   if (status === 'notFound') return '<span class="small">Fant vi ikke. Fyll inn selv.</span>';
   return '';
@@ -374,7 +375,7 @@ function fieldHint(k) {
 function missingSummary() {
   if (!intake.fromPayslip || intake.manual) return '';
   const statuses = Object.values(intake.fieldStatus || {});
-  const found = statuses.filter(s => ['confirmed', 'disagree', 'rules', 'ai'].includes(s)).length;
+  const found = statuses.filter(s => ['confirmed', 'disagree', 'rules', 'ai', 'table'].includes(s)).length;
   const check = statuses.filter(s => s === 'disagree').length;
   if (!statuses.length || (found === statuses.length && !check)) return '';
   return (found < statuses.length

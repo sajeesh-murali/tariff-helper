@@ -131,3 +131,90 @@ caveats:
     Foreløpig er bare sykepleierstillinger tilgjengelige for Oslo kommune. Andre yrker (for eksempel helsefagarbeider eller barnehageansatte) har egne lønnsrammer som vi ikke har kunnet lese ennå.
   - >-
     Basert på lønnstabellene som gjelder fra 1. mai 2026. Ansiennitetsreglene er fra avtalen 2022–2024 og senere veiledere; teksten i avtalen 2026–2028 er ikke lest.
+
+# Oslo kommune's general pay table (lønnstabell), valid from 1 May 2026, excluding OU-fond: lønnstrinn (Ltr) -> annual
+# salary at 100% position. Source: the Excel sheet "Lønnstabell Oslo kommune fra 01.05.2026" (columns Ltr and Årslønn),
+# provided by the project owner. It is used only to fill in the full-time salary of a person with a 0% position when the
+# payslip prints no annual salary; pay estimates still come from salaryLadders. A test checks that every step of the
+# ladders above has the same annual salary here.
+lonnstrinnTable:
+  1: 473350
+  2: 476650
+  3: 480050
+  4: 483550
+  5: 487050
+  6: 490650
+  7: 494350
+  8: 498150
+  9: 501950
+  10: 505450
+  11: 509050
+  12: 512550
+  13: 516250
+  14: 520350
+  15: 524350
+  16: 528550
+  17: 532550
+  18: 536750
+  19: 540950
+  20: 545150
+  21: 550050
+  22: 554750
+  23: 559350
+  24: 566600
+  25: 571000
+  26: 576000
+  27: 581200
+  28: 586800
+  29: 592700
+  30: 599100
+  31: 606200
+  32: 614600
+  33: 623400
+  34: 633200
+  35: 643000
+  36: 654100
+  37: 666400
+  38: 677500
+  39: 689300
+  40: 702200
+  41: 714100
+  42: 726900
+  43: 740600
+  44: 752700
+  45: 767500
+  46: 782700
+  47: 798200
+  48: 813500
+  49: 828300
+  50: 844000
+  51: 859400
+  52: 874800
+  53: 891600
+  54: 909000
+  55: 930100
+  56: 951400
+  57: 969300
+  58: 988200
+  59: 1007700
+  60: 1028300
+  61: 1048400
+  62: 1069400
+  63: 1091300
+  64: 1111000
+  65: 1133400
+  66: 1155900
+  67: 1178400
+  68: 1201800
+  69: 1225500
+  70: 1249300
+  71: 1274100
+  72: 1299000
+  73: 1324700
+  74: 1351000
+  75: 1377600
+  76: 1405100
+  77: 1432400
+  78: 1461000
+  79: 1490000
+  80: 1519400

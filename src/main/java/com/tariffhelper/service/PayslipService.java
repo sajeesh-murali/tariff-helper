@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Payslip (PDF or picture) to form values and a suggested agreement: read the text (the PDF text layer, or OCR on
@@ -32,6 +33,8 @@ public class PayslipService {
     public static final String CONFIRMED = "confirmed";
     /** Both readings found a value and they differ; the rules' value is shown and the person is asked to check. */
     public static final String DISAGREE = "disagree";
+    /** The value was not on the payslip; it was looked up in the agreement's pay table from the lønnstrinn. */
+    public static final String FROM_TABLE = "table";
 
     /**
      * @param suggestion  the suggested agreement, or {@link SuggestResponse#none()}; agreement is null when none
@@ -94,6 +97,15 @@ public class PayslipService {
         SuggestResponse suggestion = suggestions.suggest(fields.employerName(), fields.jobTitle());
         Agreement agreement = suggestion.suggestions().stream().findFirst()
                 .flatMap(top -> agreements.findById(top.agreementId())).orElse(null);
+        // A 0% position (called in when needed) has no yearly salary on the slip; the agreement's pay table gives it.
+        if (agreement != null && fields.annualSalaryFullTime() == null && fields.lonnstrinn() != null
+                && Integer.valueOf(0).equals(fields.positionPercent())) {
+            Optional<Integer> fromTable = agreement.annualSalaryForStep(fields.lonnstrinn());
+            if (fromTable.isPresent()) {
+                fields = fields.withAnnualSalaryFullTime(BigDecimal.valueOf(fromTable.get()));
+                status.put("annualSalaryFullTime", FROM_TABLE);
+            }
+        }
         return new Result(fields, suggestion, agreement, status);
     }
 

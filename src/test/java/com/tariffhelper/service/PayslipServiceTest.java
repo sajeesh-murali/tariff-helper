@@ -184,6 +184,50 @@ class PayslipServiceTest {
         assertThat(result.fields().ansiennitetsdato()).isEqualTo(YearMonth.of(2024, 12));
     }
 
+    /** A service with the real agreement files and an Oslo kommune suggestion, for the pay table lookup. */
+    private PayslipService.Result parseInOslo(String text) {
+        AgreementRepository real = new AgreementRepository();
+        when(reader.read(any(), any())).thenReturn(text);
+        when(suggestions.suggest(any(), any())).thenReturn(new SuggestResponse(List.of(
+                new SuggestResponse.Suggestion("oslo-kommune", com.tariffhelper.domain.ConfidenceLevel.HIGH, "test",
+                        null)), com.tariffhelper.domain.SuggestionSource.RULES));
+        when(agreements.findById("oslo-kommune")).thenReturn(real.findById("oslo-kommune"));
+        return new PayslipService(reader, new PayslipRuleReader(), new PayslipRedactor(), extractor, suggestions,
+                agreements, new PayslipProperties(AiMode.OFF)).parse(new byte[] {1});
+    }
+
+    @Test
+    void aZeroPercentPositionInOsloGetsItsFullTimeSalaryFromTheLonnstrinnTable() {
+        String slip = OSLO_HEADER + "S160076 0058000 - Sykepleier 0 01.12.2024 026 - 8 31 Hjemmetjeneste\n";
+
+        PayslipService.Result result = parseInOslo(slip);
+
+        assertThat(result.fields().positionPercent()).isZero();
+        assertThat(result.fields().lonnstrinn()).isEqualTo(31);
+        assertThat(result.fields().annualSalaryFullTime()).isEqualByComparingTo("606200");
+        assertThat(result.fieldStatus()).containsEntry("annualSalaryFullTime", PayslipService.FROM_TABLE);
+    }
+
+    @Test
+    void theTableIsNotUsedWhenThePositionIsAboveZeroOrTheStepIsMissing() {
+        String withPercent = OSLO_HEADER + "S160076 0058000 - Sykepleier 60 01.12.2024 026 - 8 31 Hjemmetjeneste\n";
+        String withoutStep = OSLO_HEADER + "S160076 0058000 - Sykepleier 0 01.12.2024 Hjemmetjeneste\n";
+
+        assertThat(parseInOslo(withPercent).fields().annualSalaryFullTime()).isNull();
+        assertThat(parseInOslo(withoutStep).fields().annualSalaryFullTime()).isNull();
+    }
+
+    @Test
+    void aSalaryPrintedOnTheSlipIsNeverReplacedByTheTable() {
+        String slip = OSLO_HEADER + "S160076 0058000 - Sykepleier 0 01.12.2024 026 - 8 31 Hjemmetjeneste\n"
+                + "Årslønn 100 % 612 300,00\n";
+
+        PayslipService.Result result = parseInOslo(slip);
+
+        assertThat(result.fieldStatus().get("annualSalaryFullTime")).isNotEqualTo(PayslipService.FROM_TABLE);
+        assertThat(result.fields().annualSalaryFullTime()).isNotEqualByComparingTo("606200");
+    }
+
     @Test
     void theRealStepNextToTheAlternativIsKept() {
         String whole = OSLO_HEADER + "S160076 0058000 - Sykepleier 0 01.12.2024 026 - 8 31 Hjemmetjeneste";

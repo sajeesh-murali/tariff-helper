@@ -34,6 +34,12 @@ public record PayslipFields(String stillingskode, Integer lonnstrinn, YearMonth 
                 annualSalaryFullTime);
     }
 
+    /** The same values with this full-time salary (looked up in a pay table, not read from the payslip). */
+    public PayslipFields withAnnualSalaryFullTime(BigDecimal salary) {
+        return new PayslipFields(stillingskode, lonnstrinn, ansiennitetsdato, employerName, jobTitle, positionPercent,
+                salary);
+    }
+
     /** Every value that is missing here is taken from the other reading; a value found here is never replaced. */
     public PayslipFields fillGapsFrom(PayslipFields other) {
         return new PayslipFields(

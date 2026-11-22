@@ -88,6 +88,19 @@ class AgreementRepositoryTest {
         assertSteps("3009", 0, 36, 2, 40, 4, 41, 9, 42, 10, 43, 12, 45, 15, 47, 16, 50);
     }
 
+    /** The general Oslo pay table (Excel "Lønnstabell Oslo kommune fra 01.05.2026") has Ltr 1 to 80. */
+    @Test
+    void osloLonnstrinnTableHasAllStepsAndAgreesWithTheLadders() {
+        assertThat(oslo().lonnstrinnTable()).hasSize(80);
+        assertThat(oslo().annualSalaryForStep(1)).contains(473_350);
+        assertThat(oslo().annualSalaryForStep(31)).contains(606_200);
+        assertThat(oslo().annualSalaryForStep(80)).contains(1_519_400);
+        assertThat(oslo().annualSalaryForStep(81)).isEmpty();
+        // every ladder entry with a step has the same annual salary in the general table
+        oslo().salaryLadders().values().forEach(ladder -> ladder.forEach(entry ->
+                assertThat(oslo().annualSalaryForStep(entry.step())).contains(entry.annualSalary().intValueExact())));
+    }
+
     @Test
     void ksHasNoStepNumbersYet() {
         assertThat(ks().salaryLadders().values()).allSatisfy(ladder ->
