@@ -88,6 +88,7 @@ public class PayslipService {
         // 3. Compare the two readings. A value the rules found is never replaced; the model fills the gaps.
         PayslipFields fields = fromRules.fillGapsFrom(fromModel);
         Map<String, String> status = compare(fromRules, fromModel, reading.notPrinted());
+        log.info("Payslip rules found: {}", PayslipFields.FIELD_NAMES.stream().filter(fromRules::has).toList());
         log.info("Payslip text read: textChars={}, excerptLines={}, foundByRules={}, foundInTotal={}, modelAsked={}, "
                         + "confirmed={}, disagree={}", text.length(), excerpt.isBlank() ? 0 : excerpt.lines().count(),
                 fromRules.foundCount(), fields.foundCount(), ask, count(status, CONFIRMED), count(status, DISAGREE));

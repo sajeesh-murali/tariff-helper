@@ -5,6 +5,8 @@ import com.tariffhelper.llm.AlternativPair;
 import com.tariffhelper.ocr.HeicConverter;
 import com.tariffhelper.ocr.OcrEngine;
 import com.tariffhelper.ocr.OcrProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -23,6 +25,8 @@ public class PayslipFileReader {
     private final OcrEngine ocr;
     private final HeicConverter heic;
     private final int maxSide;
+
+    private static final Logger log = LoggerFactory.getLogger(PayslipFileReader.class);
 
     public PayslipFileReader(PayslipTextReader pdfReader, OcrEngine ocr, HeicConverter heic,
                              OcrProperties ocrProperties) {
@@ -55,7 +59,10 @@ public class PayslipFileReader {
             text.append(ocr.recognize(picture)).append('\n');
         }
         String all = OcrTextCleaner.clean(text.toString());
-        if (AlternativPair.stepLost(all)) {
+        boolean stepLost = AlternativPair.stepLost(all);
+        String second = "notNeeded";
+        if (stepLost) {
+            second = "rejected";
             // The Ltr step of an Oslo payslip was lost: read the pictures once more in another page mode, and keep
             // that reading only when it shows the step and keeps the date on that row (never a worse text).
             try {
@@ -63,14 +70,18 @@ public class PayslipFileReader {
                 for (byte[] picture : pictures) {
                     again.append(ocr.recognizeAsColumns(picture)).append('\n');
                 }
-                String second = OcrTextCleaner.clean(again.toString());
-                if (AlternativPair.recoversStep(all, second)) {
-                    all = second;
+                String secondText = OcrTextCleaner.clean(again.toString());
+                if (AlternativPair.recoversStep(all, secondText)) {
+                    all = secondText;
+                    second = "used";
                 }
             } catch (InvalidRequestException e) {
                 // the second reading is only a help; the first one stays
+                second = "failed";
             }
         }
+        // Counts and flags only: never the text itself.
+        log.info("Payslip picture read: pictures={}, stepLost={}, secondReading={}", pictures.size(), stepLost, second);
         return all.length() <= MAX_CHARS ? all : all.substring(0, MAX_CHARS);
     }
 }
