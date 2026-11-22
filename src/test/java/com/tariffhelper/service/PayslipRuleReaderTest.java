@@ -92,6 +92,22 @@ class PayslipRuleReaderTest {
     }
 
     @Test
+    void anOsloRowIsReadFromTheRowItselfWhenTheTitlesAboveItAreGarbled() {
+        // "St-%" came out as "$t-%" and "L-ramme - Alt" lost its spaces, but the row itself is whole.
+        String text = "Oslo kommune\n"
+                + "Stilling _Stillingskode - Tittel                $t-% - Ansiennitet L-ramme-Alt Ltr      Orgenhet\n"
+                + "S000001 � 0058000 -       Sykepleier          0       01.12.2020      026     - 8 31      Hjemmetjeneste\n";
+
+        PayslipFields fields = new PayslipRuleReader().read(text).fields();
+
+        assertThat(fields.positionPercent()).isZero();
+        assertThat(fields.lonnstrinn()).isEqualTo(31);
+        assertThat(fields.ansiennitetsdato()).isEqualTo(YearMonth.of(2020, 12));
+        assertThat(fields.stillingskode()).isEqualTo("0058000");
+        assertThat(fields.jobTitle()).isEqualTo("Sykepleier");
+    }
+
+    @Test
     void aSevenDigitCodeIsOnlyReadWhenItsLastThreeDigitsAreZero() {
         PayslipRuleReader reader = new PayslipRuleReader();
 

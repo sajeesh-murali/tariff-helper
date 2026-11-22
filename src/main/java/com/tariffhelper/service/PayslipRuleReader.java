@@ -169,7 +169,14 @@ public class PayslipRuleReader {
     private static final Pattern PERCENT = Pattern.compile("^(\\d{1,3})(?:[.,](\\d{1,2}))?%?$");
     private static final Pattern AMOUNT = Pattern.compile(
             "(?<![\\d,])(\\d{1,3}(?:[ .\\u00a0]\\d{3})+|\\d+)(?:,\\d{1,2})?(?!\\d)");
-    private static final Pattern CODE_AND_TITLE = Pattern.compile("^\\s*[A-Za-z]?(\\d{4,7})\\s*(?:[-–:]\\s*)?(\\p{L}.*)$");
+    /**
+     * Oslo's position row: code with a zero sub-code, title, St-%, ansiennitet, pay frame - alternativ and (when the
+     * text recognition kept it) the step. Groups: 1 code, 2 title, 3 percent, 4 date, 5 frame, 6 alternativ, 7 step.
+     */
+    private static final Pattern OSLO_ROW = Pattern.compile(
+            "(?<!\\d)(\\d{4}000)\\s*[-–—]?\\s*(\\p{L}[\\p{L}.'-]*(?: \\p{L}[\\p{L}.'-]*)*)\\s+(\\d{1,3}(?:[.,]\\d{1,2})?)"
+                    + "\\s+(\\d{1,2}[./-]\\d{1,2}[./-]\\d{4})\\s+(\\d{2,4})\\s*[-–]\\s*(\\d{1,2})(?:\\s+(\\d{1,3}))?(?![\\d.,])");
+    private static final Pattern CODE_AND_TITLE =Pattern.compile("^\\s*[A-Za-z]?(\\d{4,7})\\s*(?:[-–:]\\s*)?(\\p{L}.*)$");
     private static final Pattern EMPLOYER_NAME = Pattern.compile(
             "\\b(?:kommunen?|fylkeskommunen?|helseforetak(?:et)?|sykehus(?:et)?|hf|direktorat(?:et)?|universit(?:et(?:et)?|y)"
                     + "|h[øo][gy]skolen?|statens|stiftelsen?)\\b", FLAGS);
@@ -257,7 +264,35 @@ public class PayslipRuleReader {
         if (unclear.contains(Field.DATE)) {
             date = null;
         }
+        // Oslo's position row says everything on one line, so it still reads when the titles above it were garbled.
+        Matcher osloRow = null;
+        int osloRowLine = -1;
+        for (int i = 0; i < lines.size() && osloRow == null; i++) {
+            Matcher candidate = OSLO_ROW.matcher(lines.get(i).raw());
+            if (candidate.find() && !payTableAbove(lines, i)) {
+                osloRow = candidate;
+                osloRowLine = i;
+            }
+        }
+        if (osloRow != null && osloRowLine >= 0) {
+            used.add(osloRowLine);
+            code = code != null || unclear.contains(Field.KODE) ? code : kode(osloRow.group(1));
+            title = title != null || unclear.contains(Field.TITLE) ? title
+                    : validText(osloRow.group(2).strip(), Limits.JOB_TITLE, true);
+            percent = percent != null || unclear.contains(Field.PERCENT) ? percent : percent(osloRow.group(3), false);
+            date = date != null || unclear.contains(Field.DATE) ? date : dateText(osloRow.group(4), false);
+        }
         String trinn = unclear.contains(Field.TRINN) ? null : best(found, Field.TRINN);
+        if (osloRow != null && osloRow.group(7) != null && !unclear.contains(Field.TRINN)) {
+            // The row prints the step after the pay frame and the alternativ; a step found before is wrong when it is
+            // one of those two.
+            String step = trinn(osloRow.group(7));
+            String frame = trinn(osloRow.group(5));
+            String alt = trinn(osloRow.group(6));
+            if (step != null && (trinn == null || trinn.equals(alt) || trinn.equals(frame))) {
+                trinn = step;
+            }
+        }
         String salary = unclear.contains(Field.SALARY) ? null : best(found, Field.SALARY);
         if (salary == null && !unclear.contains(Field.SALARY_PLAIN)) {
             salary = plainSalary(best(found, Field.SALARY_PLAIN), percent, lines);

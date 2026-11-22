@@ -229,6 +229,17 @@ class PayslipServiceTest {
     }
 
     @Test
+    void thePayFrameIsNotKeptAsTheLonnstrinnEither() {
+        // "026 - 8" is the pay frame and the alternativ; the step after it was lost, so 26 must not become the step.
+        String lost = OSLO_HEADER + "S160076 0058000 - Sykepleier 0 01.12.2024 026 - 8 Hjemmetjeneste";
+        when(extractor.extract(anyString())).thenReturn(new PayslipFields(null, 26, null, null, null, null, null));
+
+        PayslipService.Result result = parse(AiMode.ALWAYS, lost);
+
+        assertThat(result.fields().lonnstrinn()).isNull();
+    }
+
+    @Test
     void theRealStepNextToTheAlternativIsKept() {
         String whole = OSLO_HEADER + "S160076 0058000 - Sykepleier 0 01.12.2024 026 - 8 31 Hjemmetjeneste";
         when(extractor.extract(anyString())).thenReturn(new PayslipFields(null, 31, null, null, null, null, null));

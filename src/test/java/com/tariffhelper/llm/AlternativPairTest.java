@@ -48,6 +48,14 @@ class AlternativPairTest {
     }
 
     @Test
+    void thePayFrameIsOnlyAStepWhenTheSameNumberIsPrintedAgainOnItsOwn() {
+        assertThat(AlternativPair.isOnlyTheAlternativ(26,
+                HEADER + "S160076 0058000 - Sykepleier 01.12.2024 026 - 8 Hjemmetjeneste")).isTrue();
+        assertThat(AlternativPair.isOnlyTheAlternativ(26,
+                HEADER + "S160076 0058000 - Sykepleier 0 01.12.2024 026 - 8 26 Hjemmetjeneste")).isFalse();
+    }
+
+    @Test
     void aSecondReadingWithAMisreadPairStillCountsWhenItKeepsFrameAlternativAndStep() {
         String first = HEADER + "S160076 0058000 - Sykepleier 01.12.2024 026 - 8 Hjemmetjeneste";
         String second = HEADER + "|   S160076   0058000 - ——_Sykepleier   |   0   |   01.12.2024   |   0260«- «8  |  31  |   Hjemmetjeneste";

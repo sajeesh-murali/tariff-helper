@@ -105,6 +105,11 @@ public final class AlternativPair {
         for (String line : text.split("\\R")) {
             Matcher pair = RAMME_ALT.matcher(line);
             while (pair.find()) {
+                // The pay frame ("026") is not a step either, unless the same number is printed again on its own
+                // after the pair (a real step 26).
+                if (Integer.parseInt(pair.group(1)) == step && !number.matcher(line).find()) {
+                    return true;
+                }
                 if (Integer.parseInt(pair.group(2)) == step) {
                     int printed = 0;
                     Matcher same = number.matcher(line);
