@@ -36,6 +36,8 @@ import java.util.regex.Pattern;
 @Component
 public class PayslipRuleReader {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(PayslipRuleReader.class);
+
     /** Why a value is empty: the payslip says so, or it simply was not found. */
     public static final String NOT_PRINTED = "notPrinted";
 
@@ -340,7 +342,7 @@ public class PayslipRuleReader {
                     + "|fastl[o\\uFFFD]nn|monthly\\W+(?:salary|pay))(?![a-z])");
     /** An amount with øre ("34 983,33", "34.983,33", "34983,33") or a whole amount with a thousands separator. */
     private static final Pattern MONTHLY_AMOUNT_VALUE = Pattern.compile(
-            "(?<![\\d,.])(\\d{1,3}(?:[ .\\u00a0]\\d{3})+|\\d+)(?:,(\\d{2}))?(?![\\d,])");
+            "(?<![\\d,.])(\\d{1,3}(?:[ .\\u00a0]\\d{3})+|\\d+)(?:[,.](\\d{2}))?(?!\\d)(?![,.]\\d)");
 
     /**
      * The yearly full-time salary worked out from a monthly salary line, or null. The line may print two amounts, the
@@ -350,26 +352,36 @@ public class PayslipRuleReader {
      */
     private static String salaryFromMonthly(List<Line> lines, String percent, java.util.Set<Integer> used) {
         if (percent == null) {
+            log.info("Monthly salary not calculated: no position percentage was read");
             return null;
         }
         int share = Integer.parseInt(percent);
         if (share < 1 || share > 100) {
+            log.info("Monthly salary not calculated: the position percentage is 0 or out of range");
             return null;
         }
+        // Counts only, never the text or the amounts: they show where a payslip stops fitting the rule.
+        int titleLines = 0;
+        int withoutAmounts = 0;
+        int notFitting = 0;
+        int outOfRange = 0;
         for (int i = 0; i < lines.size(); i++) {
-            String folded = fold(lines.get(i).raw());
-            Matcher title = MONTHLY_TITLE.matcher(folded);
-            if (!title.find()) {
+            String raw = lines.get(i).raw();
+            int titleEnd = monthlyTitleEnd(fold(raw));
+            if (titleEnd < 0) {
                 continue;
             }
-            List<BigDecimal> amounts = monthlyAmounts(lines.get(i).raw().substring(Math.min(title.end(), lines.get(i).raw().length())));
+            titleLines++;
+            List<BigDecimal> amounts = monthlyAmounts(raw.substring(Math.min(titleEnd, raw.length())));
             if (amounts.isEmpty()) {
+                withoutAmounts++;
                 continue;
             }
             BigDecimal fullTime;
             if (amounts.size() >= 2) {
                 if (!fitsPosition(amounts.get(0), amounts.get(1), share)) {
-                    continue; // two amounts that do not fit the percentage: nothing says which one is the month's pay
+                    notFitting++; // two amounts that do not fit the percentage: nothing says which is the month's pay
+                    continue;
                 }
                 fullTime = amounts.get(0).max(amounts.get(1));
             } else {
@@ -381,8 +393,37 @@ public class PayslipRuleReader {
                 used.add(i);
                 return String.valueOf(yearly);
             }
+            outOfRange++;
         }
+        log.info("Monthly salary not calculated: titleLines={}, withoutAmounts={}, notFittingPercent={}, outOfRange={}",
+                titleLines, withoutAmounts, notFitting, outOfRange);
         return null;
+    }
+
+    private static final List<String> MONTHLY_WORDS = List.of("manedslonn", "fastlonn", "mndlonn");
+    private static final Pattern FIRST_WORD = Pattern.compile("^\\W*(?:[0-9oil|]{3,5}[a-z]?\\W+)?(\\S{6,14})");
+
+    /**
+     * Where the monthly-salary title ends on this (folded) line, or -1. The title is either written out as in
+     * {@link #MONTHLY_TITLE} or is a single word that is one or two letters off one of the usual ones, because text
+     * recognition misreads å, ø and similar ("Månedslann", "Manedsionn", "Fastlonn").
+     */
+    private static int monthlyTitleEnd(String folded) {
+        Matcher exact = MONTHLY_TITLE.matcher(folded);
+        if (exact.find()) {
+            return exact.end();
+        }
+        Matcher first = FIRST_WORD.matcher(folded);
+        if (first.find()) {
+            String word = plain(first.group(1));
+            for (String title : MONTHLY_WORDS) {
+                int allowed = title.length() >= 9 ? 2 : 1;
+                if (Math.abs(word.length() - title.length()) <= allowed && distance(word, title) <= allowed) {
+                    return first.end(1);
+                }
+            }
+        }
+        return -1;
     }
 
     /** The first amounts (at most two) on a monthly-salary line that look like a month's pay. */

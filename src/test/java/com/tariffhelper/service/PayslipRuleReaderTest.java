@@ -125,6 +125,20 @@ class PayslipRuleReaderTest {
     }
 
     @Test
+    void aMonthlySalaryIsStillFoundWhenTextRecognitionMisreadsTheTitleOrTheDecimals() {
+        String percent = "Stillingsprosent 100";
+        assertThat(monthlySalary(percent, "1100 Månedslann (3003)   41 466,67")).isEqualByComparingTo("497600");
+        assertThat(monthlySalary(percent, "1100 Manedsionn (3003)   41 466,67")).isEqualByComparingTo("497600");
+        assertThat(monthlySalary(percent, "11OO Månedslønn   41 466,67")).isEqualByComparingTo("497600");
+        assertThat(monthlySalary(percent, "Månedslønn   41 466.67")).isEqualByComparingTo("497600");
+        assertThat(monthlySalary(percent, "Månedslønn   41.466,67.")).isEqualByComparingTo("497600");
+        // other words that only look a little like a monthly title are not one
+        assertThat(monthlySalary(percent, "2000 Timelønn (3003)   41 466,67")).isNull();
+        assertThat(monthlySalary(percent, "2102 Overtidslønn   41 466,67")).isNull();
+        assertThat(monthlySalary(percent, "1100 Grunnlønn   41 466,67")).isNull();
+    }
+
+    @Test
     void aMonthlySalaryIsNotCalculatedWhenItCouldBeWrong() {
         // no position percentage: the amount could be the full-time month or the part-time one
         assertThat(monthlySalary("Månedslønn 41 466,67")).isNull();
