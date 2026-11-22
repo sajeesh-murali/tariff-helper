@@ -24,17 +24,17 @@ effectiveFrom: "2026-05-01"
 
 jobCategories:
   - id: nurse
-    label: Nurse (sykepleier)
+    label: Sykepleier
     educationRequired: true
     salaryGroup: "3-year-degree"
   - id: health_care_worker
-    label: Health care worker (helsefagarbeider)
+    label: Helsefagarbeider
     educationRequired: true
     salaryGroup: "skilled-worker"
     note: >-
       We assumed a position that requires a trade certificate (fagbrev) counts as having an education requirement. This has not been confirmed in the rules we found.
   - id: care_assistant
-    label: Care assistant (pleie- or omsorgsassistent)
+    label: Pleie- eller omsorgsassistent
     educationRequired: false
     salaryGroup: "no-education"
     note: >-

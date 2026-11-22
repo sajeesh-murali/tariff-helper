@@ -20,27 +20,27 @@ effectiveFrom: "2025-05-01"
 
 jobCategories:
   - id: kindergarten_assistant
-    label: Kindergarten assistant (barnehageassistent)
+    label: Barnehageassistent
     educationRequired: false
     salaryGroup: "assistant"
     note: >-
       We assumed this position has no specific education requirement. Check the position code in your employment contract.
   - id: skilled_worker
-    label: Child and youth worker (barne- og ungdomsarbeider)
+    label: Barne- og ungdomsarbeider
     educationRequired: true
     salaryGroup: "child-youth-worker"
     note: >-
       We assumed a position that requires a trade certificate (fagbrev) counts as having an education requirement. This has not been confirmed in the rules we found.
   - id: kindergarten_teacher
-    label: Kindergarten teacher (barnehagelærer)
+    label: Barnehagelærer
     educationRequired: true
     salaryGroup: "kindergarten-teacher"
   - id: pedagogical_leader
-    label: Pedagogical leader (pedagogisk leder)
+    label: Pedagogisk leder
     educationRequired: true
     salaryGroup: "pedagogical-leader"
   - id: special_educator
-    label: Special educator (spesialpedagog)
+    label: Spesialpedagog
     educationRequired: true
     salaryGroup: "special-educator"
 

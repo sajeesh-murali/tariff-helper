@@ -16,33 +16,33 @@ effectiveFrom: "2026-05-01"
 
 jobCategories:
   - id: nurse
-    label: Nurse (sykepleier)
+    label: Sykepleier
     educationRequired: true
     salaryGroup: "201"
   - id: specialist_nurse
-    label: Specialist nurse (spesialsykepleier)
+    label: Spesialsykepleier
     educationRequired: true
     salaryGroup: "202"
   - id: kindergarten_teacher
-    label: Kindergarten teacher (barnehagelærer)
+    label: Barnehagelærer
     educationRequired: true
     salaryGroup: "201"
   - id: health_care_worker
-    label: Health care worker (helsefagarbeider)
+    label: Helsefagarbeider
     educationRequired: true
     salaryGroup: "102"
     note: >-
       We assumed a position that requires a trade certificate (fagbrev) counts as having an
       education requirement. This has not been confirmed in the rules we found.
   - id: kindergarten_assistant
-    label: Kindergarten assistant (barnehageassistent)
+    label: Barnehageassistent
     educationRequired: false
     salaryGroup: "101"
     note: >-
       We assumed this position has no specific education requirement (pay group 101).
       Check the position code in your employment contract.
   - id: care_assistant
-    label: Care assistant (pleie- or omsorgsassistent)
+    label: Pleie- eller omsorgsassistent
     educationRequired: false
     salaryGroup: "101"
     note: >-

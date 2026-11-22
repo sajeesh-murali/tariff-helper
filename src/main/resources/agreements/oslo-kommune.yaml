@@ -23,21 +23,21 @@ effectiveFrom: "2026-05-01"
 
 jobCategories:
   - id: nurse
-    label: Nurse (sykepleier, stillingskode 58)
+    label: Sykepleier (stillingskode 58)
     educationRequired: true
     salaryGroup: "2601"
     note: >-
       The figures are for the lowest alternativ (alternativ 01) of lønnsramme 26. Oslo employers often
       offer a higher alternativ, and nurses can negotiate it when they are hired. Your actual offer may be higher.
   - id: specialist_nurse
-    label: Specialist nurse, public health nurse or midwife (spesialutdannet sykepleier, helsesykepleier, jordmor; stillingskode 59, 60, 61)
+    label: Spesialutdannet sykepleier, helsesykepleier eller jordmor (stillingskode 59, 60, 61)
     educationRequired: true
     salaryGroup: "3001"
     note: >-
       The figures are for the lowest alternativ (alternativ 01) of lønnsramme 30. Specialist nurses in geriatrics
       and psychiatry are placed one alternativ higher (lønnsramme 3002), which this estimate does not include.
   - id: clinical_nurse
-    label: Clinical nurse (klinisk sykepleier, stillingskode 94)
+    label: Klinisk sykepleier (stillingskode 94)
     educationRequired: true
     salaryGroup: "3009"
     note: >-

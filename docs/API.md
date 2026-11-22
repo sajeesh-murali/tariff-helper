@@ -41,7 +41,7 @@ A JSON array. One element per agreement:
 | `sector` | string | `municipal`, `municipal-oslo`, `health-trusts` or `state`. |
 | `status` | string | `available` (estimates work) or `placeholder` (listed, but `POST /api/estimates` returns `422`). |
 | `unavailableReason` | string or null | Why a `placeholder` agreement cannot be estimated. Null when `available`. |
-| `jobCategories` | array | Choices for `jobCategory`. Each is `{ "id": "nurse", "label": "Nurse (sykepleier)" }`. Empty for placeholders. |
+| `jobCategories` | array | Choices for `jobCategory`. Each is `{ "id": "nurse", "label": "Sykepleier" }`. Empty for placeholders. |
 
 Example (shortened):
 
@@ -54,8 +54,8 @@ Example (shortened):
     "status": "available",
     "unavailableReason": null,
     "jobCategories": [
-      { "id": "nurse", "label": "Nurse (sykepleier)" },
-      { "id": "care_assistant", "label": "Care assistant (pleie- or omsorgsassistent)" }
+      { "id": "nurse", "label": "Sykepleier" },
+      { "id": "care_assistant", "label": "Pleie- eller omsorgsassistent" }
     ]
   },
   {
@@ -247,7 +247,7 @@ All salary figures are annual and for a full-time (100%) position, in NOK.
 {
   "agreementApplied": "KS Hovedtariffavtale (municipalities)",
   "rulesValidFrom": "2026-05-01",
-  "jobCategory": "Nurse (sykepleier)",
+  "jobCategory": "Sykepleier",
   "salaryGroup": "201",
   "currentFullTimeSalary": 600000,
   "countedYears": 7.58,
