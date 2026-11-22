@@ -35,7 +35,7 @@ public record EstimateRequest(
         @NotNull @Size(max = 30) List<@Valid @NotNull ExperienceDto> experiences,
         @Size(min = 2, max = 100) @Pattern(regexp = FormText.REGEX, message = FormText.MESSAGE) String employerName,
         @Size(max = 60) @Pattern(regexp = FormText.REGEX, message = FormText.MESSAGE) String jobTitle,
-        @Pattern(regexp = "^\\d{1,6}$", message = "must be up to 6 digits") String stillingskode,
+        @Pattern(regexp = "^\\d{1,7}$", message = "must be up to 7 digits") String stillingskode,
         @Min(1) @Max(100) Integer lonnstrinn,
         YearMonth ansiennitetsdato,
         // Optional answers to the questions asked before the estimate, as total time without dates.

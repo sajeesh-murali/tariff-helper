@@ -204,7 +204,7 @@ curl -X POST http://localhost:8080/api/estimates \
 - `jobCategory`: optional, an id from `GET /api/agreements`. Without it, it is derived from `stillingskode`
   (Oslo: 58 nurse, 59/60/61 specialist nurse, 94 clinical nurse) or `jobTitle`; otherwise `400` lists the options.
 - `employerName`, `jobTitle`: letters, digits, spaces and `. , & ( ) / ' -` only; 2 to 100 and up to 60 characters.
-- Payslip values (all optional): `stillingskode` (up to 6 digits), `lonnstrinn` (1 to 100),
+- Payslip values (all optional): `stillingskode` (up to 7 digits), `lonnstrinn` (1 to 100),
   `ansiennitetsdato` (`yyyy-MM`, between 1950-01 and the current month).
 - `positionPercent` and `currentAnnualSalary`: the person's **current** job. The salary is what they actually earn per
   year at that percentage; the app converts it to full time. Both are optional (`positionPercent` 0 to 100). For

@@ -378,7 +378,7 @@ class EstimateApiIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors.stillingskode").exists())
                 .andExpect(content().string(not(containsString("58x"))));
-        postEstimate(twelveYears(base + "\"stillingskode\":\"1234567\""))
+        postEstimate(twelveYears(base + "\"stillingskode\":\"12345678\""))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors.stillingskode").exists());
         postEstimate(twelveYears(base + "\"lonnstrinn\":0"))

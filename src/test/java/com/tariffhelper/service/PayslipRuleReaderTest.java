@@ -47,9 +47,9 @@ class PayslipRuleReaderTest {
                 new Expected("labels with colons and a row under a row of titles",
                         String.join("\n", TestPdf.SAMPLE_PAYSLIP_LINES),
                         fields("7936", 45, YearMonth.of(2015, 8), "Oslo kommune", "Sykepleier", 80, 612300), List.of()),
-                new Expected("Oslo style: titles over values, hourly pay, 0 % means not given", fixture("oslo-style-hourly.txt"),
-                        fields(null, 31, YearMonth.of(2020, 12), "Oslo kommune", "Sykepleier", null, null),
-                        List.of("positionPercent", "annualSalaryFullTime")),
+                new Expected("Oslo style: titles over values, hourly pay, 0 % is kept as 0", fixture("oslo-style-hourly.txt"),
+                        fields("0058000", 31, YearMonth.of(2020, 12), "Oslo kommune", "Sykepleier", 0, null),
+                        List.of("annualSalaryFullTime")),
                 new Expected("boxed table of codes (St.kode, Betegnelse, St-%, LR, Ansiennitet)", fixture("ks-boxed-table.txt"),
                         fields("123456", null, YearMonth.of(2021, 3), "Testby kommune", "Pleiemedarbeider", 88, null),
                         List.of()),
@@ -59,6 +59,46 @@ class PayslipRuleReaderTest {
                 new Expected("employer name over a row that also holds a person's name",
                         fixture("private-header-over-values.txt"),
                         fields(null, null, null, "Eksempel Barnehage AS", null, null, null), List.of()));
+    }
+
+    @Test
+    void anOsloRowWithZeroPercentAndAStepGivesBothValues() {
+        // Under "St-%" the row prints 0 (called in for single shifts) and under "Ltr" it prints 31.
+        String text = "Oslo kommune\n"
+                + "Stilling   Stillingskode - Tittel         St-%   Ansiennitet   L-ramme - Alt   Ltr   Orgenhet\n"
+                + "|  S000001  |  0058000 -  Sykepleier  |   0   |  01.12.2024  |  0260«- «8  |  31  |  Hjemmetjeneste\n";
+
+        PayslipFields fields = new PayslipRuleReader().read(text).fields();
+
+        assertThat(fields.positionPercent()).isZero();
+        assertThat(fields.lonnstrinn()).isEqualTo(31);
+        assertThat(fields.ansiennitetsdato()).isEqualTo(YearMonth.of(2024, 12));
+    }
+
+    @Test
+    void aPictureWithDriftedColumnsStillGivesZeroPercentAndTheStep() {
+        // As read from a photographed Oslo slip: the 0 sits left of the St-% title, the pair is misread.
+        String text = "Oslo kommune\n"
+                + "[_ stiting |                  = Tittel               | st-% | Ansiennitet |L-ramme - Alt [Ltr |      Orgenhet\n"
+                + "|   S000001   0058000 - Sykepleier      |     0     |   01.12.2024   |    0260«- «8  |  31   |    Hjemmetjeneste\n";
+
+        PayslipFields fields = new PayslipRuleReader().read(text).fields();
+
+        assertThat(fields.positionPercent()).isZero();
+        assertThat(fields.lonnstrinn()).isEqualTo(31);
+        // Oslo's seven-digit code is shown exactly as printed, even when the title cell was misread
+        assertThat(fields.stillingskode()).isEqualTo("0058000");
+        assertThat(fields.jobTitle()).isEqualTo("Sykepleier");
+    }
+
+    @Test
+    void aSevenDigitCodeIsOnlyReadWhenItsLastThreeDigitsAreZero() {
+        PayslipRuleReader reader = new PayslipRuleReader();
+
+        assertThat(reader.read("Stillingskode 0059000\n").fields().stillingskode()).isEqualTo("0059000");
+        assertThat(reader.read("Stillingskode 7936000\n").fields().stillingskode()).isEqualTo("7936000");
+        assertThat(reader.read("Stillingskode 0058123\n").fields().stillingskode()).isNull();
+        assertThat(reader.read("Stillingskode 0000000\n").fields().stillingskode()).isNull();
     }
 
     @Test
@@ -105,12 +145,12 @@ class PayslipRuleReaderTest {
     }
 
     @Test
-    void aSevenDigitCodeAndAPayFrameAreNotTakenForTheCodeOrThePayStep() {
+    void aSevenDigitCodeIsKeptAndAPayFrameIsNotTakenForThePayStep() {
         String text = "Stillingskode 0058000 Lønnsramme 24\nLR 4.1\n";
 
         PayslipFields fields = reader.read(text).fields();
 
-        assertThat(fields.stillingskode()).isNull();
+        assertThat(fields.stillingskode()).isEqualTo("0058000");
         assertThat(fields.lonnstrinn()).isNull();
     }
 

@@ -57,14 +57,14 @@ public class PayslipFileReader {
         String all = OcrTextCleaner.clean(text.toString());
         if (AlternativPair.stepLost(all)) {
             // The Ltr step of an Oslo payslip was lost: read the pictures once more in another page mode, and keep
-            // that reading only when it has the step.
+            // that reading only when it shows the step and keeps the date on that row (never a worse text).
             try {
                 StringBuilder again = new StringBuilder();
                 for (byte[] picture : pictures) {
                     again.append(ocr.recognizeAsColumns(picture)).append('\n');
                 }
                 String second = OcrTextCleaner.clean(again.toString());
-                if (!AlternativPair.stepLost(second)) {
+                if (AlternativPair.recoversStep(all, second)) {
                     all = second;
                 }
             } catch (InvalidRequestException e) {

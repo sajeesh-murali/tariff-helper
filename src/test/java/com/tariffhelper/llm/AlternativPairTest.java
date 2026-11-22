@@ -46,4 +46,22 @@ class AlternativPairTest {
         assertThat(AlternativPair.stepLost(HEADER + "Timelonn - 01.08.2026 7,50 328,39")).isFalse();
         assertThat(AlternativPair.stepLost(null)).isFalse();
     }
+
+    @Test
+    void aSecondReadingWithAMisreadPairStillCountsWhenItKeepsFrameAlternativAndStep() {
+        String first = HEADER + "S160076 0058000 - Sykepleier 01.12.2024 026 - 8 Hjemmetjeneste";
+        String second = HEADER + "|   S160076   0058000 - ——_Sykepleier   |   0   |   01.12.2024   |   0260«- «8  |  31  |   Hjemmetjeneste";
+
+        assertThat(AlternativPair.recoversStep(first, second)).isTrue();
+    }
+
+    @Test
+    void aSecondReadingOnlyCountsWhenItShowsTheStepAndKeepsTheDate() {
+        String first = HEADER + "S160076 0058000 - Sykepleier 01.12.2024 026 - 8 Hjemmetjeneste";
+        assertThat(AlternativPair.recoversStep(first,
+                HEADER + "| S160076 | Sykepleier | 0 | 01.12.2024 | 026 - 8 | 31 | Hjemmetjeneste")).isTrue();
+        assertThat(AlternativPair.recoversStep(first, HEADER + "S160076 Sykepleier 01.12.2024 Hjemmetjeneste")).isFalse();
+        assertThat(AlternativPair.recoversStep(first, HEADER + "S160076 Sykepleier 026 - 8 31 Hjemmetjeneste")).isFalse();
+        assertThat(AlternativPair.recoversStep(first, null)).isFalse();
+    }
 }

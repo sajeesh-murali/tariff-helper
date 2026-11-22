@@ -216,4 +216,16 @@ class PayslipFileReaderTest {
 
         assertThat(modes).containsExactly("ordinary");
     }
+
+    @Test
+    void aSecondReadingThatLosesThePairOrTheDateIsNeverUsed() {
+        // no pair row at all (the first reading had the date, the title and the employer)
+        String noPair = HEADER + "S160076 0058000 - Sykepleier 01.12.2024 Hjemmetjeneste\n";
+        // the step is there, but the date on the row was lost
+        String noDate = HEADER + "S160076 0058000 - Sykepleier 026 - 8 31 Hjemmetjeneste\n";
+        for (String second : new String[] {noPair, noDate}) {
+            String text = readerWith(twoReadings(STEP_LOST, second, new ArrayList<>())).read(TestImages.png(1200, 800));
+            assertThat(text).contains("01.12.2024").contains("026 - 8 Hjemmetjeneste");
+        }
+    }
 }

@@ -34,7 +34,7 @@ public class ChatPayslipFieldExtractor implements PayslipFieldExtractor {
 
     private static final YearMonth EARLIEST = YearMonth.of(1950, 1);
     private static final Pattern CODE_FENCE = Pattern.compile("^```(?:json)?\\s*(.*?)\\s*```$", Pattern.DOTALL);
-    private static final Pattern STILLINGSKODE = Pattern.compile("^\\d{1,6}$");
+    private static final Pattern STILLINGSKODE = Pattern.compile("^\\d{1,7}$");
     private static final Pattern YEAR_MONTH = Pattern.compile("^\\d{4}-\\d{2}$");
     private static final Pattern FORM_TEXT =Pattern.compile(FormText.REGEX);
     // An amount as printed on a payslip: 612 300,00 / 612.300,00 / 612300. Group 1 is the whole-NOK part.

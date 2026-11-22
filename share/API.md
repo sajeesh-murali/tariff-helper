@@ -105,7 +105,7 @@ See `requests/sample-estimate.json` and `requests/sample-estimate-employer.json`
 | `experiences` | yes | List of 0 to 30 entries (below). |
 | `employerName` | conditional | 2 to 100 characters, same character whitelist as the payslip employer name. Required when `agreementId` is missing. |
 | `jobTitle` | no | Up to 60 characters, same whitelist. Used to derive `jobCategory`. |
-| `stillingskode` | no | Up to 6 digits. From the payslip. Used to derive `jobCategory` (Oslo) and nothing else. |
+| `stillingskode` | no | Up to 7 digits. From the payslip. Used to derive `jobCategory` (Oslo) and nothing else. |
 | `lonnstrinn` | no | 1 to 100. Pay step from the payslip. Used only to work out the years the employer already credits. |
 | `ansiennitetsdato` | no | `yyyy-MM`, between 1950-01 and the current month. The seniority date from the payslip. |
 
@@ -360,7 +360,7 @@ Any value is `null` when it was not found or did not pass the checks; `currentAn
 4. **Check.** Each value is accepted only if it is in range **and** is written in the excerpt that was sent. Ranges
    are the estimate form's: `employerName` 2 to 100 and `jobTitle` 2 to 60 characters from the same character
    whitelist, `positionPercent` and `lonnstrinn` 1 to 100, `annualSalaryFullTime` 1 to 5,000,000 whole NOK (printed as
-   `612 300,00`, `612.300,00` or `612300`), `stillingskode` up to 6 digits, `ansiennitetsdato` between 1950-01 and now.
+   `612 300,00`, `612.300,00` or `612300`), `stillingskode` up to 7 digits, `ansiennitetsdato` between 1950-01 and now.
    A value the model made up, merged from two columns (for example `7936` and `45` into `793645`) or took from an
    injected instruction is dropped.
 5. **Suggest the agreement.** From the employer name and job title, as described below. The person confirms or

@@ -236,6 +236,15 @@ public class PayslipRuleReader {
             percent = percent == null ? shape[2] : percent;
             date = date == null ? shape[3] : date;
         }
+        if (code == null && !unclear.contains(Field.KODE)) {
+            // Titles lost by the text recognition: Oslo's position row still has the code and the date on one line.
+            String[] row = codeRow(lines);
+            if (row != null) {
+                code = row[0];
+                title = title == null ? row[1] : title;
+                used.add(Integer.parseInt(row[2]));
+            }
+        }
         if (unclear.contains(Field.KODE)) {
             code = null;
         }
@@ -299,10 +308,7 @@ public class PayslipRuleReader {
         if (value == null) {
             return;
         }
-        if (hit.field() == Field.PERCENT && "0".equals(value)) {
-            notPrinted.put("positionPercent", NOT_PRINTED);
-            return;
-        }
+        // A printed 0 is a real answer (someone called in for single shifts has no fixed position), so it is kept.
         if (hit.field() == Field.TITLE) {
             Matcher combined = CODE_AND_TITLE.matcher(value);
             if (combined.matches()) {
@@ -573,6 +579,16 @@ public class PayslipRuleReader {
                 return value;
             }
         }
+        if (hit.field() == Field.PERCENT) {
+            // The columns of a picture drift, so the value may sit outside the title's span.
+            String beforeDate = percentBeforeDate(header, hit, row);
+            if (beforeDate != null) {
+                String value = checkedFor(hit.field(), beforeDate, fraction);
+                if (value != null) {
+                    return value;
+                }
+            }
+        }
         // A row written with single spaces has no columns to line up: the n-th title goes with the n-th value.
         int position = header.hits().indexOf(hit);
         if (position >= 0 && header.hits().size() == row.tokens().size()) {
@@ -677,6 +693,32 @@ public class PayslipRuleReader {
                 .filter(t -> !t.key().isEmpty() && (t.start() + t.end()) / 2 >= from && (t.start() + t.end()) / 2 <= to)
                 .toList();
         return values.size() == runSize ? values.get(at - firstInRun).text() : null;
+    }
+
+    /**
+     * "St-%" directly before "Ansiennitet" in the titles (as on Oslo payslips): the value is the cell right before
+     * the date in the row, wherever the columns ended up when the picture was read.
+     */
+    private static String percentBeforeDate(Line header, Hit hit, Line row) {
+        List<Hit> hits = header.hits();
+        int at = hits.indexOf(hit);
+        if (at < 0 || at + 1 >= hits.size() || hits.get(at + 1).field() != Field.DATE
+                || gapBetween(header, hit, hits.get(at + 1)) > 6) {
+            return null;
+        }
+        List<Token> tokens = row.tokens();
+        for (int i = 0; i < tokens.size(); i++) {
+            if (!DATE.matcher(tokens.get(i).text()).find()) {
+                continue;
+            }
+            for (int k = i - 1; k >= 0; k--) {
+                if (!tokens.get(k).key().isEmpty()) {
+                    return tokens.get(k).text();
+                }
+            }
+            return null;
+        }
+        return null;
     }
 
     private static int gapBetween(Line line, Hit left, Hit right) {
@@ -824,10 +866,13 @@ public class PayslipRuleReader {
         return number >= 1 && number <= 100 ? String.valueOf(number) : null;
     }
 
-    /** The code as the form takes it: up to six digits. A seven-digit number is not accepted. */
+    /**
+     * The code as the slip prints it: up to six digits, or Oslo's seven-digit form with a zero sub-code ("0058000").
+     * Any other seven-digit number is not accepted (it may be a position ID or an occupation code).
+     */
     private static String kode(String raw) {
         String text = digits(raw);
-        return text.matches("\\d{1,6}") && !text.matches("0+") ? text : null;
+        return (text.matches("\\d{1,6}") || text.matches("\\d{4}000")) && !text.matches("0+") ? text : null;
     }
 
     private static final Pattern FRAME_AND_STEP = Pattern.compile("^(\\d{1,3})\\s*/\\s*(\\d{1,3})$");
@@ -963,6 +1008,42 @@ public class PayslipRuleReader {
             }
         }
         return rows;
+    }
+
+    /**
+     * A line with a seven-digit code that ends in 000 ("0058000 - Sykepleier") and a date, outside any pay-line table.
+     * Returns the code, the title next to it (or null) and the line number.
+     */
+    private static String[] codeRow(List<Line> lines) {
+        for (int lineIndex = 0; lineIndex < lines.size(); lineIndex++) {
+            if (payTableAbove(lines, lineIndex)) {
+                continue;
+            }
+            List<Token> tokens = lines.get(lineIndex).tokens();
+            boolean hasDate = tokens.stream().anyMatch(t -> dateText(t.text(), false) != null);
+            for (int i = 0; hasDate && i < tokens.size(); i++) {
+                if (!tokens.get(i).text().matches("\\d{4}000")) {
+                    continue;
+                }
+                String code = kode(tokens.get(i).text());
+                StringBuilder title = new StringBuilder();
+                for (int j = i + 1; j < tokens.size(); j++) {
+                    String word = tokens.get(j).text().replaceFirst("^[^\\p{L}]+", "");
+                    if (word.isEmpty() && title.length() == 0) {
+                        continue; // the dash between the code and the title
+                    }
+                    if (!word.matches("\\p{L}[\\p{L}.'-]*")) {
+                        break;
+                    }
+                    title.append(title.length() == 0 ? "" : " ").append(word);
+                }
+                if (code != null) {
+                    return new String[] {code, validText(title.toString(), Limits.JOB_TITLE, true),
+                            String.valueOf(lineIndex)};
+                }
+            }
+        }
+        return null;
     }
 
     /** Whether one of the few lines above is the title row of a pay-line table (two of Lønnsart, Tekst, Antall, ...). */

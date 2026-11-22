@@ -401,7 +401,7 @@ function intakeConfirm() {
     + jobCategorySelect()
     + field('ansiennitetsdato', 'Ansiennitetsdato på lønnsslippen (valgfritt)', 'month', `min="1950-01" max="${CUR_YM}"`)
     + field('lonnstrinn', 'Lønnstrinn (valgfritt)', 'number', 'min="1" max="100" step="1"')
-    + field('stillingskode', 'Stillingskode (valgfritt)', 'text', 'maxlength="6" inputmode="numeric"')
+    + field('stillingskode', 'Stillingskode (valgfritt)', 'text', 'maxlength="7" inputmode="numeric"')
     + `</div><p class="small">Ansiennitetsdato, lønnstrinn og stillingskode brukes bare til å sammenligne med det vi regner ut. `
     + `De sendes aldri til KI. Velg «Jeg er usikker» hvis du ikke vet hvilken avtale som gjelder; da bruker vi arbeidsgivernavnet. `
     + `For private barnehager må du velge avtalen selv.</p>${intakeError()}`
@@ -435,7 +435,7 @@ function confirmIntake() {
     intake.error = 'Ansiennitetsdato må være en måned mellom januar 1950 og nå.';
   } else if (intake.lonnstrinn !== '' && !(Number.isInteger(Number(intake.lonnstrinn)) && Number(intake.lonnstrinn) >= 1 && Number(intake.lonnstrinn) <= 100)) {
     intake.error = 'Lønnstrinn må være et heltall mellom 1 og 100.';
-  } else if (intake.stillingskode && !/^\d{1,6}$/.test(intake.stillingskode)) {
+  } else if (intake.stillingskode && !/^\d{1,7}$/.test(intake.stillingskode)) {
     intake.error = 'Stillingskode kan bare være opptil 6 siffer.';
   }
   if (intake.error) { render(); return; }

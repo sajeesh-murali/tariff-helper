@@ -25,11 +25,11 @@
    "jobTitle": "Spesialsykepleier",
    "positionPercent": 100,
    "annualSalaryFullTime": null,
-   "stillingskode": null,
+   "stillingskode": "0059000",
    "lonnstrinn": 52,
    "ansiennitetsdato": "2014-06"
   },
-  "notes": "Oslo prints the code as 7 digits (0059000 ~ stillingskode 59?). Mapping 0059000 -> 59 is NOT verified, so the safe answer is null. No årslønn printed."
+  "notes": "Oslo prints the code as 7 digits (0059000); it is shown exactly as printed. No årslønn printed."
  },
  {
   "id": "s03-trondheim-table-below",
@@ -455,13 +455,13 @@
   "expected": {
    "employerName": "Testby kommune",
    "jobTitle": "Assistent",
-   "positionPercent": null,
+   "positionPercent": 0,
    "annualSalaryFullTime": null,
    "stillingskode": null,
    "lonnstrinn": null,
    "ansiennitetsdato": null
   },
-  "notes": "0 % means not given (on-call/hourly). Percent and salary null and marked notPrinted."
+  "notes": "0 % is kept as 0 (on-call/hourly, no fixed position). Salary stays null."
  },
  {
   "id": "s30-lonnsart-row-false-positive",
