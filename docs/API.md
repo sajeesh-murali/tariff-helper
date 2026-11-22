@@ -333,7 +333,7 @@ curl -F "file=@payslip.pdf;type=application/pdf" http://localhost:8080/api/paysl
 `fieldStatus` says, for each of the seven values, where it came from or why it is empty: `confirmed` (the rules and the
 model read the same value), `disagree` (both read a value and they differ; the rules' value is returned and the page asks
 the person to check it), `rules` (only the rules found it), `ai` (only the model found it, and the value was checked),
-`table` (not on the payslip: the full-time salary of a 0% position in Oslo kommune, looked up in the agreement's
+`calculated` (no yearly salary on the payslip: it was worked out from a monthly salary line, "Månedslønn", "Fastlønn", "Lønn pr. måned" and similar, times 12; with two amounts on the line the full-time basis is used when they fit the position percentage, with one amount it is divided by the percentage, and without a percentage nothing is calculated), `table` (not on the payslip: the full-time salary of a 0% position in Oslo kommune, looked up in the agreement's
 lønnstrinn table from the lønnstrinn), `notPrinted` (the payslip itself leaves it out, for example hourly pay has no
 yearly salary) or `notFound`. A printed "St-%" of 0 is returned as `positionPercent` 0. The page uses it to tell the person which fields to check or fill in. Text values count as the same when one
 contains the other once case, spacing and punctuation are ignored; numbers, dates and codes must be equal.

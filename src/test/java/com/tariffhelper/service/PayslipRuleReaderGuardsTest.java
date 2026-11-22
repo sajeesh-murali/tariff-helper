@@ -59,8 +59,9 @@ class PayslipRuleReaderGuardsTest {
                 .annualSalaryFullTime()).isEqualByComparingTo(BigDecimal.valueOf(560000));
         // 80 % and nothing that confirms it: it could be the person's own salary, so it stays empty
         assertThat(read("Stillingsprosent 80", "Årslønn 560 000,00").annualSalaryFullTime()).isNull();
-        // the figure is never calculated: a salary that is only implied by the monthly pay is not made up
-        assertThat(read("Stillingsprosent 80", "1010 Månedslønn   37 333,33").annualSalaryFullTime()).isNull();
+        // no yearly salary at all: the monthly pay line (what is paid at 80 %) gives the full-time figure, 12 months
+        assertThat(read("Stillingsprosent 80", "1010 Månedslønn   37 333,33").annualSalaryFullTime())
+                .isEqualByComparingTo(BigDecimal.valueOf(560000));
         assertThat(read("Stillingsprosent 80", "Årslønn i stilling 448 000,00").annualSalaryFullTime()).isNull();
     }
 

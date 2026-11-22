@@ -91,6 +91,60 @@ class PayslipRuleReaderTest {
         assertThat(fields.jobTitle()).isEqualTo("Sykepleier");
     }
 
+    private static java.math.BigDecimal monthlySalary(String... lines) {
+        return new PayslipRuleReader().read(String.join("\n", lines)).fields().annualSalaryFullTime();
+    }
+
+    @Test
+    void aMonthlySalaryGivesTheYearlySalaryWhenTheSlipPrintsNoYearlyOne() {
+        // two amounts on the line: the basis for a full position and the amount paid at 91,62 %
+        PayslipRuleReader.Reading reading = new PayslipRuleReader().read(String.join("\n",
+                "Teststad kommune",
+                "St.kode         Betegnelse            St-%      LR     Ansiennitet",
+                "658300          Pleiemedarbeider      91,62     4.1    01.02.2022",
+                "1100 | Månedslønn (3003)                       34 983,33          32 051,73",
+                "1100E | Etterbetaling månedslønn (3003)        1 000,00"));
+
+        assertThat(reading.fields().positionPercent()).isEqualTo(92);
+        assertThat(reading.fields().annualSalaryFullTime()).isEqualByComparingTo("419800");
+        assertThat(reading.calculated()).containsExactly("annualSalaryFullTime");
+    }
+
+    @Test
+    void variousWaysOfWritingAMonthlySalaryAreRecognised() {
+        String percent = "Stillingsprosent 100";
+        assertThat(monthlySalary(percent, "Månedslønn: 41 466,67")).isEqualByComparingTo("497600");
+        assertThat(monthlySalary(percent, "Fast månedslønn kr 41 466,67")).isEqualByComparingTo("497600");
+        assertThat(monthlySalary(percent, "1100 Manedslonn 41 466,67")).isEqualByComparingTo("497600"); // å and ø lost
+        assertThat(monthlySalary(percent, "Fastlønn (månedlig)      41 466,67")).isEqualByComparingTo("497600");
+        assertThat(monthlySalary(percent, "Lønn pr. måned 41 466,67")).isEqualByComparingTo("497600");
+        assertThat(monthlySalary(percent, "Monthly salary 41 466,67")).isEqualByComparingTo("497600");
+        assertThat(monthlySalary(percent, "1000 Månedslønn  1,00  41466,67")).isEqualByComparingTo("497600");
+        // a share of the full position: what is paid at 50 % is half of the full-time month
+        assertThat(monthlySalary("Stillingsprosent 50", "Månedslønn 20 733,33")).isEqualByComparingTo("497600");
+    }
+
+    @Test
+    void aMonthlySalaryIsNotCalculatedWhenItCouldBeWrong() {
+        // no position percentage: the amount could be the full-time month or the part-time one
+        assertThat(monthlySalary("Månedslønn 41 466,67")).isNull();
+        // no position at all (0 %): there is no fixed pay to scale up
+        assertThat(monthlySalary("Stillingsprosent 0", "Månedslønn 41 466,67")).isNull();
+        // two amounts that do not fit the percentage: nothing says which one is the month's pay
+        assertThat(monthlySalary("Stillingsprosent 50", "Månedslønn 34 983,33   32 051,73")).isNull();
+        // other pay lines that mention a monthly salary are not the monthly salary
+        assertThat(monthlySalary("Stillingsprosent 100", "1100E Etterbetaling månedslønn (3003) 5 000,00",
+                "1842 Ferietrekk totalt - fastlønn juni (3003) 3 000,00", "6000 Trekk - timer fastlønn 4 000,00")).isNull();
+        // a period or a pay code is not an amount
+        assertThat(monthlySalary("Stillingsprosent 100", "1000 Månedslønn 202610 1,00")).isNull();
+    }
+
+    @Test
+    void aPrintedYearlySalaryIsUsedBeforeAnyMonthlyOne() {
+        assertThat(monthlySalary("Stillingsprosent 100", "Årslønn 560 000,00", "Månedslønn 41 466,67"))
+                .isEqualByComparingTo("560000");
+    }
+
     @Test
     void anOsloRowIsReadFromTheRowItselfWhenTheTitlesAboveItAreGarbled() {
         // "St-%" came out as "$t-%" and "L-ramme - Alt" lost its spaces, but the row itself is whole.

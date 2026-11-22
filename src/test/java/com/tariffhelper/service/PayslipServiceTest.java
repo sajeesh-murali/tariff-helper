@@ -229,6 +229,16 @@ class PayslipServiceTest {
     }
 
     @Test
+    void aYearlySalaryWorkedOutFromAMonthlySalaryIsMarkedAsCalculated() {
+        String slip = "Oslo kommune\nStillingsprosent 100\n1000 Månedslønn  1,00  41 466,67\n";
+
+        PayslipService.Result result = parse(AiMode.OFF, slip);
+
+        assertThat(result.fields().annualSalaryFullTime()).isEqualByComparingTo("497600");
+        assertThat(result.fieldStatus()).containsEntry("annualSalaryFullTime", PayslipService.CALCULATED);
+    }
+
+    @Test
     void thePayFrameIsNotKeptAsTheLonnstrinnEither() {
         // "026 - 8" is the pay frame and the alternativ; the step after it was lost, so 26 must not become the step.
         String lost = OSLO_HEADER + "S160076 0058000 - Sykepleier 0 01.12.2024 026 - 8 Hjemmetjeneste";

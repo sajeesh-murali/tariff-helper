@@ -24,12 +24,12 @@
    "employerName": "Oslo kommune",
    "jobTitle": "Spesialsykepleier",
    "positionPercent": 100,
-   "annualSalaryFullTime": null,
+   "annualSalaryFullTime": 697350,
    "stillingskode": "0059000",
    "lonnstrinn": 52,
    "ansiennitetsdato": "2014-06"
   },
-  "notes": "Oslo prints the code as 7 digits (0059000); it is shown exactly as printed. No årslønn printed."
+  "notes": "Oslo prints the code as 7 digits (0059000); it is shown exactly as printed. No årslønn printed: 58 112,50 per month at 100 % x 12."
  },
  {
   "id": "s03-trondheim-table-below",
@@ -88,12 +88,12 @@
    "employerName": "Helse Testfjord HF",
    "jobTitle": "Helsefagarbeider",
    "positionPercent": 100,
-   "annualSalaryFullTime": null,
+   "annualSalaryFullTime": 468500,
    "stillingskode": null,
    "lonnstrinn": null,
    "ansiennitetsdato": "2012-09"
   },
-  "notes": "HARD: Basislønn includes fixed individual tillegg (Helse Stavanger guide), so it is not the tariff årslønn. Safe answer: salary null."
+  "notes": "No årslønn: the monthly pay 39 041,67 at 100 % x 12. (Basislønn is not used as the tariff årslønn.)"
  },
  {
   "id": "s07-pbl-kindergarten-years",
@@ -120,12 +120,12 @@
    "employerName": "Stiftelsen Eksempelhjemmet",
    "jobTitle": "Vernepleier",
    "positionPercent": 60,
-   "annualSalaryFullTime": null,
+   "annualSalaryFullTime": 530000,
    "stillingskode": null,
    "lonnstrinn": null,
    "ansiennitetsdato": "2020-01"
   },
-  "notes": "HARD: only monthly pay is printed. Do not derive årslønn (26 500 x 12 / 0,6 would be arithmetic on an unconfirmed basis). Salary null."
+  "notes": "Only monthly pay is printed: 26 500 is what is paid at 60 %, so full time is 26 500 / 0,6 x 12."
  },
  {
   "id": "s09-agency-hourly",

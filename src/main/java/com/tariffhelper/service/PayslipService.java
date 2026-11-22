@@ -35,6 +35,8 @@ public class PayslipService {
     public static final String DISAGREE = "disagree";
     /** The value was not on the payslip; it was looked up in the agreement's pay table from the lønnstrinn. */
     public static final String FROM_TABLE = "table";
+    /** The value was worked out from other values on the payslip (a monthly salary times 12). */
+    public static final String CALCULATED = "calculated";
 
     /**
      * @param suggestion  the suggested agreement, or {@link SuggestResponse#none()}; agreement is null when none
@@ -87,7 +89,7 @@ public class PayslipService {
         PayslipFields fromModel = answer == null ? PayslipFields.empty() : withoutAlternativ(answer, text);
         // 3. Compare the two readings. A value the rules found is never replaced; the model fills the gaps.
         PayslipFields fields = fromRules.fillGapsFrom(fromModel);
-        Map<String, String> status = compare(fromRules, fromModel, reading.notPrinted());
+        Map<String, String> status = compare(fromRules, fromModel, reading.notPrinted(), reading.calculated());
         log.info("Payslip rules found: {}", PayslipFields.FIELD_NAMES.stream().filter(fromRules::has).toList());
         log.info("Payslip text read: textChars={}, excerptLines={}, foundByRules={}, foundInTotal={}, modelAsked={}, "
                         + "confirmed={}, disagree={}", text.length(), excerpt.isBlank() ? 0 : excerpt.lines().count(),
@@ -121,7 +123,7 @@ public class PayslipService {
     }
 
     private static Map<String, String> compare(PayslipFields byRules, PayslipFields byModel,
-                                               Map<String, String> notPrinted) {
+                                               Map<String, String> notPrinted, java.util.Set<String> calculated) {
         Map<String, String> status = new LinkedHashMap<>();
         for (String field : PayslipFields.FIELD_NAMES) {
             boolean rules = byRules.has(field);
@@ -129,7 +131,7 @@ public class PayslipService {
             if (rules && model) {
                 status.put(field, same(byRules.valueOf(field), byModel.valueOf(field)) ? CONFIRMED : DISAGREE);
             } else if (rules) {
-                status.put(field, "rules");
+                status.put(field, calculated.contains(field) ? CALCULATED : "rules");
             } else if (model) {
                 status.put(field, "ai");
             } else {

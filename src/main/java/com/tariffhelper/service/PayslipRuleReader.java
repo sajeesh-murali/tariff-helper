@@ -43,7 +43,12 @@ public class PayslipRuleReader {
      * @param notPrinted fields that the payslip itself leaves out or marks as not given (for example 0 %)
      * @param usedLines  the numbers of the lines the values were read from, so the excerpt for the model can include them
      */
-    public record Reading(PayslipFields fields, Map<String, String> notPrinted, java.util.Set<Integer> usedLines) {
+    public record Reading(PayslipFields fields, Map<String, String> notPrinted, java.util.Set<Integer> usedLines,
+                          java.util.Set<String> calculated) {
+
+        public Reading(PayslipFields fields, Map<String, String> notPrinted, java.util.Set<Integer> usedLines) {
+            this(fields, notPrinted, usedLines, java.util.Set.of());
+        }
     }
 
     /**
@@ -297,6 +302,12 @@ public class PayslipRuleReader {
         if (salary == null && !unclear.contains(Field.SALARY_PLAIN)) {
             salary = plainSalary(best(found, Field.SALARY_PLAIN), percent, lines);
         }
+        // No yearly salary on the slip: a monthly salary (månedslønn, fastlønn, ...) times 12 is the next best thing.
+        boolean calculated = false;
+        if (salary == null && !unclear.contains(Field.SALARY) && !unclear.contains(Field.SALARY_PLAIN)) {
+            salary = salaryFromMonthly(lines, percent, used);
+            calculated = salary != null;
+        }
         String employer = best(found, Field.EMPLOYER);
         if (employer == null) {
             employer = letterhead(lines, used);
@@ -312,7 +323,102 @@ public class PayslipRuleReader {
         if (fields.positionPercent() == null && hourlyPay(text)) {
             notPrinted.put("positionPercent", NOT_PRINTED);
         }
-        return new Reading(fields, notPrinted, used);
+        return new Reading(fields, notPrinted, used,
+                calculated && fields.annualSalaryFullTime() != null
+                        ? java.util.Set.of("annualSalaryFullTime") : java.util.Set.of());
+    }
+
+    /**
+     * A pay line that starts with a monthly-salary title, after an optional pay code: "1100 Månedslønn (3003) ...",
+     * "Fast månedslønn", "Månedslønn:", "Fastlønn", "Lønn pr. måned", "Monthly salary". Matched on the line with
+     * accents folded, so a lost "å" or "ø" in the text recognition does not matter. A title further into the line
+     * ("Etterbetaling månedslønn", "Ferietrekk ... fastlønn", "Trekk - timer fastlønn") is another kind of line.
+     */
+    private static final Pattern MONTHLY_TITLE = Pattern.compile(
+            "^\\W*(?:\\d{3,5}[a-z]?\\W+)?(?:fast\\W*)?(?:m[a\\uFFFD]nedsl[o\\uFFFD]nn|maanedslonn|mnd\\W*l[o\\uFFFD]nn"
+                    + "|m[a\\uFFFD]nedlig\\W+(?:fast\\W+)?l[o\\uFFFD]nn|l[o\\uFFFD]nn\\W+(?:pr|per)\\W*m[a\\uFFFD]ned"
+                    + "|fastl[o\\uFFFD]nn|monthly\\W+(?:salary|pay))(?![a-z])");
+    /** An amount with øre ("34 983,33", "34.983,33", "34983,33") or a whole amount with a thousands separator. */
+    private static final Pattern MONTHLY_AMOUNT_VALUE = Pattern.compile(
+            "(?<![\\d,.])(\\d{1,3}(?:[ .\\u00a0]\\d{3})+|\\d+)(?:,(\\d{2}))?(?![\\d,])");
+
+    /**
+     * The yearly full-time salary worked out from a monthly salary line, or null. The line may print two amounts, the
+     * basis for a full position ("Ant/Gr.lag") and the amount paid ("Beløp"); when they fit the position percentage
+     * the basis is the full-time month. With one amount, that amount is taken as what the person is paid for the
+     * position, so it is divided by the percentage; without a percentage nothing is guessed (it could be either).
+     */
+    private static String salaryFromMonthly(List<Line> lines, String percent, java.util.Set<Integer> used) {
+        if (percent == null) {
+            return null;
+        }
+        int share = Integer.parseInt(percent);
+        if (share < 1 || share > 100) {
+            return null;
+        }
+        for (int i = 0; i < lines.size(); i++) {
+            String folded = fold(lines.get(i).raw());
+            Matcher title = MONTHLY_TITLE.matcher(folded);
+            if (!title.find()) {
+                continue;
+            }
+            List<BigDecimal> amounts = monthlyAmounts(lines.get(i).raw().substring(Math.min(title.end(), lines.get(i).raw().length())));
+            if (amounts.isEmpty()) {
+                continue;
+            }
+            BigDecimal fullTime;
+            if (amounts.size() >= 2) {
+                if (!fitsPosition(amounts.get(0), amounts.get(1), share)) {
+                    continue; // two amounts that do not fit the percentage: nothing says which one is the month's pay
+                }
+                fullTime = amounts.get(0).max(amounts.get(1));
+            } else {
+                fullTime = amounts.get(0).multiply(BigDecimal.valueOf(100))
+                        .divide(BigDecimal.valueOf(share), 6, RoundingMode.HALF_UP);
+            }
+            long yearly = fullTime.multiply(BigDecimal.valueOf(12)).setScale(0, RoundingMode.HALF_UP).longValue();
+            if (yearly >= 10_000 && yearly <= MAX_SALARY) {
+                used.add(i);
+                return String.valueOf(yearly);
+            }
+        }
+        return null;
+    }
+
+    /** The first amounts (at most two) on a monthly-salary line that look like a month's pay. */
+    private static List<BigDecimal> monthlyAmounts(String rest) {
+        String cleaned = rest.replaceAll("\\([^)]*\\)", " ")            // "(3003)": a pay code, not an amount
+                .replaceAll("\\d{1,3}(?:[.,]\\d{1,2})?\\s*%", " ");        // "91,62 %": a percentage
+        List<BigDecimal> amounts = new ArrayList<>();
+        Matcher matcher = MONTHLY_AMOUNT_VALUE.matcher(cleaned);
+        while (matcher.find() && amounts.size() < 2) {
+            boolean looksLikeMoney = matcher.group(2) != null || matcher.group(1).matches(".*[ .\\u00a0].*");
+            String whole = matcher.group(1).replaceAll("[ .\\u00a0]", "");
+            if (!looksLikeMoney || whole.length() > 7) {
+                continue; // "202610" (a period) or "3003" (a pay code) is a number, not an amount
+            }
+            BigDecimal amount = new BigDecimal(whole + (matcher.group(2) == null ? "" : "." + matcher.group(2)));
+            if (amount.compareTo(BigDecimal.valueOf(3_000)) >= 0 && amount.compareTo(BigDecimal.valueOf(400_000)) <= 0) {
+                amounts.add(amount);
+            }
+        }
+        return amounts;
+    }
+
+    /** The paid amount is the position's share of the full-time amount (the printed percentage is rounded). */
+    private static boolean fitsPosition(BigDecimal first, BigDecimal second, int share) {
+        BigDecimal big = first.max(second);
+        BigDecimal small = first.min(second);
+        BigDecimal ratio = small.divide(big, 6, RoundingMode.HALF_UP);
+        return ratio.compareTo(BigDecimal.valueOf(share - 0.5).movePointLeft(2).subtract(BigDecimal.valueOf(0.002))) >= 0
+                && ratio.compareTo(BigDecimal.valueOf(share + 0.5).movePointLeft(2).add(BigDecimal.valueOf(0.002))) <= 0;
+    }
+
+    /** Lower case with æ, ø and å written as a, o and a; everything else stays, so positions in the line hold. */
+    private static String fold(String text) {
+        return text.toLowerCase(Locale.ROOT)
+                .replace('ø', 'o').replace('ö', 'o').replace('å', 'a').replace('ä', 'a').replace('æ', 'a')
+                .replace('é', 'e').replace('è', 'e');
     }
 
     /** Hourly pay: there is no yearly salary or position percentage to find. */
