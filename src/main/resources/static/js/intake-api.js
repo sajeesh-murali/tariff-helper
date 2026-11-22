@@ -854,7 +854,11 @@ function intakeBooking() {
     + `for å booke tid. Navn og e-post jeg skriver der deles med Calendly. Anslaget mitt blir ikke delt. `
     + `<a href="#personvern">Personvern</a></span></label>`
     + (ready ? '' : `<div class="notice">Bookinglenken er ikke satt opp ennå.</div>`)
-    + `<button class="btn cta-btn" ${intake.bookingConsent && ready ? '' : 'disabled'} onclick="openBooking()">Åpne kalenderen</button>`
+    // The calendar is embedded where the old button was. It loads only after consent, since loading it contacts Calendly.
+    + (intake.bookingConsent && ready
+      ? `<iframe class="booking-frame" src="${esc(bookingUrl)}" title="Kalender for å booke samtale" `
+        + `loading="lazy" referrerpolicy="no-referrer" style="width:100%;height:700px;border:0;margin-top:16px"></iframe>`
+      : `<p class="small">Kalenderen vises her når du har huket av.</p>`)
     + `</div><button class="textbtn" style="margin-top:24px" onclick="go(3)">Tilbake til anslaget</button></section>`;
 }
 
