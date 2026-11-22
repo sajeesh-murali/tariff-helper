@@ -151,6 +151,7 @@ public class EstimateService {
                 currentFullTime,
                 seniority.countedYears(),
                 seniority.countedYearsIfAllAccepted(),
+                seniority.enteredYears(),
                 minimum,
                 difference,
                 seniority.perExperience(),

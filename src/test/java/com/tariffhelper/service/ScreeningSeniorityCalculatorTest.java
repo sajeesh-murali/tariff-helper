@@ -117,6 +117,20 @@ class ScreeningSeniorityCalculatorTest {
     }
 
     @Test
+    void everyEnteredPeriodIsListedAndAddedUpEvenWhenItDoesNotCountOrOverlaps() {
+        // 18 months au pair (earns nothing) and 36 months of care for 1 child, said to have happened at the same time
+        SeniorityResult result = run(screening(null, null, new PeriodAnswer(months(18), null), null,
+                new ChildCareAnswer(1, months(36), null), null, PeriodOverlap.YES));
+
+        assertThat(result.perExperience()).extracting(PerExperience::label)
+                .containsExactly("Au pair", "Omsorg for egne barn hjemme");
+        assertThat(result.perExperience()).extracting(PerExperience::enteredMonths).containsExactly(18, 36);
+        assertThat(result.enteredMonths()).isEqualTo(54);
+        // the months that count for pay are not changed by this
+        assertThat(result.countedMonths()).isLessThan(54);
+    }
+
+    @Test
     void militaryServiceCountsInFullAndServiceAbroadGetsANote() {
         MilitaryAnswer norway = new MilitaryAnswer(months(12), "NO", null);
         MilitaryAnswer abroad = new MilitaryAnswer(months(12), "de", null);

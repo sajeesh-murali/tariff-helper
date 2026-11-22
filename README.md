@@ -226,7 +226,7 @@ curl -X POST http://localhost:8080/api/estimates \
 
 ### Response
 
-All salary figures are annual, full time. Main fields: `countedYears`, `countedYearsIfAllAccepted`,
+All salary figures are annual, full time. Main fields: `countedYears`, `countedYearsIfAllAccepted`, `enteredYears` (all entered periods added up, display only),
 `estimatedMinimumSalary` (min/max), `differenceFromCurrent` (negative = already above the minimum),
 `perExperience` (months counted and why), `caveats`, `disclaimer`, and:
 

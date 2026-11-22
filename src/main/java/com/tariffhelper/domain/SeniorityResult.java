@@ -18,6 +18,15 @@ public record SeniorityResult(int countedMonths, int possibleExtraMonths, List<P
         return years(countedMonths + possibleExtraMonths);
     }
 
+    /** Everything the person entered, added up: overlap is not removed and no period is left out. Not used for pay. */
+    public int enteredMonths() {
+        return perExperience.stream().mapToInt(PerExperience::enteredMonths).sum();
+    }
+
+    public BigDecimal enteredYears() {
+        return years(enteredMonths());
+    }
+
     public static BigDecimal years(int months) {
         return BigDecimal.valueOf(months).divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
     }

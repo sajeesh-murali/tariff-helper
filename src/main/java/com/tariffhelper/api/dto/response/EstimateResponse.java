@@ -15,6 +15,8 @@ import java.util.List;
  * @param currentFullTimeSalary  null when the person gave no fixed position percentage or no salary
  * @param differenceFromCurrent  null in the same case: there is nothing to compare with
  * @param agreementSuggestion present only when the agreement was not given in the request
+ * @param enteredYears        all periods the person entered added up, overlap included and none left out; shown
+ *                            next to the counted years and never used for pay
  * @param confidence          calculated in code, never by the LLM; a label with reasons, not a probability
  * @param creditedVsCounted   present only when payslip values allowed a comparison, otherwise null
  */
@@ -26,6 +28,7 @@ public record EstimateResponse(
         BigDecimal currentFullTimeSalary,
         BigDecimal countedYears,
         BigDecimal countedYearsIfAllAccepted,
+        BigDecimal enteredYears,
         SalaryRange estimatedMinimumSalary,
         SalaryRange differenceFromCurrent,
         List<PerExperience> perExperience,

@@ -40,7 +40,7 @@ public class ScreeningSeniorityCalculator {
     /** Far from any real date, so these synthetic periods never overlap periods the person entered with dates. */
     private static final YearMonth BASE = YearMonth.of(3000, 1);
 
-    private record Bucket(String label, ExperienceKind kind, String country, int months, boolean approximate,
+    private record Bucket(String label, String nbLabel, ExperienceKind kind, String country, int months, boolean approximate,
                           String extraNote) {
     }
 
@@ -100,7 +100,8 @@ public class ScreeningSeniorityCalculator {
             int possible = range
                     ? Math.max(0, sum.countedMonths() + sum.possibleExtraMonths() - counted)
                     : sum.possibleExtraMonths();
-            entries.add(new PerExperience(datedCount + i, counted, possible, note(b, sum.note(), range)));
+            entries.add(new PerExperience(datedCount + i, counted, possible, note(b, sum.note(), range),
+                    b.months(), b.nbLabel()));
             summaryCounted += counted;
             summaryPossible += possible;
         }
@@ -149,35 +150,35 @@ public class ScreeningSeniorityCalculator {
         if (s == null) {
             return list;
         }
-        work(list, s.workInNorway(), "Work in Norway", "NO");
-        work(list, s.workAbroad(), "Work outside Norway", "XX");
+        work(list, s.workInNorway(), "Work in Norway", "Arbeid i Norge", "NO");
+        work(list, s.workAbroad(), "Work outside Norway", "Arbeid utenfor Norge", "XX");
         if (s.auPair() != null && months(s.auPair().duration()) > 0) {
-            list.add(new Bucket("Au pair", ExperienceKind.AU_PAIR, "XX", months(s.auPair().duration()),
+            list.add(new Bucket("Au pair", "Au pair", ExperienceKind.AU_PAIR, "XX", months(s.auPair().duration()),
                     Boolean.TRUE.equals(s.auPair().approximate()), null));
         }
         if (s.militaryService() != null && months(s.militaryService().duration()) > 0) {
             String country = s.militaryService().country();
             boolean abroad = country != null && !country.equalsIgnoreCase("NO");
-            list.add(new Bucket("Military or civil service", ExperienceKind.MILITARY_SERVICE,
+            list.add(new Bucket("Military or civil service", "Militær- eller siviltjeneste", ExperienceKind.MILITARY_SERVICE,
                     country == null ? "NO" : country.toUpperCase(), months(s.militaryService().duration()),
                     Boolean.TRUE.equals(s.militaryService().approximate()),
                     abroad ? "The rules we found do not say whether service abroad counts the same way; "
                             + "the employer decides." : null));
         }
         if (s.childCare() != null && months(s.childCare().duration()) > 0) {
-            list.add(new Bucket("Care for your own children at home", ExperienceKind.CARE_WORK, "NO",
+            list.add(new Bucket("Care for your own children at home", "Omsorg for egne barn hjemme", ExperienceKind.CARE_WORK, "NO",
                     months(s.childCare().duration()), Boolean.TRUE.equals(s.childCare().approximate()), null));
         }
         if (s.otherHome() != null && months(s.otherHome().duration()) > 0) {
             ExperienceKind type = s.otherHome().type();
             list.add(new Bucket(type == ExperienceKind.CARE_WORK ? "Other care at home" : "Other work in the home",
-                    type, "NO", months(s.otherHome().duration()),
+                    type == ExperienceKind.CARE_WORK ? "Annen omsorg i hjemmet" : "Annet arbeid i hjemmet", type, "NO", months(s.otherHome().duration()),
                     Boolean.TRUE.equals(s.otherHome().approximate()), null));
         }
         return list;
     }
 
-    private static void work(List<Bucket> list, WorkAnswer answer, String label, String country) {
+    private static void work(List<Bucket> list, WorkAnswer answer, String label, String nbLabel, String country) {
         if (answer == null || months(answer.duration()) == 0) {
             return;
         }
@@ -185,11 +186,11 @@ public class ScreeningSeniorityCalculator {
         int own = Math.min(months(answer.selfEmployed()), total);
         boolean approximate = Boolean.TRUE.equals(answer.approximate());
         if (total - own > 0) {
-            list.add(new Bucket(label, ExperienceKind.PRIVATE_SERVICE, country, total - own, approximate,
+            list.add(new Bucket(label, nbLabel, ExperienceKind.PRIVATE_SERVICE, country, total - own, approximate,
                     "We did not ask whether it was public or private work, so it is treated as private service."));
         }
         if (own > 0) {
-            list.add(new Bucket(label + ", own firm", ExperienceKind.SELF_EMPLOYED, country, own, approximate, null));
+            list.add(new Bucket(label + ", own firm", nbLabel + ", eget foretak", ExperienceKind.SELF_EMPLOYED, country, own, approximate, null));
         }
     }
 }

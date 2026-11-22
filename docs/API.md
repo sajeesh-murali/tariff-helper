@@ -252,6 +252,7 @@ All salary figures are annual and for a full-time (100%) position, in NOK.
   "currentFullTimeSalary": 600000,
   "countedYears": 7.58,
   "countedYearsIfAllAccepted": 7.58,
+  "enteredYears": 8.5,
   "estimatedMinimumSalary": { "min": 523600, "max": 523600 },
   "differenceFromCurrent": { "min": -76400, "max": -76400 },
   "perExperience": [
@@ -277,6 +278,7 @@ All salary figures are annual and for a full-time (100%) position, in NOK.
 | `currentFullTimeSalary` | The person's current pay converted to 100%. |
 | `countedYears` | Seniority that counts for certain, in years with 2 decimals. |
 | `countedYearsIfAllAccepted` | Seniority if the employer also accepts every uncertain period. Equal to `countedYears` when nothing is uncertain. |
+| `enteredYears` | Every period the person entered added up: overlap is not removed and no period is left out. For display only; it never changes pay. Each `perExperience` entry has its own `enteredMonths` and a Norwegian `label`. |
 | `estimatedMinimumSalary.min / max` | The agreement's minimum (garantilønn) for `countedYears` and for `countedYearsIfAllAccepted`. Employers may pay more. |
 | `differenceFromCurrent.min / max` | Minimum pay minus current full-time pay. **Positive:** the minimum is above current pay. **Negative:** the person already earns above the minimum. |
 | `perExperience[]` | One entry per submitted period, same order. `index` is the position in the request, `countedMonths` and `possibleExtraMonths` are the months it contributes, `note` is fixed plain-English text saying why (including overlap and limit effects), not model output. |

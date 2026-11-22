@@ -109,11 +109,24 @@ public class SeniorityCalculator {
             int totalMonths = (int) ChronoUnit.MONTHS.between(
                     experiences.get(i).startDate(), experiences.get(i).endDate()) + 1;
             perExperience.add(new PerExperience(i, counted, possible,
-                    note(experiences.get(i), job, rules, credit[i], totalMonths, won[i], counted, possible)));
+                    note(experiences.get(i), job, rules, credit[i], totalMonths, won[i], counted, possible),
+                    totalMonths, label(experiences.get(i).kind())));
             countedTotal += counted;
             possibleTotal += possible;
         }
         return new SeniorityResult(countedTotal, possibleTotal, List.copyOf(perExperience));
+    }
+
+    private static String label(ExperienceKind kind) {
+        return switch (kind) {
+            case PUBLIC_SERVICE -> "Offentlig tjeneste";
+            case PRIVATE_SERVICE -> "Privat arbeid";
+            case SELF_EMPLOYED -> "Selvstendig næringsdrivende";
+            case AU_PAIR -> "Au pair";
+            case CARE_WORK -> "Omsorgsarbeid";
+            case HOME_WORK -> "Arbeid i hjemmet";
+            case MILITARY_SERVICE -> "Militær- eller siviltjeneste";
+        };
     }
 
     private static Credit classify(ExperienceDto e, JobCategory job, Rules rules) {

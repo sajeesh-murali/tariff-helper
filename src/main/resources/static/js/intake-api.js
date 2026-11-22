@@ -723,6 +723,23 @@ function statusIcon(monthly) {
     + `<circle class="dot" cx="46" cy="29" r="3.5"/>${STATUS_ICONS[tier]}</svg>`;
 }
 
+function fmtMonths(m) {
+  const y = Math.floor(m / 12), r = m % 12;
+  return [y ? `${y} år` : '', r ? `${r} mnd` : ''].filter(Boolean).join(' ') || '0 mnd';
+}
+
+/** Every period the person entered with its own length, and the total of all of them (overlap not removed). */
+function enteredCard(d) {
+  const rows = (d.perExperience || []).filter(p => p.enteredMonths > 0);
+  if (!rows.length) return '';
+  const total = rows.reduce((sum, p) => sum + p.enteredMonths, 0);
+  return `<div class="card"><h2>Erfaringen du har oppgitt</h2><ul class="small">`
+    + rows.map(p => `<li>${esc(p.label || 'Periode ' + (p.index + 1))}: <b>${fmtMonths(p.enteredMonths)}</b></li>`).join('')
+    + `</ul><p><b>Til sammen: ${fmtMonths(total)}</b></p>`
+    + `<p class="small">Dette er alt du oppga, lagt sammen. Ingen perioder er tatt ut. Tallet «Vi mener du har» over kan være lavere, `
+    + `fordi tariffavtalen ikke teller alle typer erfaring, setter tak på noen, og bare teller måneder som overlapper én gang.</p></div>`;
+}
+
 /** No fixed position or salary: show the agreement's full-time pay for the counted seniority, no comparison. */
 function referenceCard(d) {
   const counted = fmtYears(d.countedYears);
@@ -735,6 +752,7 @@ function referenceCard(d) {
     + `<p class="small">Du har ikke fast stillingsprosent, så vi sammenligner ikke med lønnen din. `
     + `Det du faktisk får utbetalt avhenger av hvor mye du jobber.</p>`
     + `<p class="small">Hvor sikkert er anslaget? <b>${esc(LEVELS[conf.level] || conf.level)}</b></p>`
+    + enteredCard(d)
     + `<div class="card"><h2>Dette bygger anslaget på</h2><ul class="small">`
     + `<li>Tariffavtale: ${esc(d.agreementApplied)} (satser fra ${esc(d.rulesValidFrom)})</li>`
     + `<li>Stilling: ${esc(d.jobCategory)}</li>`
@@ -803,6 +821,7 @@ function resultCard(r) {
   return statusIcon(monthly) + head + summary + assumed
     + `<p class="small">Hvor sikkert er anslaget? <b>${esc(LEVELS[conf.level] || conf.level)}</b></p>`
     + cta
+    + enteredCard(d)
     + assumptions
     + `<p class="small">${esc(d.disclaimer)}</p>`;
 }
