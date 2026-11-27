@@ -742,12 +742,32 @@ function enteredCard(d) {
     + `fordi tariffavtalen ikke teller alle typer erfaring, setter tak på noen, og bare teller måneder som overlapper én gang.</p></div>`;
 }
 
-/** The "book a free call" box. Empty when no booking link is set up. */
+/**
+ * The "book a free call" box, on the result page itself. It first asks whether the person wants a call. Only after
+ * they say yes is the calendar embedded here, since loading it contacts Calendly (an external service).
+ * Empty when no booking link is set up.
+ */
 function bookingCta() {
   if (!bookingReady()) return '';
-  return `<div class="cta"><h2>Vil du ha hjelp til å sikre at ansienniteten din er riktig registrert?</h2>`
-    + `<p>Gratis og uforpliktende. Du betaler bare hvis lønnen din øker.</p>`
-    + `<button class="btn cta-btn" onclick="go(4)">Ja, book en gratis samtale</button></div>`;
+  if (intake.bookingOpen) {
+    return `<div class="cta"><h2>Velg en tid som passer</h2>`
+      + `<p>Gratis og uforpliktende. Du betaler bare hvis lønnen din øker. Navn og e-post du skriver i kalenderen deles med `
+      + `Calendly. Anslaget ditt blir ikke delt. <a href="#personvern">Personvern</a></p>`
+      + `<iframe class="booking-frame" src="${esc(bookingUrl)}" title="Kalender for å booke samtale" loading="lazy" `
+      + `referrerpolicy="no-referrer" style="width:100%;height:700px;border:0"></iframe></div>`;
+  }
+  return `<div class="cta"><h2>Vil du ha en gratis samtale om ansienniteten din?</h2>`
+    + `<p>Vi går gjennom anslaget og hva som trengs for å få ansienniteten riktig registrert. Gratis og uforpliktende. `
+    + `Du betaler bare hvis lønnen din øker. Hvis du sier ja, vises kalenderen her på siden. Den hentes fra Calendly, `
+    + `en ekstern tjeneste.</p>`
+    + `<button class="btn cta-btn" onclick="openBookingHere()">Ja, jeg vil ha en samtale</button></div>`;
+}
+
+/** The person said yes: show the calendar in the page. */
+function openBookingHere() {
+  intake.bookingOpen = true;
+  render();
+  document.querySelector('.booking-frame')?.scrollIntoView({ block: 'center' });
 }
 
 /** No fixed position or salary: show the agreement's full-time pay for the counted seniority, no comparison. */
@@ -824,8 +844,8 @@ function resultCard(r) {
   const monthly = perYear / 12;
   const cta = !bookingReady() ? ''
     : r.kind === 'none'
-    ? `<p class="small">Tror du likevel at ansienniteten din er feil? `
-      + `<button class="textbtn" onclick="openBooking()">Snakk med oss</button></p>`
+    ? (intake.bookingOpen ? bookingCta() : `<p class="small">Tror du likevel at ansienniteten din er feil? `
+      + `<button class="textbtn" onclick="openBookingHere()">Snakk med oss</button></p>`)
     : bookingCta();
   return statusIcon(monthly) + head + summary + assumed
     + `<p class="small">Hvor sikkert er anslaget? <b>${esc(LEVELS[conf.level] || conf.level)}</b></p>`

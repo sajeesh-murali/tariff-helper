@@ -44,15 +44,17 @@ class StaticSiteIntegrationTest {
         org.assertj.core.api.Assertions.assertThat(html).contains("/js/intake-api.js");
     }
 
-    /** A result without a fixed position (the reference card) must offer the booking step, and the flow must reach it. */
+    /** Both result pages ask first, and only a yes embeds the calendar in the same page (no jump to another step). */
     @Test
-    void theReferenceResultOffersTheBookingStep() throws Exception {
+    void theResultPagesAskFirstAndThenEmbedTheCalendarInThePage() throws Exception {
         String script = mvc.perform(get("/js/intake-api.js")).andReturn().getResponse().getContentAsString();
-        String html = mvc.perform(get("/index.html")).andReturn().getResponse().getContentAsString();
         String card = script.substring(script.indexOf("function referenceCard"), script.indexOf("function resultCard"));
         org.assertj.core.api.Assertions.assertThat(card).contains("bookingCta()");
-        org.assertj.core.api.Assertions.assertThat(script).contains("function bookingCta()").contains("onclick=\"go(4)\"");
-        org.assertj.core.api.Assertions.assertThat(html).contains("['potential','possible','reference'].includes(intake.result.kind)");
+        String cta = script.substring(script.indexOf("function bookingCta"), script.indexOf("function openBookingHere"));
+        org.assertj.core.api.Assertions.assertThat(cta).contains("openBookingHere()").contains("if (intake.bookingOpen)")
+                .contains("booking-frame").doesNotContain("go(4)");
+        org.assertj.core.api.Assertions.assertThat(script.indexOf("intake.bookingOpen"))
+                .isLessThan(script.indexOf("booking-frame"));
     }
 
     @Test
