@@ -743,31 +743,38 @@ function enteredCard(d) {
 }
 
 /**
- * The "book a free call" box, on the result page itself. It first asks whether the person wants a call. Only after
- * they say yes is the calendar embedded here, since loading it contacts Calendly (an external service).
+ * The "free call" question, on the result page itself: the person answers Ja or Nei. Only after Ja is the calendar
+ * embedded here, since loading it contacts Calendly (an external service). Nothing is loaded before that.
  * Empty when no booking link is set up.
  */
 function bookingCta() {
   if (!bookingReady()) return '';
-  if (intake.bookingOpen) {
-    return `<div class="cta"><h2>Velg en tid som passer</h2>`
-      + `<p>Gratis og uforpliktende. Du betaler bare hvis lønnen din øker. Navn og e-post du skriver i kalenderen deles med `
-      + `Calendly. Anslaget ditt blir ikke delt. <a href="#personvern">Personvern</a></p>`
+  const answer = intake.bookingAnswer || '';
+  const buttons = `<div class="answer-buttons" role="group" aria-label="Vil du ha en gratis samtale?">`
+    + [['yes', 'Ja'], ['no', 'Nei']].map(([v, t]) =>
+      `<button type="button" aria-pressed="${answer === v}" onclick="answerBooking('${v}')">${t}</button>`).join('')
+    + `</div>`;
+  const question = `<h2>Vil du ha en gratis samtale om ansienniteten din?</h2>`
+    + `<p>Vi går gjennom anslaget og hva som trengs for å få ansienniteten riktig registrert. Gratis og uforpliktende. `
+    + `Du betaler bare hvis lønnen din øker.</p>`;
+  if (answer === 'yes') {
+    return `<div class="cta">${question}${buttons}`
+      + `<p class="small">Velg en tid som passer. Kalenderen hentes fra Calendly, en ekstern tjeneste. Navn og e-post du `
+      + `skriver der deles med Calendly. Anslaget ditt blir ikke delt. <a href="#personvern">Personvern</a></p>`
       + `<iframe class="booking-frame" src="${esc(bookingUrl)}" title="Kalender for å booke samtale" loading="lazy" `
       + `referrerpolicy="no-referrer" style="width:100%;height:700px;border:0"></iframe></div>`;
   }
-  return `<div class="cta"><h2>Vil du ha en gratis samtale om ansienniteten din?</h2>`
-    + `<p>Vi går gjennom anslaget og hva som trengs for å få ansienniteten riktig registrert. Gratis og uforpliktende. `
-    + `Du betaler bare hvis lønnen din øker. Hvis du sier ja, vises kalenderen her på siden. Den hentes fra Calendly, `
-    + `en ekstern tjeneste.</p>`
-    + `<button class="btn cta-btn" onclick="openBookingHere()">Ja, jeg vil ha en samtale</button></div>`;
+  return `<div class="cta">${question}${buttons}`
+    + (answer === 'no' ? `<p class="small">Greit. Du kan ombestemme deg når som helst.</p>`
+      : `<p class="small">Hvis du svarer ja, vises kalenderen her på siden. Den hentes fra Calendly, en ekstern tjeneste.</p>`)
+    + `</div>`;
 }
 
-/** The person said yes: show the calendar in the page. */
-function openBookingHere() {
-  intake.bookingOpen = true;
+/** The person answered the question: show or hide the calendar in the page. */
+function answerBooking(answer) {
+  intake.bookingAnswer = answer;
   render();
-  document.querySelector('.booking-frame')?.scrollIntoView({ block: 'center' });
+  if (answer === 'yes') document.querySelector('.booking-frame')?.scrollIntoView({ block: 'center' });
 }
 
 /** No fixed position or salary: show the agreement's full-time pay for the counted seniority, no comparison. */
@@ -844,8 +851,8 @@ function resultCard(r) {
   const monthly = perYear / 12;
   const cta = !bookingReady() ? ''
     : r.kind === 'none'
-    ? (intake.bookingOpen ? bookingCta() : `<p class="small">Tror du likevel at ansienniteten din er feil? `
-      + `<button class="textbtn" onclick="openBookingHere()">Snakk med oss</button></p>`)
+    ? (intake.bookingAnswer ? bookingCta() : `<p class="small">Tror du likevel at ansienniteten din er feil? `
+      + `<button class="textbtn" onclick="answerBooking('yes')">Snakk med oss</button></p>`)
     : bookingCta();
   return statusIcon(monthly) + head + summary + assumed
     + `<p class="small">Hvor sikkert er anslaget? <b>${esc(LEVELS[conf.level] || conf.level)}</b></p>`

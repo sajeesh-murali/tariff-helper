@@ -44,17 +44,17 @@ class StaticSiteIntegrationTest {
         org.assertj.core.api.Assertions.assertThat(html).contains("/js/intake-api.js");
     }
 
-    /** Both result pages ask first, and only a yes embeds the calendar in the same page (no jump to another step). */
+    /** Both result pages ask Ja/Nei first, and only a yes embeds the calendar in the same page (no jump, no extra button). */
     @Test
-    void theResultPagesAskFirstAndThenEmbedTheCalendarInThePage() throws Exception {
+    void theResultPagesAskJaOrNeiAndThenEmbedTheCalendarInThePage() throws Exception {
         String script = mvc.perform(get("/js/intake-api.js")).andReturn().getResponse().getContentAsString();
         String card = script.substring(script.indexOf("function referenceCard"), script.indexOf("function resultCard"));
         org.assertj.core.api.Assertions.assertThat(card).contains("bookingCta()");
-        String cta = script.substring(script.indexOf("function bookingCta"), script.indexOf("function openBookingHere"));
-        org.assertj.core.api.Assertions.assertThat(cta).contains("openBookingHere()").contains("if (intake.bookingOpen)")
-                .contains("booking-frame").doesNotContain("go(4)");
-        org.assertj.core.api.Assertions.assertThat(script.indexOf("intake.bookingOpen"))
-                .isLessThan(script.indexOf("booking-frame"));
+        String cta = script.substring(script.indexOf("function bookingCta"), script.indexOf("function answerBooking"));
+        org.assertj.core.api.Assertions.assertThat(cta).contains("answerBooking('${v}')").contains("answer === 'yes'")
+                .contains("booking-frame").doesNotContain("go(4)").doesNotContain("Ja, jeg vil ha en samtale");
+        org.assertj.core.api.Assertions.assertThat(cta.indexOf("answer === 'yes'"))
+                .isLessThan(cta.indexOf("booking-frame"));
     }
 
     @Test
