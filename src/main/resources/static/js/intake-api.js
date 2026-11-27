@@ -876,40 +876,6 @@ function bookingReady() {
   return bookingUrl !== null;
 }
 
-function openBooking() {
-  if (!bookingReady()) {
-    showInfo('Booking', 'Bookinglenken er ikke satt opp ennå.');
-    return;
-  }
-  window.open(bookingUrl, '_blank', 'noopener');
-}
-
-/* ---------- step 4: book a call ---------- */
-
-function intakeBooking() {
-  const ready = bookingReady();
-  return intakeProgress(4) + `<section class="intake-work">`
-    + `<span class="badge">Hjelp videre</span><h1>Book en gratis samtale</h1>`
-    + `<p class="lead">Vi går gjennom anslaget ditt og hva som trengs for å få ansienniteten riktig registrert. `
-    + `Du bestemmer selv om du vil ha hjelp videre.</p>`
-    + `<div class="card"><h2>Slik fungerer det</h2><ol>`
-    + `<li>Du velger en tid som passer i kalenderen vår.</li>`
-    + `<li>Vi går gjennom anslaget og hvilke dokumenter som trengs.</li>`
-    + `<li>Du bestemmer selv om du vil at vi hjelper deg videre.</li></ol>`
-    + `<p class="small">Gratis og uforpliktende. Du betaler bare hvis lønnen din øker. <a href="#vilkar">Les vilkårene</a></p>`
-    + `<label class="checkline consent"><input type="checkbox" ${intake.bookingConsent ? 'checked' : ''} `
-    + `onchange="intake.bookingConsent=this.checked;render()"><span>Jeg forstår at jeg går videre til Calendly, en ekstern tjeneste, `
-    + `for å booke tid. Navn og e-post jeg skriver der deles med Calendly. Anslaget mitt blir ikke delt. `
-    + `<a href="#personvern">Personvern</a></span></label>`
-    + (ready ? '' : `<div class="notice">Bookinglenken er ikke satt opp ennå.</div>`)
-    // The calendar is embedded where the old button was. It loads only after consent, since loading it contacts Calendly.
-    + (intake.bookingConsent && ready
-      ? `<iframe class="booking-frame" src="${esc(bookingUrl)}" title="Kalender for å booke samtale" `
-        + `loading="lazy" referrerpolicy="no-referrer" style="width:100%;height:700px;border:0;margin-top:16px"></iframe>`
-      : `<p class="small">Kalenderen vises her når du har huket av.</p>`)
-    + `</div><button class="textbtn" style="margin-top:24px" onclick="go(3)">Tilbake til anslaget</button></section>`;
-}
-
 function intakeResult() {
   const r = intake.result;
   let content;
