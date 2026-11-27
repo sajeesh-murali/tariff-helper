@@ -44,6 +44,17 @@ class StaticSiteIntegrationTest {
         org.assertj.core.api.Assertions.assertThat(html).contains("/js/intake-api.js");
     }
 
+    /** A result without a fixed position (the reference card) must offer the booking step, and the flow must reach it. */
+    @Test
+    void theReferenceResultOffersTheBookingStep() throws Exception {
+        String script = mvc.perform(get("/js/intake-api.js")).andReturn().getResponse().getContentAsString();
+        String html = mvc.perform(get("/index.html")).andReturn().getResponse().getContentAsString();
+        String card = script.substring(script.indexOf("function referenceCard"), script.indexOf("function resultCard"));
+        org.assertj.core.api.Assertions.assertThat(card).contains("bookingCta()");
+        org.assertj.core.api.Assertions.assertThat(script).contains("function bookingCta()").contains("onclick=\"go(4)\"");
+        org.assertj.core.api.Assertions.assertThat(html).contains("['potential','possible','reference'].includes(intake.result.kind)");
+    }
+
     @Test
     void unknownFolderIsStill404() throws Exception {
         mvc.perform(get("/finnes-ikke/")).andExpect(status().isNotFound());

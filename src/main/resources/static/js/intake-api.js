@@ -742,6 +742,14 @@ function enteredCard(d) {
     + `fordi tariffavtalen ikke teller alle typer erfaring, setter tak på noen, og bare teller måneder som overlapper én gang.</p></div>`;
 }
 
+/** The "book a free call" box. Empty when no booking link is set up. */
+function bookingCta() {
+  if (!bookingReady()) return '';
+  return `<div class="cta"><h2>Vil du ha hjelp til å sikre at ansienniteten din er riktig registrert?</h2>`
+    + `<p>Gratis og uforpliktende. Du betaler bare hvis lønnen din øker.</p>`
+    + `<button class="btn cta-btn" onclick="go(4)">Ja, book en gratis samtale</button></div>`;
+}
+
 /** No fixed position or salary: show the agreement's full-time pay for the counted seniority, no comparison. */
 function referenceCard(d) {
   const counted = fmtYears(d.countedYears);
@@ -754,6 +762,7 @@ function referenceCard(d) {
     + `<p class="small">Du har ikke fast stillingsprosent, så vi sammenligner ikke med lønnen din. `
     + `Det du faktisk får utbetalt avhenger av hvor mye du jobber.</p>`
     + `<p class="small">Hvor sikkert er anslaget? <b>${esc(LEVELS[conf.level] || conf.level)}</b></p>`
+    + bookingCta()
     + enteredCard(d)
     + `<div class="card"><h2>Dette bygger anslaget på</h2><ul class="small">`
     + `<li>Tariffavtale: ${esc(d.agreementApplied)} (satser fra ${esc(d.rulesValidFrom)})</li>`
@@ -817,9 +826,7 @@ function resultCard(r) {
     : r.kind === 'none'
     ? `<p class="small">Tror du likevel at ansienniteten din er feil? `
       + `<button class="textbtn" onclick="openBooking()">Snakk med oss</button></p>`
-    : `<div class="cta"><h2>Vil du ha hjelp til å sikre at ansienniteten din er riktig registrert?</h2>`
-      + `<p>Gratis og uforpliktende. Du betaler bare hvis lønnen din øker.</p>`
-      + `<button class="btn cta-btn" onclick="go(4)">Ja, book en gratis samtale</button></div>`;
+    : bookingCta();
   return statusIcon(monthly) + head + summary + assumed
     + `<p class="small">Hvor sikkert er anslaget? <b>${esc(LEVELS[conf.level] || conf.level)}</b></p>`
     + cta
